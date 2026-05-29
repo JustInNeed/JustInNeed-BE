@@ -23,7 +23,7 @@
 
 브랜치는 아래 Prefix 중 하나를 선택하여 작성합니다.
 
-- feat : 기능 추가
+- feature : 기능 추가
 - fix : 버그 수정
 - refactor : 리팩토링
 - chore : 설정, 빌드, 패키지 관리 등 기타 작업
@@ -32,13 +32,13 @@
 브랜치명은 아래 형식을 따릅니다.
 
 ```
-{prefix}/{issue-related-content}
+{issue number}-{prefix}-{issue-related-content}
 ```
 
 예시:
 
 ```
-chore/github-template refactor/user-service
+1-chore-github-template refactor/user-service
 ```
 
 단어 구분은 -를 사용하며, 영어로 작성합니다.
