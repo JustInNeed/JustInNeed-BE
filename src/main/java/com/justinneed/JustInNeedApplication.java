@@ -1,13 +1,13 @@
-package com.justinneed.justinneed;
+package com.justinneed;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class JustinneedApplication {
+public class JustInNeedApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(JustinneedApplication.class, args);
+		SpringApplication.run(JustInNeedApplication.class, args);
 	}
 
 }
