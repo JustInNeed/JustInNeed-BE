@@ -74,16 +74,7 @@ JWT 인증 필터 예외 처리 로직 추가(O)
     │   │   ├── JustInNeedApplication.java        // @SpringBootApplication 진입점
     │   │   │
     │   │   ├── session                            // ── 세션 도메인 (MVP 주력) ──
-    │   │   │   ├── management                      // 세션 본체: 목록/상세 종합, 편집, 공개여부
-    │   │   │   │   ├── SessionController.java
-    │   │   │   │   ├── SessionService.java
-    │   │   │   │   ├── SessionRepository.java
-    │   │   │   │   ├── Session.java                // @Entity
-    │   │   │   │   └── dto
-    │   │   │   │       ├── SessionListResponse.java     // 목록용 (markdown 제외, 가벼움)
-    │   │   │   │       ├── SessionDetailResponse.java   // 상세용 (summary 포함)
-    │   │   │   │       └── SessionUpdateRequest.java    // PATCH 바디
-    │   │   │   │
+    │   │   │   ├── management                      // 세션 메인 : 목록/상세 종합, 편집, 공개여
     │   │   │   ├── summary                          // 세션 줄글 (+텍스트수정 뷰)
     │   │   │   ├── mindmap                          // 세션 마인드맵 (향후)
     │   │   │   └── taggroup                         // 해시태그 그룹
