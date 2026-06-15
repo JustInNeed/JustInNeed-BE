@@ -1,6 +1,6 @@
-package com.justinneed.taggroup.repository;
+package com.justinneed.session.taggroup.repository;
 
-import com.justinneed.taggroup.domain.TagGroup;
+import com.justinneed.session.taggroup.domain.TagGroup;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;

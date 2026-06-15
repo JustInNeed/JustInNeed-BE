@@ -1,4 +1,4 @@
-package com.justinneed.taggroup.domain;
+package com.justinneed.session.taggroup.domain;
 
 import com.justinneed.global.common.BaseEntity;
 import jakarta.persistence.Column;

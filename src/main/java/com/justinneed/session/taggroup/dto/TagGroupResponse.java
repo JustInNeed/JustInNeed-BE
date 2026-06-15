@@ -1,7 +1,7 @@
-package com.justinneed.taggroup.dto;
+package com.justinneed.session.taggroup.dto;
 
 import com.justinneed.session.management.dto.SessionListResponse;
-import com.justinneed.taggroup.domain.TagGroup;
+import com.justinneed.session.taggroup.domain.TagGroup;
 import java.util.List;
 
 public record TagGroupResponse(

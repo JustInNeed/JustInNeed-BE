@@ -1,4 +1,4 @@
-package com.justinneed.taggroup.controller;
+package com.justinneed.session.taggroup.controller;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -9,10 +9,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.repository.BrowsingSessionRepository;
-import com.justinneed.taggroup.domain.TagGroup;
-import com.justinneed.taggroup.dto.TagGroupCreateRequest;
-import com.justinneed.taggroup.dto.TagGroupOrderRequest;
-import com.justinneed.taggroup.repository.TagGroupRepository;
+import com.justinneed.session.taggroup.domain.TagGroup;
+import com.justinneed.session.taggroup.dto.TagGroupCreateRequest;
+import com.justinneed.session.taggroup.dto.TagGroupOrderRequest;
+import com.justinneed.session.taggroup.repository.TagGroupRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;

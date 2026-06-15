@@ -1,4 +1,4 @@
-package com.justinneed.taggroup.dto;
+package com.justinneed.session.taggroup.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

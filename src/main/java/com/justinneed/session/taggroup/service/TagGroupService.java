@@ -1,4 +1,4 @@
-package com.justinneed.taggroup.service;
+package com.justinneed.session.taggroup.service;
 
 import com.justinneed.global.common.HashtagValidator;
 import com.justinneed.global.exception.CustomException;
@@ -6,12 +6,12 @@ import com.justinneed.global.exception.ErrorCode;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.dto.SessionListResponse;
 import com.justinneed.session.management.repository.BrowsingSessionRepository;
-import com.justinneed.taggroup.domain.TagGroup;
-import com.justinneed.taggroup.dto.TagGroupCreateRequest;
-import com.justinneed.taggroup.dto.TagGroupOrderRequest;
-import com.justinneed.taggroup.dto.TagGroupResponse;
-import com.justinneed.taggroup.dto.TagGroupUpdateRequest;
-import com.justinneed.taggroup.repository.TagGroupRepository;
+import com.justinneed.session.taggroup.domain.TagGroup;
+import com.justinneed.session.taggroup.dto.TagGroupCreateRequest;
+import com.justinneed.session.taggroup.dto.TagGroupOrderRequest;
+import com.justinneed.session.taggroup.dto.TagGroupResponse;
+import com.justinneed.session.taggroup.dto.TagGroupUpdateRequest;
+import com.justinneed.session.taggroup.repository.TagGroupRepository;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;

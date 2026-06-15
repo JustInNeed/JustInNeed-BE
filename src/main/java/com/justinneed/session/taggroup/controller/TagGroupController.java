@@ -1,11 +1,11 @@
-package com.justinneed.taggroup.controller;
+package com.justinneed.session.taggroup.controller;
 
 import com.justinneed.global.common.ApiResponse;
-import com.justinneed.taggroup.dto.TagGroupCreateRequest;
-import com.justinneed.taggroup.dto.TagGroupOrderRequest;
-import com.justinneed.taggroup.dto.TagGroupResponse;
-import com.justinneed.taggroup.dto.TagGroupUpdateRequest;
-import com.justinneed.taggroup.service.TagGroupService;
+import com.justinneed.session.taggroup.dto.TagGroupCreateRequest;
+import com.justinneed.session.taggroup.dto.TagGroupOrderRequest;
+import com.justinneed.session.taggroup.dto.TagGroupResponse;
+import com.justinneed.session.taggroup.dto.TagGroupUpdateRequest;
+import com.justinneed.session.taggroup.service.TagGroupService;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
