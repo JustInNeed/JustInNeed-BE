@@ -82,3 +82,14 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+### Gradle ###
+.gradle/
+build/
+out/
+target/
+
+### Local workspace ###
+tools/
+work/
+outputs/

@@ -6,8 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class JustInNeedApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(JustInNeedApplication.class, args);
-	}
-
+    public static void main(String[] args) {
+        SpringApplication.run(JustInNeedApplication.class, args);
+    }
 }
