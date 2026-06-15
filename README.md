@@ -38,7 +38,7 @@
 예시:
 
 ```
-1-chore-github-template refactor/user-service
+1-chore-github-template
 ```
 
 단어 구분은 -를 사용하며, 영어로 작성합니다.
