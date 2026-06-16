@@ -3,11 +3,8 @@ package com.justinneed.auth.controller;
 import com.justinneed.auth.dto.LogoutRequest;
 import com.justinneed.auth.dto.TokenRefreshRequest;
 import com.justinneed.auth.dto.TokenResponse;
-import com.justinneed.auth.jwt.JwtTokenProvider;
-import com.justinneed.auth.jwt.TokenDenylist;
+import com.justinneed.auth.service.AuthTokenService;
 import com.justinneed.global.common.ApiResponse;
-import com.justinneed.global.exception.CustomException;
-import com.justinneed.global.exception.ErrorCode;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -20,48 +17,28 @@ public class AuthController {
 
     private static final String BEARER_PREFIX = "Bearer ";
 
-    private final JwtTokenProvider jwtTokenProvider;
-    private final TokenDenylist tokenDenylist;
+    private final AuthTokenService authTokenService;
 
-    public AuthController(JwtTokenProvider jwtTokenProvider, TokenDenylist tokenDenylist) {
-        this.jwtTokenProvider = jwtTokenProvider;
-        this.tokenDenylist = tokenDenylist;
+    public AuthController(AuthTokenService authTokenService) {
+        this.authTokenService = authTokenService;
     }
 
-    // refresh 토큰으로 access(+refresh) 재발급. (러프 단계: refresh 토큰을 DB 저장 없이 무상태 검증)
+    // refresh 토큰으로 access(+refresh) 재발급. (DB 화이트리스트 확인 + 회전)
     @PostMapping("/refresh")
     public ApiResponse<TokenResponse> refresh(@RequestBody TokenRefreshRequest request) {
-        String refreshToken = request.refreshToken();
-        if (refreshToken == null
-                || !jwtTokenProvider.validate(refreshToken)
-                || !jwtTokenProvider.isRefreshToken(refreshToken)
-                || tokenDenylist.isDenied(refreshToken)) {
-            throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
-        }
-        Long memberId = jwtTokenProvider.getMemberId(refreshToken);
-        return ApiResponse.ok(new TokenResponse(
-                jwtTokenProvider.createAccessToken(memberId),
-                jwtTokenProvider.createRefreshToken(memberId)
-        ));
+        return ApiResponse.ok(authTokenService.reissue(request.refreshToken()));
     }
 
-    // 로그아웃: 제시된 access/refresh 토큰을 denylist 에 등록해 즉시 무효화. (멱등 — 토큰이 없거나 이미 만료여도 200)
+    // 로그아웃: refresh 화이트리스트에서 삭제 + access 즉시 무효화. (멱등 — 토큰이 없거나 만료여도 200)
     @PostMapping("/logout")
     public ApiResponse<Void> logout(
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestBody(required = false) LogoutRequest request
     ) {
-        denyIfValid(resolveBearer(authorization));
-        if (request != null) {
-            denyIfValid(request.refreshToken());
-        }
+        String accessToken = resolveBearer(authorization);
+        String refreshToken = request == null ? null : request.refreshToken();
+        authTokenService.logout(accessToken, refreshToken);
         return ApiResponse.ok();
-    }
-
-    private void denyIfValid(String token) {
-        if (token != null && jwtTokenProvider.validate(token)) {
-            tokenDenylist.deny(token, jwtTokenProvider.getExpiryEpochSecond(token));
-        }
     }
 
     private String resolveBearer(String authorization) {

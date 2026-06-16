@@ -1,6 +1,7 @@
 package com.justinneed.auth.oauth;
 
-import com.justinneed.auth.jwt.JwtTokenProvider;
+import com.justinneed.auth.dto.TokenResponse;
+import com.justinneed.auth.service.AuthTokenService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -19,14 +20,14 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Component
 public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-    private final JwtTokenProvider jwtTokenProvider;
+    private final AuthTokenService authTokenService;
     private final String successRedirectUri;
 
     public OAuth2SuccessHandler(
-            JwtTokenProvider jwtTokenProvider,
+            AuthTokenService authTokenService,
             @Value("${app.oauth.success-redirect-uri}") String successRedirectUri
     ) {
-        this.jwtTokenProvider = jwtTokenProvider;
+        this.authTokenService = authTokenService;
         this.successRedirectUri = successRedirectUri;
     }
 
@@ -37,12 +38,11 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         Long memberId = ((Number) principal.getAttributes().get(CustomOAuth2UserService.ATTR_MEMBER_ID)).longValue();
         boolean needsNickname = Boolean.TRUE.equals(principal.getAttributes().get(CustomOAuth2UserService.ATTR_NEEDS_NICKNAME));
 
-        String accessToken = jwtTokenProvider.createAccessToken(memberId);
-        String refreshToken = jwtTokenProvider.createRefreshToken(memberId);
+        TokenResponse tokens = authTokenService.issue(memberId);
 
         String targetUrl = UriComponentsBuilder.fromUriString(successRedirectUri)
-                .queryParam("accessToken", accessToken)
-                .queryParam("refreshToken", refreshToken)
+                .queryParam("accessToken", tokens.accessToken())
+                .queryParam("refreshToken", tokens.refreshToken())
                 .queryParam("needsNickname", needsNickname)
                 .build()
                 .toUriString();
