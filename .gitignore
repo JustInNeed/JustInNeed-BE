@@ -93,3 +93,7 @@ target/
 tools/
 work/
 outputs/
+
+### Env / Secrets ###
+.env
+!.env.example
