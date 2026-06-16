@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "justinneed-docker",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "justinneed",
+      "Username": "postgres",
+      "SSLMode": "prefer"
+    }
+  }
+}
