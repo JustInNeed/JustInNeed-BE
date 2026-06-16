@@ -72,6 +72,10 @@ public class JwtTokenProvider {
         return Long.valueOf(parse(token).getSubject());
     }
 
+    public long getExpiryEpochSecond(String token) {
+        return parse(token).getExpiration().toInstant().getEpochSecond();
+    }
+
     private Claims parse(String token) {
         return Jwts.parser()
                 .verifyWith(key)

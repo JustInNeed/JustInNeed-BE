@@ -19,16 +19,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String PREFIX = "Bearer ";
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final TokenDenylist tokenDenylist;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, TokenDenylist tokenDenylist) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.tokenDenylist = tokenDenylist;
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String token = resolveToken(request);
-        if (token != null && jwtTokenProvider.validate(token) && jwtTokenProvider.isAccessToken(token)) {
+        if (token != null && jwtTokenProvider.validate(token) && jwtTokenProvider.isAccessToken(token)
+                && !tokenDenylist.isDenied(token)) {
             Long memberId = jwtTokenProvider.getMemberId(token);
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                     memberId, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
