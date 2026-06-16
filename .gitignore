@@ -97,3 +97,6 @@ outputs/
 ### Env / Secrets ###
 .env
 !.env.example
+
+db/
+logs/
