@@ -44,9 +44,8 @@ public class SecurityConfig {
                         .requestMatchers("/", "/error",
                                 "/auth/**", "/oauth2/**", "/login/**",
                                 "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-                        // 인증 도입 전까지 임시로 X-User-Id 헤더 쓰는 기존 API는 열어둠 (추후 인증 적용 예정)
-                        .requestMatchers("/sessions/**", "/tag-groups/**").permitAll()
-                        // 그 외(예: /members/**)는 access 토큰 필요
+                        // 세션·태그그룹 API는 로그인 회원만 (access 토큰의 memberId = user_id)
+                        // 그 외(예: /members/**)도 access 토큰 필요
                         .anyRequest().authenticated()
                 )
                 // 소셜 로그인: /oauth2/authorization/{kakao|naver} 진입 → 콜백 → 프로필 조회 → 토큰 발급

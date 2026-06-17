@@ -12,9 +12,9 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -30,14 +30,14 @@ public class TagGroupController {
 
     @GetMapping
     public ApiResponse<List<TagGroupResponse>> getTagGroups(
-            @RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId
+            @AuthenticationPrincipal Long userId
     ) {
         return ApiResponse.ok(tagGroupService.getTagGroups(userId));
     }
 
     @PostMapping
     public ApiResponse<TagGroupResponse> createTagGroup(
-            @RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
+            @AuthenticationPrincipal Long userId,
             @Valid @RequestBody TagGroupCreateRequest request
     ) {
         return ApiResponse.ok(tagGroupService.createTagGroup(userId, request));
@@ -45,7 +45,7 @@ public class TagGroupController {
 
     @PatchMapping("/{id}")
     public ApiResponse<TagGroupResponse> updateTagGroup(
-            @RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long id,
             @Valid @RequestBody TagGroupUpdateRequest request
     ) {
@@ -54,7 +54,7 @@ public class TagGroupController {
 
     @DeleteMapping("/{id}")
     public ApiResponse<Void> deleteTagGroup(
-            @RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long id
     ) {
         tagGroupService.deleteTagGroup(userId, id);
@@ -63,7 +63,7 @@ public class TagGroupController {
 
     @PatchMapping("/order")
     public ApiResponse<List<TagGroupResponse>> updateOrder(
-            @RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
+            @AuthenticationPrincipal Long userId,
             @Valid @RequestBody TagGroupOrderRequest request
     ) {
         return ApiResponse.ok(tagGroupService.updateOrder(userId, request));
