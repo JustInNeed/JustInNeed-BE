@@ -50,6 +50,10 @@ public class Summary {
         this.markdown = markdown;
     }
 
+    public void updateInsights(List<String> insights) {
+        this.insights = new ArrayList<>(insights);
+    }
+
     public String getHeading() {
         return heading;
     }

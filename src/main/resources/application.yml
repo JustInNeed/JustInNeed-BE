@@ -55,12 +55,6 @@ server:
     context-path: /
 
 # 애플리케이션 커스텀 설정 (JWT / OAuth 성공 리다이렉트)
-# (임시) OAuth 로그인 실패 원인 디버깅용 — 원인 파악 후 제거 예정
-logging:
-  level:
-    org.springframework.security.oauth2: DEBUG
-    org.springframework.web.client: DEBUG
-
 app:
   jwt:
     secret: ${JWT_SECRET:dev-only-jwt-secret-please-change-in-prod-0123456789abcdef}

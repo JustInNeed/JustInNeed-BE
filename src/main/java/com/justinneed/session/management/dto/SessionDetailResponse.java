@@ -38,7 +38,6 @@ public record SessionDetailResponse(
     }
 
     public record SummaryResponse(
-            String heading,
             String markdown,
             List<String> insights
     ) {
@@ -46,7 +45,7 @@ public record SessionDetailResponse(
             if (summary == null) {
                 return null;
             }
-            return new SummaryResponse(summary.getHeading(), summary.getMarkdown(), summary.getInsights());
+            return new SummaryResponse(summary.getMarkdown(), summary.getInsights());
         }
     }
 }
