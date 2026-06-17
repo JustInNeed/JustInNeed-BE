@@ -10,9 +10,9 @@ import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -28,14 +28,14 @@ public class SessionController {
 
     @GetMapping
     public ApiResponse<List<SessionListResponse>> getSessions(
-            @RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId
+            @AuthenticationPrincipal Long userId
     ) {
         return ApiResponse.ok(sessionService.getSessions(userId));
     }
 
     @GetMapping("/{id}")
     public ApiResponse<SessionDetailResponse> getSession(
-            @RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long id
     ) {
         return ApiResponse.ok(sessionService.getSession(userId, id));
@@ -43,7 +43,7 @@ public class SessionController {
 
     @PatchMapping("/{id}")
     public ApiResponse<SessionDetailResponse> updateSession(
-            @RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long id,
             @Valid @RequestBody SessionUpdateRequest request
     ) {
@@ -52,7 +52,7 @@ public class SessionController {
 
     @DeleteMapping("/{id}")
     public ApiResponse<Void> deleteSession(
-            @RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long id
     ) {
         sessionService.deleteSession(userId, id);
