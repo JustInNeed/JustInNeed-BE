@@ -52,6 +52,12 @@ public class SecurityConfig {
                 .oauth2Login(oauth -> oauth
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         .successHandler(oAuth2SuccessHandler)
+                        // (임시) 로그인 실패 원인 로깅 — 디버깅 후 제거 예정
+                        .failureHandler((request, response, exception) -> {
+                            org.slf4j.LoggerFactory.getLogger(SecurityConfig.class)
+                                    .error("[OAuth2 login FAILED] {}", exception.getMessage(), exception);
+                            response.sendRedirect("/login?error");
+                        })
                 )
                 // 보호 리소스에 인증 없이 접근 시 리다이렉트 대신 401 반환 (API 친화적)
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(
