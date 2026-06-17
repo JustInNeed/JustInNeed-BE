@@ -9,6 +9,8 @@ public record SessionUpdateRequest(
         String editedMarkdown,
         Boolean isPublic,
         Boolean isFavorite,
-        List<String> tags
+        List<String> tags,
+        // 하이라이트(요약 insights). 보내면 전체 교체(텍스트 수정/개별 삭제/추가 모두 이 한 필드로 처리). null이면 변경 없음.
+        List<String> insights
 ) {
 }

@@ -52,10 +52,10 @@ public class SecurityConfig {
                 .oauth2Login(oauth -> oauth
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         .successHandler(oAuth2SuccessHandler)
-                        // (임시) 로그인 실패 원인 로깅 — 디버깅 후 제거 예정
+                        // 소셜 로그인 실패 시 원인 로깅 후 기본 실패 URL로
                         .failureHandler((request, response, exception) -> {
                             org.slf4j.LoggerFactory.getLogger(SecurityConfig.class)
-                                    .error("[OAuth2 login FAILED] {}", exception.getMessage(), exception);
+                                    .warn("[OAuth2 login failed] {}", exception.getMessage());
                             response.sendRedirect("/login?error");
                         })
                 )

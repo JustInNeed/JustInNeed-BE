@@ -89,7 +89,8 @@ public class BrowsingSession extends BaseEntity {
         this.summary = summary;
     }
 
-    public void update(String title, String editedMarkdown, Boolean publicSession, Boolean favorite, List<String> tags) {
+    public void update(String title, String editedMarkdown, Boolean publicSession, Boolean favorite,
+            List<String> tags, List<String> insights) {
         if (title != null) {
             this.title = title;
         }
@@ -104,6 +105,9 @@ public class BrowsingSession extends BaseEntity {
         }
         if (tags != null) {
             this.tags = new ArrayList<>(tags);
+        }
+        if (insights != null) {
+            getOrCreateSummary().updateInsights(insights);
         }
     }
 
