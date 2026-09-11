@@ -25,6 +25,9 @@ public class MemberService {
     @Transactional
     public MemberResponse updateNickname(Long memberId, String nickname) {
         Member member = findMember(memberId);
+        if (memberRepository.existsByNicknameIgnoreCaseAndIdNot(nickname, memberId)) {
+            throw new CustomException(ErrorCode.DUPLICATE_NICKNAME);
+        }
         member.updateNickname(nickname);
         return MemberResponse.from(member);
     }
