@@ -1,0 +1,49 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:justinneed;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            provider: kakao
+            client-name: Kakao
+            client-id: test-kakao-client
+            client-secret: test-kakao-secret
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            authorization-grant-type: authorization_code
+            client-authentication-method: client_secret_post
+          naver:
+            provider: naver
+            client-name: Naver
+            client-id: test-naver-client
+            client-secret: test-naver-secret
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            authorization-grant-type: authorization_code
+            client-authentication-method: client_secret_post
+        provider:
+          kakao:
+            authorization-uri: https://example.com/kakao/authorize
+            token-uri: https://example.com/kakao/token
+            user-info-uri: https://example.com/kakao/user
+            user-name-attribute: id
+          naver:
+            authorization-uri: https://example.com/naver/authorize
+            token-uri: https://example.com/naver/token
+            user-info-uri: https://example.com/naver/user
+            user-name-attribute: response
+
+app:
+  jwt:
+    secret: test-only-jwt-secret-that-is-long-enough-for-hmac-sha-256
+    access-token-validity-seconds: 3600
+    refresh-token-validity-seconds: 1209600
+  oauth:
+    success-redirect-uri: http://localhost:3000/oauth/callback
