@@ -14,17 +14,21 @@ import com.justinneed.session.management.repository.BrowsingSessionRepository;
 import com.justinneed.session.summary.domain.Summary;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(addFilters = false)
 class SessionControllerTest {
 
     @Autowired
@@ -40,14 +44,21 @@ class SessionControllerTest {
 
     @BeforeEach
     void setUp() {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                1L, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))));
         sessionRepository.deleteAll();
 
         session = new BrowsingSession(1L, "Spring 조사", LocalDateTime.of(2026, 6, 1, 10, 0));
         session.complete(LocalDateTime.of(2026, 6, 1, 10, 30), 3);
-        session.update(null, null, false, true, List.of("Spring", "JPA"));
+        session.update(null, null, false, true, List.of("Spring", "JPA"), null);
         session.replaceSources(List.of(new Source("Spring Docs", "https://spring.io", "Spring reference")));
         new Summary(session, "Spring 요약", "## Spring\n본문");
         sessionRepository.save(session);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -73,7 +84,8 @@ class SessionControllerTest {
                 "수정된 본문",
                 true,
                 false,
-                List.of("Java")
+                List.of("Java"),
+                null
         );
 
         mockMvc.perform(patch("/sessions/{id}", session.getId())
