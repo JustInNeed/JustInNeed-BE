@@ -5,8 +5,21 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import com.justinneed.community.domain.CommunityProfile;
+import java.util.List;
 
 class HashtagVisibilityTest extends CommunityTestSupport {
+    @Test
+    void canHideAnInterestBeforeItIsUsedByASession() throws Exception {
+        var profile = new CommunityProfile(ownerId);
+        profile.replaceInterests(List.of("Java"));
+        profiles.saveAndFlush(profile);
+        mvc.perform(patch("/community/me/hashtags/visibility").header("Authorization", auth(ownerId))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"hashtag\":\"JAVA\",\"isPublic\":false}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.isPublic").value(false));
+        assertThat(profiles.findById(ownerId).orElseThrow().getHiddenHashtags()).containsExactly("java");
+    }
+
     @Test
     void hidingTagSuppressesMixedSessionsAndRestoringMakesThemVisible() throws Exception {
         session(ownerId, true, "Java", "Secret");

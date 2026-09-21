@@ -57,6 +57,7 @@ public class HashtagVisibilityService {
         sessions.findByUserIdAndDeletedAtIsNullOrderByEndedAtDescStartedAtDesc(profile.getUserId())
                 .forEach(session -> session.getTags().forEach(tag ->
                         result.putIfAbsent(tag.toLowerCase(Locale.ROOT), tag)));
+        profile.getInterests().forEach(tag -> result.putIfAbsent(tag.toLowerCase(Locale.ROOT), tag));
         // Keep preferences discoverable after the last session with a hidden tag is removed.
         profile.getHiddenHashtags().forEach(tag -> result.putIfAbsent(tag.toLowerCase(Locale.ROOT), tag));
         return result;
