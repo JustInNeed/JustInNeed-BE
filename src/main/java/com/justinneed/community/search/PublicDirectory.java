@@ -1,6 +1,8 @@
 package com.justinneed.community.search;
 
 import com.justinneed.community.graph.PublicGraphService;
+import com.justinneed.global.exception.CustomException;
+import com.justinneed.global.exception.ErrorCode;
 import java.util.function.Predicate;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,10 @@ public class PublicDirectory {
             for (Long id : ids) {
                 PublicGraphService.Graph graph;
                 try { graph = graphs.graph(id, null); }
+                catch (CustomException error) {
+                    if (error.getErrorCode() == ErrorCode.MEMBER_NOT_FOUND) continue;
+                    throw error;
+                }
                 catch (ResponseStatusException error) {
                     if (error.getStatusCode().value() == 404) continue;
                     throw error;
