@@ -15,17 +15,21 @@ import com.justinneed.session.taggroup.dto.TagGroupOrderRequest;
 import com.justinneed.session.taggroup.repository.TagGroupRepository;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(addFilters = false)
 class TagGroupControllerTest {
 
     @Autowired
@@ -45,16 +49,23 @@ class TagGroupControllerTest {
 
     @BeforeEach
     void setUp() {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                1L, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))));
         tagGroupRepository.deleteAll();
         sessionRepository.deleteAll();
 
         BrowsingSession session = new BrowsingSession(1L, "JPA 기록", LocalDateTime.of(2026, 6, 1, 9, 0));
         session.complete(LocalDateTime.of(2026, 6, 1, 9, 30), 2);
-        session.update(null, null, false, false, List.of("Spring", "JPA"));
+        session.update(null, null, false, false, List.of("Spring", "JPA"), null);
         sessionRepository.save(session);
 
         springGroup = tagGroupRepository.save(new TagGroup(1L, "Spring", List.of("Spring"), 0));
         javaGroup = tagGroupRepository.save(new TagGroup(1L, "Java", List.of("Java"), 1));
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
