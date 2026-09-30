@@ -24,7 +24,7 @@ class InterestTest extends CommunityTestSupport {
         for (String tag : List.of("Java", "한글123")) {
             mvc.perform(post("/community/me/interests").header("Authorization", auth(ownerId))
                             .contentType(MediaType.APPLICATION_JSON).content("{\"hashtag\":\"" + tag + "\"}"))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isCreated());
         }
         mvc.perform(post("/community/me/interests").header("Authorization", auth(ownerId))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"hashtag\":\"JAVA\"}"))
@@ -55,7 +55,7 @@ class InterestTest extends CommunityTestSupport {
         profiles.saveAndFlush(profile);
         mvc.perform(post("/community/me/interests").header("Authorization", auth(ownerId))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"hashtag\":\"1234567890\"}"))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.data.length()").value(10));
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.data.interestCount").value(10));
         mvc.perform(post("/community/me/interests").header("Authorization", auth(ownerId))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"hashtag\":\"extra\"}"))
                 .andExpect(status().isBadRequest());

@@ -1,6 +1,8 @@
 package com.justinneed.community.interest;
 
 import com.justinneed.global.common.ApiResponse;
+import com.justinneed.community.edit.ProfileEditService;
+import org.springframework.http.HttpStatus;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -12,14 +14,16 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/community")
 public class InterestController {
     private final InterestService service;
+    private final ProfileEditService edit;
 
-    public InterestController(InterestService service) {
+    public InterestController(InterestService service, ProfileEditService edit) {
         this.service = service;
+        this.edit = edit;
     }
 
     @GetMapping("/me/interests")
-    public ApiResponse<List<String>> mine(@AuthenticationPrincipal Long userId) {
-        return ApiResponse.ok(service.get(userId, userId));
+    public ApiResponse<List<ProfileEditService.InterestView>> mine(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.ok(edit.myInterests(userId));
     }
 
     @GetMapping("/profiles/{userId}/interests")
@@ -28,9 +32,10 @@ public class InterestController {
     }
 
     @PostMapping("/me/interests")
-    public ApiResponse<List<String>> add(
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<ProfileEditService.InterestView> add(
             @AuthenticationPrincipal Long userId, @Valid @RequestBody Request request) {
-        return ApiResponse.ok(service.add(userId, request.hashtag()));
+        return ApiResponse.ok(edit.addInterest(userId, request.hashtag()));
     }
 
     public record Request(

@@ -1,6 +1,7 @@
 package com.justinneed.community.visibility;
 
 import com.justinneed.community.domain.NodeVisibility;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.justinneed.global.common.ApiResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -34,5 +35,5 @@ public class VisibilityController {
         return ApiResponse.ok(service.nodes(userId, viewerId));
     }
 
-    public record VisibilityRequest(@NotNull NodeVisibility visibility) { }
+    public record VisibilityRequest(@NotNull @JsonAlias("visibilityScope") NodeVisibility visibility) { }
 }
