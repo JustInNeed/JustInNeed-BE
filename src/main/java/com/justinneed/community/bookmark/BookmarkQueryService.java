@@ -29,7 +29,7 @@ public class BookmarkQueryService {
         profiles.read(userId);
         var slice = bookmarks.findByUserIdAndSaveType(userId, SaveType.MINI_MINDMAP, paging(page, size));
         return new Mindmaps(200, slice.stream().map(b -> new Mindmap(b.getId(), b.getSourceMindmapId(),
-                b.getSnapshot().title(), b.getSnapshot().nodes(), b.getSnapshot().edges(), b.getSavedAt())).toList(),
+                b.getSnapshot().title(), b.getSnapshot().hashtags(), b.getSnapshot().nodes(), b.getSnapshot().edges(), b.getSavedAt())).toList(),
                 slice.hasNext());
     }
     public CommunityBookmark owned(Long userId, Long bookmarkId) {
@@ -43,6 +43,7 @@ public class BookmarkQueryService {
     public record Bundle(Long bookmarkId, List<String> hashtags, Instant savedAt) { }
     public record Bundles(int code, List<Bundle> bundles, boolean hasNext) { }
     public record Mindmap(Long bookmarkId, Long sourceMindmapId, String title,
-            List<BookmarkSnapshot.Node> nodes, List<BookmarkSnapshot.Edge> edges, Instant savedAt) { }
+            List<BookmarkSnapshot.Tag> hashtags, List<BookmarkSnapshot.Node> nodes,
+            List<BookmarkSnapshot.Edge> edges, Instant savedAt) { }
     public record Mindmaps(int code, List<Mindmap> mindmaps, boolean hasNext) { }
 }
