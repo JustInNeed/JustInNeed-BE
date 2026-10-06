@@ -8,6 +8,7 @@ public enum ErrorCode {
     DUPLICATE_URL(HttpStatus.CONFLICT, "이미 등록된 URL입니다."),
     EXCLUDED_URL_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "URL은 최대 100개까지 등록할 수 있습니다."),
     SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "세션을 찾을 수 없습니다."),
+    INTEREST_NOT_FOUND(HttpStatus.NOT_FOUND, "관심 해시태그를 찾을 수 없습니다."),
     TAG_GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "해시태그 그룹을 찾을 수 없습니다."),
     TITLE_REQUIRED(HttpStatus.BAD_REQUEST, "제목을 입력해 주세요."),
     INVALID_HASHTAG(HttpStatus.BAD_REQUEST, "해시태그는 한글, 영문, 숫자만 사용할 수 있으며 최대 10자까지 입력 가능합니다."),

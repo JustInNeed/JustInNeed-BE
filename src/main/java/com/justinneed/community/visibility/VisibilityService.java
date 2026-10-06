@@ -5,6 +5,8 @@ import com.justinneed.community.domain.NodeVisibility;
 import com.justinneed.community.dto.SharedSessionView;
 import com.justinneed.community.service.CommunityProfiles;
 import com.justinneed.community.service.CommunitySharing;
+import com.justinneed.community.repository.CommunityProfileRepository;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -18,20 +20,25 @@ import org.springframework.transaction.annotation.Transactional;
 public class VisibilityService {
     private final CommunityProfiles profiles;
     private final CommunitySharing sharing;
+    private final CommunityProfileRepository repository;
 
-    public VisibilityService(CommunityProfiles profiles, CommunitySharing sharing) {
+    public VisibilityService(CommunityProfiles profiles, CommunitySharing sharing, CommunityProfileRepository repository) {
         this.profiles = profiles;
         this.sharing = sharing;
+        this.repository = repository;
     }
 
     public VisibilityResponse get(Long userId) {
-        return new VisibilityResponse(profiles.read(userId).getVisibility());
+        var profile = profiles.read(userId);
+        return new VisibilityResponse(200, profile.getVisibility(), profile.getUpdatedAt());
     }
 
     @Transactional
     public VisibilityResponse update(Long userId, NodeVisibility visibility) {
-        profiles.lock(userId).changeVisibility(visibility);
-        return new VisibilityResponse(visibility);
+        var profile = profiles.lock(userId);
+        profile.changeVisibility(visibility);
+        repository.flush();
+        return new VisibilityResponse(200, visibility, profile.getUpdatedAt());
     }
 
     public List<NodeResponse> nodes(Long userId, Long viewerId) {
@@ -50,6 +57,6 @@ public class VisibilityService {
                 .map(entry -> new NodeResponse(labels.get(entry.getKey()), entry.getValue())).toList();
     }
 
-    public record VisibilityResponse(NodeVisibility visibility) { }
+    public record VisibilityResponse(int code, NodeVisibility visibilityScope, LocalDateTime updatedAt) { }
     public record NodeResponse(String hashtag, List<SharedSessionView> sessions) { }
 }
