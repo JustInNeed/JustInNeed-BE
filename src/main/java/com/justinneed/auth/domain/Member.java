@@ -35,12 +35,18 @@ public class Member extends BaseEntity {
     private String providerId;
 
     // 방법 B: 첫 소셜 로그인 시 null로 생성되고, 이후 닉네임 입력(PATCH)으로 채워짐
-    @Column(length = 30)
+    @Column(length = 8, unique = true)
     private String nickname;
 
     // 선택값: 카카오/네이버 동의 항목에 따라 없을 수 있음
     @Column
     private String email;
+
+    @Column(name = "withdrawal_reason", length = 500)
+    private String withdrawalReason;
+
+    @Column(name = "withdrawn_at")
+    private LocalDateTime withdrawnAt;
 
     protected Member() {
     }
@@ -54,6 +60,15 @@ public class Member extends BaseEntity {
 
     public void updateNickname(String nickname) {
         this.nickname = nickname;
+    }
+
+    public void withdraw(String reason, LocalDateTime withdrawnAt) {
+        this.withdrawalReason = reason;
+        this.withdrawnAt = withdrawnAt;
+    }
+
+    public boolean isWithdrawn() {
+        return withdrawnAt != null;
     }
 
     // 가입일자 = 엔티티 생성 시각(BaseEntity.createdAt)
