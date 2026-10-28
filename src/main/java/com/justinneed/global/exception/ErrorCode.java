@@ -3,15 +3,24 @@ package com.justinneed.global.exception;
 import org.springframework.http.HttpStatus;
 
 public enum ErrorCode {
+    EXCLUDED_URL_NOT_FOUND(HttpStatus.NOT_FOUND, "수집 제외 URL을 찾을 수 없습니다."),
+    INVALID_URL(HttpStatus.BAD_REQUEST, "올바른 URL 형식이 아닙니다."),
+    DUPLICATE_URL(HttpStatus.CONFLICT, "이미 등록된 URL입니다."),
+    EXCLUDED_URL_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "URL은 최대 100개까지 등록할 수 있습니다."),
     SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "세션을 찾을 수 없습니다."),
     INTEREST_NOT_FOUND(HttpStatus.NOT_FOUND, "관심 해시태그를 찾을 수 없습니다."),
     TAG_GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "해시태그 그룹을 찾을 수 없습니다."),
     TITLE_REQUIRED(HttpStatus.BAD_REQUEST, "제목을 입력해 주세요."),
     INVALID_HASHTAG(HttpStatus.BAD_REQUEST, "해시태그는 한글, 영문, 숫자만 사용할 수 있으며 최대 10자까지 입력 가능합니다."),
+    INVALID_INTEGRATION_PROVIDER(HttpStatus.BAD_REQUEST, "지원하지 않는 외부 플랫폼입니다."),
+    DUPLICATE_INTEGRATION_EMAIL(HttpStatus.CONFLICT, "이미 연동된 이메일입니다."),
     TAG_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "해시태그는 최대 10개까지 추가할 수 있습니다."),
     DUPLICATE_HASHTAG(HttpStatus.BAD_REQUEST, "이미 등록된 해시태그입니다."),
     INVALID_ORDER_REQUEST(HttpStatus.BAD_REQUEST, "정렬할 그룹 목록이 올바르지 않습니다."),
+    DUPLICATE_NICKNAME(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다."),
+    INVALID_WITHDRAW_CONFIRMATION(HttpStatus.BAD_REQUEST, "탈퇴 확인 문구가 올바르지 않습니다."),
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다."),
+    INVALID_TAG_GROUP_POSITION(HttpStatus.BAD_REQUEST, "그룹 위치 값이 올바르지 않습니다."),
     INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 리프레시 토큰입니다.");
 
     private final HttpStatus status;

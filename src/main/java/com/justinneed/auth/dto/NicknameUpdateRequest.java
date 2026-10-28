@@ -1,7 +1,13 @@
 package com.justinneed.auth.dto;
 
-// 닉네임 유효성 검사는 추후 추가 예정 (지금은 검증 없음)
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+
+// FE(NicknameStep)와 동일한 규칙: 영문으로 시작하는 3~8자(영문·숫자)
 public record NicknameUpdateRequest(
+        @NotBlank(message = "닉네임을 입력해 주세요.")
+        @Pattern(regexp = "^[a-zA-Z][a-zA-Z0-9]{2,7}$",
+                message = "닉네임은 영문으로 시작하는 3~8자(영문·숫자)여야 합니다.")
         String nickname
 ) {
 }

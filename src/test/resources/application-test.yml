@@ -1,0 +1,33 @@
+# 테스트 프로파일(@ActiveProfiles("test")): 메인 application.yml 위에 덮어쓴다. 외부 Postgres/도커 없이 H2 인메모리로 동작하고, OAuth 클라이언트 값은 더미로 채운다.
+spring:
+  datasource:
+    url: jdbc:h2:mem:justinneed-test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            client-id: test-kakao-client-id
+            client-secret: test-kakao-client-secret
+          naver:
+            client-id: test-naver-client-id
+            client-secret: test-naver-client-secret
+
+app:
+  jwt:
+    secret: test-only-jwt-secret-0123456789abcdef0123456789abcdef0123456789
+    access-token-validity-seconds: 3600
+    refresh-token-validity-seconds: 1209600
+  oauth:
+    success-redirect-uri: http://localhost:3000/oauth/callback
+    failure-redirect-uri: http://localhost:3000/login?error=oauth
+  cors:
+    allowed-origins: http://localhost:3000

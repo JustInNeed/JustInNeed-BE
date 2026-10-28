@@ -111,7 +111,9 @@ class CommunityCommitTest {
     }
 
     private Long member() {
-        return members.saveAndFlush(new Member(SocialProvider.KAKAO, UUID.randomUUID().toString(), "Test", null)).getId();
+        return members.saveAndFlush(new Member(SocialProvider.KAKAO, UUID.randomUUID().toString(),
+                // members.nickname 은 unique(최대 8자) → 테스트마다 다른 닉네임 사용
+                "T" + UUID.randomUUID().toString().substring(0, 7), null)).getId();
     }
     private Long session(Long owner) {
         var s = new BrowsingSession(owner, "private", LocalDateTime.now());

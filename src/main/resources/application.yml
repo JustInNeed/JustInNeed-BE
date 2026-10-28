@@ -62,3 +62,8 @@ app:
     refresh-token-validity-seconds: 1209600    # 14일
   oauth:
     success-redirect-uri: ${OAUTH_SUCCESS_REDIRECT_URI:http://localhost:3000/oauth/callback}
+    # 소셜 로그인 실패 시 돌려보낼 FE 로그인 페이지 (FE 콜백이 쓰는 ?error=oauth 규약과 동일)
+    failure-redirect-uri: ${OAUTH_FAILURE_REDIRECT_URI:http://localhost:3000/login?error=oauth}
+  cors:
+    # 쉼표로 여러 origin 지정 가능 (예: http://localhost:3000,https://app.example.com)
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}

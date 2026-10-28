@@ -4,6 +4,7 @@ import com.justinneed.auth.dto.MemberResponse;
 import com.justinneed.auth.dto.NicknameUpdateRequest;
 import com.justinneed.auth.service.MemberService;
 import com.justinneed.global.common.ApiResponse;
+import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -29,7 +30,7 @@ public class MemberController {
     @PatchMapping("/me/nickname")
     public ApiResponse<MemberResponse> updateNickname(
             @AuthenticationPrincipal Long memberId,
-            @RequestBody NicknameUpdateRequest request
+            @Valid @RequestBody NicknameUpdateRequest request
     ) {
         return ApiResponse.ok(memberService.updateNickname(memberId, request.nickname()));
     }

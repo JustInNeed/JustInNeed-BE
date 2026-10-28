@@ -4,7 +4,11 @@ import com.justinneed.auth.jwt.JwtAuthenticationFilter;
 import com.justinneed.auth.oauth.CustomOAuth2UserService;
 import com.justinneed.auth.oauth.OAuth2SuccessHandler;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.Arrays;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -18,18 +22,29 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 public class SecurityConfig {
 
+    private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
+
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final String failureRedirectUri;
+    private final List<String> allowedOrigins;
 
     public SecurityConfig(
             CustomOAuth2UserService customOAuth2UserService,
             OAuth2SuccessHandler oAuth2SuccessHandler,
-            JwtAuthenticationFilter jwtAuthenticationFilter
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            @Value("${app.oauth.failure-redirect-uri}") String failureRedirectUri,
+            @Value("${app.cors.allowed-origins}") String allowedOrigins
     ) {
         this.customOAuth2UserService = customOAuth2UserService;
         this.oAuth2SuccessHandler = oAuth2SuccessHandler;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.failureRedirectUri = failureRedirectUri;
+        this.allowedOrigins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .toList();
     }
 
     @Bean
@@ -52,11 +67,10 @@ public class SecurityConfig {
                 .oauth2Login(oauth -> oauth
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         .successHandler(oAuth2SuccessHandler)
-                        // 소셜 로그인 실패 시 원인 로깅 후 기본 실패 URL로
+                        // 소셜 로그인 실패 시 원인 로깅 후 FE 로그인 페이지로 (BE에는 /login 화면이 없음)
                         .failureHandler((request, response, exception) -> {
-                            org.slf4j.LoggerFactory.getLogger(SecurityConfig.class)
-                                    .warn("[OAuth2 login failed] {}", exception.getMessage());
-                            response.sendRedirect("/login?error");
+                            log.warn("[OAuth2 login failed] {}", exception.getMessage());
+                            response.sendRedirect(failureRedirectUri);
                         })
                 )
                 // 보호 리소스에 인증 없이 접근 시 리다이렉트 대신 401 반환 (API 친화적)
@@ -72,7 +86,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:3000"));
+        config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("*"));
