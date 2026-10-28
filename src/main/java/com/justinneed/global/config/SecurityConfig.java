@@ -59,6 +59,8 @@ public class SecurityConfig {
                         .requestMatchers("/", "/error",
                                 "/auth/**", "/oauth2/**", "/login/**",
                                 "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                        // 헬스체크(로드밸런서·모니터링)용. 그 외 actuator 엔드포인트는 인증 필요
+                        .requestMatchers("/actuator/health").permitAll()
                         // 세션·태그그룹 API는 로그인 회원만 (access 토큰의 memberId = user_id)
                         // 그 외(예: /members/**)도 access 토큰 필요
                         .anyRequest().authenticated()
