@@ -16,7 +16,7 @@ class UnpinTest extends CommunityTestSupport {
         var profile = new CommunityProfile(ownerId);
         profile.replacePinnedSessionIds(List.of(first.getId(), removed.getId(), last.getId()));
         profiles.saveAndFlush(profile);
-        mvc.perform(delete("/community/me/shared-sessions/{id}", removed.getId())
+        mvc.perform(delete("/community/me/pinned-sessions/{id}", removed.getId())
                         .header("Authorization", auth(ownerId))).andExpect(status().isOk());
         assertThat(removed.isPublicSession()).isFalse();
         assertThat(removed.getSummary().getMarkdown()).isEqualTo("private markdown");
@@ -33,12 +33,12 @@ class UnpinTest extends CommunityTestSupport {
         var profile = new CommunityProfile(ownerId);
         profile.replacePinnedSessionIds(List.of(session.getId()));
         profiles.saveAndFlush(profile);
-        mvc.perform(delete("/community/me/shared-sessions/{id}", session.getId())
+        mvc.perform(delete("/community/me/pinned-sessions/{id}", session.getId())
                         .header("Authorization", auth(viewerId))).andExpect(status().isNotFound());
-        mvc.perform(delete("/community/me/shared-sessions/{id}", Long.MAX_VALUE)
+        mvc.perform(delete("/community/me/pinned-sessions/{id}", Long.MAX_VALUE)
                         .header("Authorization", auth(ownerId))).andExpect(status().isNotFound());
         assertThat(session.isPublicSession()).isTrue();
         assertThat(profiles.findById(ownerId).orElseThrow().getPinnedSessionIds()).containsExactly(session.getId());
-        mvc.perform(delete("/community/me/shared-sessions/{id}", session.getId())).andExpect(status().isUnauthorized());
+        mvc.perform(delete("/community/me/pinned-sessions/{id}", session.getId())).andExpect(status().isUnauthorized());
     }
 }

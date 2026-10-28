@@ -11,9 +11,9 @@ import org.springframework.http.MediaType;
 
 class SharedSessionTest extends CommunityTestSupport {
     private void pin(Long id) throws Exception {
-        mvc.perform(post("/community/me/shared-sessions").header("Authorization", auth(ownerId))
+        mvc.perform(post("/community/me/pinned-sessions").header("Authorization", auth(ownerId))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"sessionId\":" + id + "}"))
-                .andExpect(status().isOk());
+                .andExpect(status().isCreated());
     }
 
     @Test
@@ -28,7 +28,7 @@ class SharedSessionTest extends CommunityTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.markdown").doesNotExist())
                 .andExpect(jsonPath("$.data.sources").doesNotExist());
-        mvc.perform(post("/community/me/shared-sessions").header("Authorization", auth(viewerId))
+        mvc.perform(post("/community/me/pinned-sessions").header("Authorization", auth(viewerId))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"sessionId\":" + session.getId() + "}"))
                 .andExpect(status().isNotFound());
     }
@@ -39,14 +39,14 @@ class SharedSessionTest extends CommunityTestSupport {
         var second = session(ownerId, false, "Second");
         pin(first.getId());
         pin(second.getId());
-        mvc.perform(patch("/community/me/shared-sessions/order").header("Authorization", auth(ownerId))
+        mvc.perform(patch("/community/me/pinned-sessions/order").header("Authorization", auth(ownerId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"sessionIds\":[" + second.getId() + "," + first.getId() + "]}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].id").value(second.getId()));
+                .andExpect(jsonPath("$.data.sessionIds[0]").value(second.getId()));
         for (String ids : new String[]{"[]", "[" + first.getId() + "," + first.getId() + "]",
                 "[null]", "[" + Long.MAX_VALUE + "]"}) {
-            mvc.perform(patch("/community/me/shared-sessions/order").header("Authorization", auth(ownerId))
+            mvc.perform(patch("/community/me/pinned-sessions/order").header("Authorization", auth(ownerId))
                             .contentType(MediaType.APPLICATION_JSON).content("{\"sessionIds\":" + ids + "}"))
                     .andExpect(status().isBadRequest());
         }
@@ -84,9 +84,9 @@ class SharedSessionTest extends CommunityTestSupport {
         deleted.delete();
         sessions.flush();
         String body = "{\"sessionId\":" + deleted.getId() + "}";
-        mvc.perform(post("/community/me/shared-sessions").header("Authorization", auth(ownerId))
+        mvc.perform(post("/community/me/pinned-sessions").header("Authorization", auth(ownerId))
                         .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isNotFound());
-        mvc.perform(post("/community/me/shared-sessions").contentType(MediaType.APPLICATION_JSON).content(body))
+        mvc.perform(post("/community/me/pinned-sessions").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isUnauthorized());
     }
 }
