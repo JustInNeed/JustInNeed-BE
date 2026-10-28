@@ -3,9 +3,6 @@
 Depends on #23. This PR targets its branch and also covers the reorder/detail
 requirements, which have no separately assigned issue in the supplied list.
 
-> 2026-10-29: `POST /community/me/shared-sessions`, `PATCH /community/me/shared-sessions/order` 는 중복이라 주석처리됨.
-> 같은 서비스를 쓰는 `POST /community/me/pinned-sessions`, `PATCH /community/me/pinned-sessions/order` 를 사용한다.
-
 | Method | Path | Body / result |
 | --- | --- | --- |
 | POST | /community/me/shared-sessions | {"sessionId":123} |

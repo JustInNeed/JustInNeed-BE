@@ -66,3 +66,7 @@ No production database was accessed by this work.
 Search/recommendations currently traverse candidate profiles in bounded batches;
 they are not an indexed search service. Activity starts when the new interaction
 endpoints are deployed. See #39/#40 notes for scaling and counting semantics.
+
+---
+2026-10-29: #35~#40 전체를 PR #48로 main에 머지함.
+(#42~#46은 앞 기능 브랜치로만 머지되어 main에 반영되지 않았던 상태)

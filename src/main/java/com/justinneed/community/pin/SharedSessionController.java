@@ -18,18 +18,17 @@ public class SharedSessionController {
         this.service = service;
     }
 
-    // 중복 API: 핀고정 추가/순서 변경은 POST /community/me/pinned-sessions, PATCH /community/me/pinned-sessions/order 사용 (2026-10-29 주석처리)
-    // @PostMapping("/me/shared-sessions")
-    // public ApiResponse<SharedSessionView> pin(
-    //         @AuthenticationPrincipal Long userId, @Valid @RequestBody PinRequest request) {
-    //     return ApiResponse.ok(service.pin(userId, request.sessionId()));
-    // }
+    @PostMapping("/me/shared-sessions")
+    public ApiResponse<SharedSessionView> pin(
+            @AuthenticationPrincipal Long userId, @Valid @RequestBody PinRequest request) {
+        return ApiResponse.ok(service.pin(userId, request.sessionId()));
+    }
 
-    // @PatchMapping("/me/shared-sessions/order")
-    // public ApiResponse<List<SharedSessionView>> reorder(
-    //         @AuthenticationPrincipal Long userId, @Valid @RequestBody OrderRequest request) {
-    //     return ApiResponse.ok(service.reorder(userId, request.sessionIds()));
-    // }
+    @PatchMapping("/me/shared-sessions/order")
+    public ApiResponse<List<SharedSessionView>> reorder(
+            @AuthenticationPrincipal Long userId, @Valid @RequestBody OrderRequest request) {
+        return ApiResponse.ok(service.reorder(userId, request.sessionIds()));
+    }
 
     @GetMapping("/profiles/{userId}/shared-sessions")
     public ApiResponse<List<SharedSessionView>> list(
