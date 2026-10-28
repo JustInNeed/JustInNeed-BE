@@ -27,14 +27,15 @@ public class AccountSettingsController {
         this.accountSettingsService = accountSettingsService;
     }
 
-    @PatchMapping("/nickname")
-    public ApiResponse<NicknameUpdateResponse> updateNickname(
-            @AuthenticationPrincipal Long memberId,
-            @Valid @RequestBody NicknameUpdateRequest request
-    ) {
-        NicknameUpdateResponse response = accountSettingsService.updateNickname(memberId, request.nickname());
-        return new ApiResponse<>(true, response, "닉네임이 변경되었습니다.");
-    }
+    // 중복 API: 닉네임 변경은 PATCH /members/me/nickname 사용 (2026-10-29 주석처리)
+    // @PatchMapping("/nickname")
+    // public ApiResponse<NicknameUpdateResponse> updateNickname(
+    //         @AuthenticationPrincipal Long memberId,
+    //         @Valid @RequestBody NicknameUpdateRequest request
+    // ) {
+    //     NicknameUpdateResponse response = accountSettingsService.updateNickname(memberId, request.nickname());
+    //     return new ApiResponse<>(true, response, "닉네임이 변경되었습니다.");
+    // }
 
     @DeleteMapping
     public ApiResponse<AccountWithdrawResponse> withdraw(
