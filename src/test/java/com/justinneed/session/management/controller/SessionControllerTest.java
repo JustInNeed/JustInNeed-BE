@@ -62,6 +62,7 @@ class SessionControllerTest {
         sessionRepository.save(session);
     }
 
+
     @Test
     void getSessionsRequiresAuthentication() throws Exception {
         mockMvc.perform(get("/sessions"))

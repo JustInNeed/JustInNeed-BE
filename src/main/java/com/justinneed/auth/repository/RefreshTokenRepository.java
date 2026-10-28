@@ -9,6 +9,8 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
 
     Optional<RefreshToken> findByTokenHash(String tokenHash);
 
+    void deleteByMemberId(Long memberId);
+
     // 만료된 토큰 행 정리용 (RefreshTokenCleanupScheduler)
     long deleteByExpiresAtBefore(LocalDateTime threshold);
 }

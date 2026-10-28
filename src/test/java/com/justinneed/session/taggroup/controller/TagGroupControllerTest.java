@@ -74,6 +74,7 @@ class TagGroupControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
+
     @Test
     void getTagGroupsReturnsMatchingSessions() throws Exception {
         mockMvc.perform(get("/tag-groups").header(HttpHeaders.AUTHORIZATION, bearer))

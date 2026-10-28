@@ -42,6 +42,9 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         Member member = memberRepository.findBySocialProviderAndProviderId(provider, info.getProviderId())
                 .orElseGet(() -> memberRepository.save(
                         new Member(provider, info.getProviderId(), null, info.getEmail())));
+        if (member.isWithdrawn()) {
+            throw new OAuth2AuthenticationException("withdrawn_account");
+        }
 
         Map<String, Object> attributes = new HashMap<>(oAuth2User.getAttributes());
         attributes.put(ATTR_MEMBER_ID, member.getId());

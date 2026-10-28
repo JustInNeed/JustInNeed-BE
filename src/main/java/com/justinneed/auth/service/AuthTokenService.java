@@ -74,6 +74,15 @@ public class AuthTokenService {
         }
     }
 
+    /** 계정 탈퇴 시 현재 access 토큰과 회원에게 발급된 모든 refresh 토큰을 폐기한다. */
+    @Transactional
+    public void revokeAll(Long memberId, String accessToken) {
+        if (accessToken != null && jwtTokenProvider.validate(accessToken)) {
+            accessTokenDenylist.deny(accessToken, jwtTokenProvider.getExpiryEpochSecond(accessToken));
+        }
+        refreshTokenRepository.deleteByMemberId(memberId);
+    }
+
     private void saveRefreshToken(Long memberId, String refreshToken) {
         LocalDateTime expiresAt = Instant.ofEpochSecond(jwtTokenProvider.getExpiryEpochSecond(refreshToken))
                 .atZone(ZoneId.systemDefault())

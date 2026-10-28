@@ -1,0 +1,35 @@
+package com.justinneed.community.hashtag;
+
+import com.justinneed.global.common.ApiResponse;
+import com.justinneed.community.edit.ProfileEditService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import java.util.List;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/community/me/hashtags")
+public class HashtagVisibilityController {
+    private final HashtagVisibilityService service;
+    private final ProfileEditService edit;
+
+    public HashtagVisibilityController(HashtagVisibilityService service, ProfileEditService edit) {
+        this.service = service;
+        this.edit = edit;
+    }
+
+    @GetMapping
+    public ApiResponse<List<ProfileEditService.TagView>> get(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.ok(edit.hashtags(userId));
+    }
+
+    @PatchMapping("/visibility")
+    public ApiResponse<HashtagVisibilityService.HashtagResponse> update(
+            @AuthenticationPrincipal Long userId, @Valid @RequestBody Request request) {
+        return ApiResponse.ok(service.update(userId, request.hashtag(), request.isPublic()));
+    }
+
+    public record Request(@NotBlank String hashtag, @NotNull Boolean isPublic) { }
+}
