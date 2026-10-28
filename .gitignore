@@ -96,7 +96,13 @@ outputs/
 
 ### Env / Secrets ###
 .env
-!.env.example
+.env.example
 
-db/
 logs/
+
+# 로컬 전용 문서(진행 메모, 배포/체크리스트 등)는 저장소에 올리지 않는다
+docs/
+
+# 로컬 DB 덤프 등은 제외하되, 팀 공용 더미 데이터 시드는 공유한다
+db/*
+!db/seed-dummy.sql

@@ -11,6 +11,7 @@ public record SessionUpdateRequest(
         Boolean isFavorite,
         List<String> tags,
         // 하이라이트(요약 insights). 보내면 전체 교체(텍스트 수정/개별 삭제/추가 모두 이 한 필드로 처리). null이면 변경 없음.
-        List<String> insights
+        @Size(max = 20, message = "하이라이트는 최대 20개까지 저장할 수 있습니다.")
+        List<@Size(max = 300, message = "하이라이트 한 항목은 최대 300자까지 입력할 수 있습니다.") String> insights
 ) {
 }

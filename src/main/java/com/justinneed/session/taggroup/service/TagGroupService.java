@@ -45,7 +45,15 @@ public class TagGroupService {
     @Transactional
     public TagGroupResponse createTagGroup(Long userId, TagGroupCreateRequest request) {
         List<String> hashtags = HashtagValidator.normalizeAndValidate(emptyIfNull(request.hashtags()));
-        int position = request.position() == null ? tagGroupRepository.countByUserId(userId) : request.position();
+        List<TagGroup> existing = tagGroupRepository.findByUserIdOrderByPositionAscIdAsc(userId);
+        int position = request.position() == null ? existing.size() : request.position();
+        if (position < 0 || position > existing.size()) {
+            throw new CustomException(ErrorCode.INVALID_TAG_GROUP_POSITION);
+        }
+        // 요청 위치 이후의 그룹을 한 칸씩 밀어 position 중복을 막는다
+        for (int i = position; i < existing.size(); i++) {
+            existing.get(i).updatePosition(i + 1);
+        }
         TagGroup group = tagGroupRepository.save(new TagGroup(userId, request.name(), hashtags, position));
         List<BrowsingSession> sessions = sessionRepository.findByUserIdAndDeletedAtIsNullOrderByEndedAtDescStartedAtDesc(userId);
         return TagGroupResponse.from(group, matchingSessions(group, sessions));

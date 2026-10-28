@@ -10,6 +10,4 @@ public interface TagGroupRepository extends JpaRepository<TagGroup, Long> {
     List<TagGroup> findByUserIdOrderByPositionAscIdAsc(Long userId);
 
     Optional<TagGroup> findByIdAndUserId(Long id, Long userId);
-
-    int countByUserId(Long userId);
 }
