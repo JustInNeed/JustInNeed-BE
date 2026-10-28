@@ -140,12 +140,6 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 
 ## 환경 변수
 
-`.env.example`을 복사해 `.env`를 만들고 값을 채웁니다. `./gradlew bootRun`이 `.env`를 읽어 환경변수로 주입합니다.
-
-```bash
-cp .env.example .env
-```
-
 | 변수 | 설명 |
 | --- | --- |
 | `KAKAO_CLIENT_ID`, `KAKAO_CLIENT_SECRET` | 카카오 개발자 콘솔. redirect URI `http://localhost:8080/login/oauth2/code/kakao` 등록 필요 |
