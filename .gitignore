@@ -96,7 +96,7 @@ outputs/
 
 ### Env / Secrets ###
 .env
-!.env.example
+.env.example
 
 logs/
 
