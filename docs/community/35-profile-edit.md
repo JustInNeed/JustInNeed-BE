@@ -31,3 +31,6 @@ that expected POST to return a plain array.
 
 The application uses Hibernate schema update; community_hashtags is additive.
 No production database was changed by this task.
+
+---
+2026-10-29: #29~#34와 #35 모두 main에 머지됨.
