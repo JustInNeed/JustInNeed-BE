@@ -1,4 +1,9 @@
 spring:
+  # main application.yml 과 동일 (이 파일이 main 설정을 가리므로 응답 charset 설정을 맞춰 둔다)
+  servlet:
+    encoding:
+      charset: UTF-8
+      force-response: true
   datasource:
     url: jdbc:h2:mem:justinneed;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
     driver-class-name: org.h2.Driver
