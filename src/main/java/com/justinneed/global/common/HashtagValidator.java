@@ -28,7 +28,7 @@ public final class HashtagValidator {
         List<String> normalized = new ArrayList<>();
         for (String tag : tags) {
             String value = tag == null ? "" : tag.trim();
-            if (!HASHTAG_PATTERN.matcher(value).matches()) {
+            if (!isValid(value)) {
                 throw new CustomException(ErrorCode.INVALID_HASHTAG);
             }
             String key = value.toLowerCase();
@@ -38,5 +38,10 @@ public final class HashtagValidator {
             normalized.add(value);
         }
         return normalized;
+    }
+
+    // 해시태그 형식(한글/영문/숫자 1~10자)만 검사한다. 예외 없이 결과만 필요할 때 사용.
+    public static boolean isValid(String tag) {
+        return tag != null && HASHTAG_PATTERN.matcher(tag).matches();
     }
 }
