@@ -61,7 +61,7 @@ class TagGroupControllerTest {
 
         BrowsingSession session = new BrowsingSession(USER_ID, "JPA 기록", LocalDateTime.of(2026, 6, 1, 9, 0));
         session.complete(LocalDateTime.of(2026, 6, 1, 9, 30), 2);
-        session.update(null, null, false, false, List.of("Spring", "JPA"), null);
+        session.update(null, null, false, false, List.of("Spring", "JPA"));
         sessionRepository.save(session);
 
         springGroup = tagGroupRepository.save(new TagGroup(USER_ID, "Spring", List.of("Spring"), 0));

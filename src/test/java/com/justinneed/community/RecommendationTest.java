@@ -45,7 +45,7 @@ class RecommendationTest extends CommunityTestSupport {
         bookmarks.save(viewerId, TargetType.HASHTAG, List.of(tag), SaveType.HASHTAG_BUNDLE, null);
         assertThat(recommendations.recent(viewerId, 3).mindmaps()).hasSize(1);
         assertThat(recommendations.recent(ownerId, 3).basisHashtags()).isEmpty();
-        publicSession.update(null, null, false, null, null, null);
+        publicSession.update(null, null, false, null, null);
         assertThat(recommendations.interests(viewerId, 3).mindmaps()).isEmpty();
         assertThat(recommendations.recent(viewerId, 3).mindmaps()).isEmpty();
     }
@@ -94,9 +94,9 @@ class RecommendationTest extends CommunityTestSupport {
         var node = graph.nodes().get(0).nodeId();
         event(viewerId, TargetType.NODE, node, tag, ActivityKind.EXPLORE, NOW.toString());
         assertThat(trending.trending(TrendingService.Period.TODAY, 10).hashtags()).hasSize(1);
-        s.update(null, null, false, null, null, null);
+        s.update(null, null, false, null, null);
         assertThat(trending.trending(TrendingService.Period.TODAY, 10).hashtags()).isEmpty();
-        s.update(null, null, true, null, List.of("Spring"), null);
+        s.update(null, null, true, null, List.of("Spring"));
         assertThat(trending.trending(TrendingService.Period.TODAY, 10).hashtags()).isEmpty();
     }
 

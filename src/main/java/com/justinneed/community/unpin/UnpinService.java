@@ -30,6 +30,6 @@ public class UnpinService {
         var pins = new ArrayList<>(profile.getPinnedSessionIds());
         pins.remove(sessionId);
         profile.replacePinnedSessionIds(pins);
-        session.update(null, null, false, null, null, null);
+        session.update(null, null, false, null, null);
     }
 }

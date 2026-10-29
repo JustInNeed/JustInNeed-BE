@@ -42,9 +42,9 @@ public abstract class CommunityTestSupport {
 
     protected BrowsingSession session(Long owner, boolean isPublic, String... tags) {
         BrowsingSession session = new BrowsingSession(owner, "private title", LocalDateTime.now());
-        session.update(null, null, isPublic, false, List.of(tags), null);
+        session.update(null, null, isPublic, false, List.of(tags));
         session.replaceSources(List.of(new Source("private source", "https://example.com", "private excerpt")));
-        new Summary(session, "private heading", "private markdown");
+        new Summary(session, "private markdown");
         return sessions.saveAndFlush(session);
     }
 }

@@ -170,7 +170,7 @@ class AnalysisSchemaTest {
     @Test
     void 요약에_AI_원본_줄글을_저장한다() {
         BrowsingSession session = sessionRepository.save(new BrowsingSession(USER_ID, "고양이 돌보기", NOW));
-        Summary summary = new Summary(session, "고양이 돌보기", "");
+        Summary summary = new Summary(session, "");
         Map<String, Object> essay = Map.of("source", "llm", "title", "고양이 돌보기",
                 "sections", List.of(Map.of("heading", "음수량", "body", "하루 약 50ml.", "unitKeys", List.of("u1"))));
         summary.replaceEssay(essay, "# 고양이 돌보기\n\n## 음수량\n\n하루 약 50ml.");

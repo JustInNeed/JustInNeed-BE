@@ -64,7 +64,7 @@ class CommunityCommitTest {
             assertThat(snapshot.nodes().get(0).content()).isNull();
 
             new TransactionTemplate(manager).executeWithoutResult(status -> sessions.findById(s).orElseThrow()
-                    .update(null, null, false, null, null, null));
+                    .update(null, null, false, null, null));
             assertThat(interactions.exploring(actor, TargetType.NODE, node, false).exploring()).isFalse();
             assertThat(graphs.original(actor, id).highlightedNodeIds()).isEmpty();
             assertThat(queries.mindmaps(actor, 0, 10).mindmaps().get(0)).isEqualTo(snapshot);
@@ -117,7 +117,7 @@ class CommunityCommitTest {
     }
     private Long session(Long owner) {
         var s = new BrowsingSession(owner, "private", LocalDateTime.now());
-        s.update(null, null, true, null, List.of("Java"), null);
+        s.update(null, null, true, null, List.of("Java"));
         s.replaceSources(List.of(new Source("private", "https://example.com", "private")));
         return sessions.saveAndFlush(s).getId();
     }

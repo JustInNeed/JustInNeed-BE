@@ -40,7 +40,7 @@ public class SharedSessionService {
         if (!pins.contains(sessionId)) {
             pins.add(sessionId);
         }
-        session.update(null, null, true, null, null, null);
+        session.update(null, null, true, null, null);
         profile.replacePinnedSessionIds(pins);
         return sharing.project(profile, userId, session);
     }
