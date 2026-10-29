@@ -11,4 +11,6 @@ public interface SurfSessionRepository extends JpaRepository<SurfSession,Long> {
     List<SurfSession> findByStateOrderByIdAsc(SurfSession.State state, Pageable page);
     List<SurfSession> findByStateAndLastActivityAtBeforeOrderByIdAsc(SurfSession.State state, java.time.Instant cutoff, Pageable page);
     List<SurfSession> findByUserIdOrderByStartedAtDesc(Long user);
+    List<SurfSession> findByUserIdAndStartedAtLessThanAndEndedAtGreaterThanEqualOrderByStartedAtDesc(
+        Long user, java.time.Instant end, java.time.Instant start);
 }

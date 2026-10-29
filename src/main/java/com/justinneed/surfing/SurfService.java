@@ -111,14 +111,18 @@ public class SurfService {
     public void process(Long user,Long id) {
         var s=owned(user,id); if(s.getState()!=SurfSession.State.ANALYZING) return;
         s.attempt();
+        List<SurfEvent> data;
+        SurfModel.Result result;
+        List<String> tags;
         try {
-            var data=events.findBySessionIdOrderByOccurredAtAscIdAsc(id);
+            data=events.findBySessionIdOrderByOccurredAtAscIdAsc(id);
             if(data.isEmpty()) throw new IllegalStateException();
-            var result=model.analyze(data);
+            result=model.analyze(data);
             if(result==null || result.title()==null || result.title().isBlank() || result.title().length()>100 ||
                 result.markdown()==null || result.markdown().length()>100000 || result.behaviors()==null) throw new IllegalStateException();
-            var tags=HashtagValidator.normalizeAndValidate(result.tags()==null?List.of():result.tags());
+            tags=HashtagValidator.normalizeAndValidate(result.tags()==null?List.of():result.tags());
             for(var e:data) if(result.behaviors().get(e.getClientId())==null) throw new IllegalStateException();
+        } catch(Exception e) { s.fail("Analysis unavailable or invalid; retry later"); return; }
             var record=new BrowsingSession(user,result.title(),LocalDateTime.ofInstant(s.getStartedAt(),ZoneOffset.UTC));
             record.update(null,null,false,false,tags,null);
             var sources=new LinkedHashMap<String,Source>();
@@ -129,7 +133,6 @@ public class SurfService {
             records.saveAndFlush(record);
             data.forEach(e -> e.classify(result.behaviors().get(e.getClientId())));
             s.done(record.getId());
-        } catch(Exception e) { s.fail("Analysis unavailable or invalid; retry later"); }
     }
     private View view(SurfSession s) {
         Instant now=Instant.now();
