@@ -1,0 +1,129 @@
+name: ci-cd
+
+# PR: 테스트만 / main 머지: 테스트 → 이미지 push → EC2 배포
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # 테스트는 H2 인메모리(test 프로파일)라 DB 서비스나 시크릿이 필요 없다
+      - name: Test
+        run: |
+          chmod +x gradlew
+          ./gradlew test --no-daemon
+
+      - name: Upload test report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: build/reports/tests/test
+
+  build:
+    needs: test
+    if: github.repository == 'JustInNeed/JustInNeed-BE' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 러너가 x86 이라 EC2(t3, x86) 와 아키텍처가 같다
+      - name: Build & push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/justinneed-be:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/justinneed-be:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build
+    if: github.repository == 'JustInNeed/JustInNeed-BE' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    # 배포가 겹치면 EC2 에서 compose 가 동시에 돌아 컨테이너가 꼬인다
+    concurrency:
+      group: deploy-api
+      cancel-in-progress: false
+    env:
+      EC2_HOST: ${{ secrets.EC2_HOST }}
+      EC2_USER: ${{ secrets.EC2_USER }}
+      COMPOSE_FILE_PATH: ${{ secrets.EC2_COMPOSE_PATH }}
+      # latest 대신 커밋 SHA 태그로 띄워 어떤 커밋이 떠 있는지 명확히 하고 롤백도 태그로 한다
+      API_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/justinneed-be:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key
+          chmod 600 ~/.ssh/ec2_key
+          # 호스트 키를 미리 고정한다(ssh-keyscan TOFU 대신). 서버 재생성 시 갱신 필요.
+          printf '%s\n' "${{ secrets.EC2_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Upload compose file
+        run: |
+          ssh -o BatchMode=yes -i ~/.ssh/ec2_key "${EC2_USER}@${EC2_HOST}" \
+            "mkdir -p \"\$(dirname '${COMPOSE_FILE_PATH}')\""
+          scp -o BatchMode=yes -i ~/.ssh/ec2_key deploy/docker-compose.yml \
+            "${EC2_USER}@${EC2_HOST}:${COMPOSE_FILE_PATH}"
+
+      - name: Pull & restart api on EC2
+        run: |
+          ssh -o BatchMode=yes -i ~/.ssh/ec2_key "${EC2_USER}@${EC2_HOST}" \
+            "API_IMAGE='${API_IMAGE}' COMPOSE_FILE='${COMPOSE_FILE_PATH}' bash -s" <<'EOF'
+          set -euo pipefail
+          # 수동 docker run 으로 띄운 컨테이너가 남아 있으면 이름·포트가 겹치므로 정리한다
+          if [ -n "$(docker ps -aq --filter name=^justinneed-be$)" ] && \
+             [ -z "$(docker ps -aq --filter name=^justinneed-be$ --filter label=com.docker.compose.project)" ]; then
+            docker rm -f justinneed-be
+          fi
+          docker compose -f "$COMPOSE_FILE" pull api
+          docker compose -f "$COMPOSE_FILE" up -d api
+          # 실행 중이 아닌 이전 SHA 이미지까지 정리해 20GB 디스크가 차지 않게 한다
+          docker image prune -af
+          EOF
+
+      - name: Verify health
+        run: |
+          ssh -o BatchMode=yes -i ~/.ssh/ec2_key "${EC2_USER}@${EC2_HOST}" 'bash -s' <<'EOF'
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/actuator/health | grep -q '"status":"UP"'; then
+              echo 'api healthy'
+              exit 0
+            fi
+            echo "waiting for api ... ($i/30)"
+            sleep 3
+          done
+          echo 'api did not become healthy'
+          docker logs --tail 100 justinneed-be
+          exit 1
+          EOF

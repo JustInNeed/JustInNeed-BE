@@ -23,4 +23,5 @@ outputs/
 *.iml
 .DS_Store
 docker-compose.yml
+deploy/
 HELP.md
