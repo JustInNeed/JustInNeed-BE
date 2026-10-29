@@ -1,7 +1,9 @@
 package com.justinneed.scenario;
 
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
@@ -20,6 +22,7 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
@@ -308,5 +311,118 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.success").value(false));
         mvc.perform(get("/community/exploring").param("targetType", "HASHTAG").with(as(me)))
                 .andExpect(status().isBadRequest());
+    }
+
+    /**
+     * wanderer 는 카페 · 슬로우트래블 을 비공개로 두었다 (카페 세션 · 슬로우트래블 비공개 세션).
+     * 카페는 잠깐 공개로 돌려 내가 북마크 · 탐색한 뒤 다시 비공개로 돌리는 식으로, 비공개가 아니었다면 추천 · 집계에 걸렸을 상황을 만든다.
+     */
+    @Nested
+    @DisplayName("다른 사람이 비공개로 둔 해시태그는 추천 피드 카드 · 추천 기준 · 떠오르는 해시태그에 나오지 않는다")
+    class PrivateHashtagsStayOutOfFeed {
+
+        private static final String CAFE_URL = "https://www.cafecentral.wien/en/";
+
+        private void setWandererHashtagPublic(String hashtag, boolean isPublic) throws Exception {
+            mvc.perform(patch("/community/me/hashtags/{id}/visibility", hashtagId(wanderer.member(), hashtag))
+                            .with(as(wanderer.member())).with(json(Map.of("isPublic", isPublic))))
+                    .andExpect(okEnvelope());
+        }
+
+        private void noCardMentionsPrivateHashtags(String path) throws Exception {
+            mvc.perform(get(path).with(as(me)))
+                    .andExpect(okEnvelope())
+                    .andExpect(jsonPath("$.data.mindmaps[*].matchedHashtags[*]").value(not(hasItem("카페"))))
+                    .andExpect(jsonPath("$.data.mindmaps[*].matchedHashtags[*]").value(not(hasItem("슬로우트래블"))))
+                    .andExpect(jsonPath("$.data.mindmaps[*].relatedUrls[*]").value(not(hasItem(CAFE_URL))));
+        }
+
+        @Test
+        @DisplayName("관심 해시태그 기반(COM-6-1): 내 관심이 남의 비공개 태그와만 겹치면 그 마인드맵은 추천되지 않고, 공개 태그로 추천돼도 카드에 비공개 태그 · 그 노드 URL 이 없다")
+        void interestRecommendationIgnoresPrivateHashtags() throws Exception {
+            addInterest(me, "카페");
+            addInterest(me, "슬로우트래블");
+
+            mvc.perform(get(BY_INTERESTS).with(as(me)))
+                    .andExpect(okEnvelope())
+                    // 추천 기준은 내가 직접 등록한 관심 해시태그 그대로다 (남의 비공개 태그가 새는 것이 아님)
+                    .andExpect(jsonPath("$.data.basisHashtags").value(contains("카페", "슬로우트래블")))
+                    .andExpect(jsonPath("$.data.mindmaps", hasSize(0)));
+
+            addInterest(me, "비엔나");
+
+            mvc.perform(get(BY_INTERESTS).with(as(me)))
+                    .andExpect(jsonPath("$.data.mindmaps[*].ownerId").value(contains(ids(wanderer.id()))))
+                    .andExpect(jsonPath("$.data.mindmaps[0].matchedHashtags").value(contains("비엔나")))
+                    .andExpect(jsonPath("$.data.mindmaps[0].relatedUrls").value(containsInAnyOrder(
+                            "https://www.wien.info/en", "https://www.belvedere.at/en")));
+            noCardMentionsPrivateHashtags(BY_INTERESTS);
+        }
+
+        @Test
+        @DisplayName("최근 저장 기반(COM-6-2): 저장한 뒤 작성자가 비공개로 돌린 해시태그로는 마인드맵이 추천되지 않고, 카드에도 그 태그 · 노드 URL 이 없다")
+        void recentBookmarkRecommendationIgnoresPrivateHashtags() throws Exception {
+            setWandererHashtagPublic("카페", true);
+            bookmarkHashtag(me, wanderer.member(), "카페");
+            // 공개였을 땐 카페로 wanderer 가 추천된다 (비공개가 아니면 걸리는 상황인지 확인)
+            mvc.perform(get(BY_RECENT_BOOKMARKS).with(as(me)))
+                    .andExpect(jsonPath("$.data.mindmaps[0].matchedHashtags").value(contains("카페")));
+
+            setWandererHashtagPublic("카페", false);
+
+            mvc.perform(get(BY_RECENT_BOOKMARKS).with(as(me)))
+                    .andExpect(okEnvelope())
+                    .andExpect(jsonPath("$.data.mindmaps", hasSize(0)));
+
+            bookmarkHashtag(me, wanderer.member(), "비엔나");
+
+            mvc.perform(get(BY_RECENT_BOOKMARKS).with(as(me)))
+                    .andExpect(jsonPath("$.data.mindmaps[*].ownerId").value(contains(ids(wanderer.id()))))
+                    .andExpect(jsonPath("$.data.mindmaps[0].matchedHashtags").value(contains("비엔나")))
+                    .andExpect(jsonPath("$.data.mindmaps[0].relatedUrls").value(containsInAnyOrder(
+                            "https://www.wien.info/en", "https://www.belvedere.at/en")));
+            noCardMentionsPrivateHashtags(BY_RECENT_BOOKMARKS);
+        }
+
+        @Test
+        @Disabled("FE 기대와 다름: 최근 저장 기반 추천의 basisHashtags 는 내 북마크 스냅샷 태그를 그대로 써서, 저장한 뒤 작성자가 비공개로 돌린 "
+                + "'카페'가 추천 기준으로 계속 나옴 (추천 카드 · 매칭에는 안 쓰임) — 스냅샷 보존과 비공개 중 무엇을 따를지 결정 후 켠다")
+        @DisplayName("최근 저장 기반(COM-6-2): 작성자가 나중에 비공개로 돌린 해시태그는 추천 기준(basisHashtags)에도 안 나온다")
+        void recentBookmarkBasisHidesPrivateHashtags() throws Exception {
+            setWandererHashtagPublic("카페", true);
+            bookmarkHashtag(me, wanderer.member(), "카페");
+            bookmarkHashtag(me, wanderer.member(), "비엔나");
+            setWandererHashtagPublic("카페", false);
+
+            mvc.perform(get(BY_RECENT_BOOKMARKS).with(as(me)))
+                    .andExpect(okEnvelope())
+                    .andExpect(jsonPath("$.data.basisHashtags").value(contains("비엔나")));
+        }
+
+        @Test
+        @DisplayName("떠오르는 해시태그(COM-6-3): 비공개로 돌린 해시태그 · 그 세션 노드에 쌓인 탐색 · 북마크 활동은 오늘 · 이번 주 순위에 안 나온다")
+        void trendingIgnoresPrivateHashtags() throws Exception {
+            setWandererHashtagPublic("카페", true);
+            exploreHashtag(me, wanderer.member(), "카페");
+            bookmarkHashtag(me, wanderer.member(), "카페");
+            Long cafeNode = nodeId(foodtrip, wanderer.member(), CAFE_URL); // 카페 세션 노드: 비엔나 · 카페 태그에 이어짐
+            mvc.perform(patch("/community/exploring").with(as(foodtrip))
+                            .with(json(Map.of("targetType", "NODE", "targetId", cafeNode, "exploring", true))))
+                    .andExpect(okEnvelope());
+            exploreHashtag(me, wanderer.member(), "프라하");
+            // 공개였을 땐 카페가 순위에 오른다 (비공개가 아니면 걸리는 상황인지 확인)
+            mvc.perform(get(TRENDING).param("period", "TODAY").with(as(me)))
+                    .andExpect(jsonPath("$.data.hashtags[*].name").value(hasItem("카페")));
+
+            setWandererHashtagPublic("카페", false);
+
+            for (String period : List.of("TODAY", "WEEK")) {
+                mvc.perform(get(TRENDING).param("period", period).with(as(me)))
+                        .andExpect(okEnvelope())
+                        // 카페 세션 노드 활동으로 붙은 비엔나 집계도 같이 빠지고, 공개 태그 활동만 남는다
+                        .andExpect(jsonPath("$.data.hashtags[*].name").value(contains("프라하")))
+                        .andExpect(jsonPath("$.data.hashtags[0].exploreCount").value(1));
+            }
+        }
     }
 }
