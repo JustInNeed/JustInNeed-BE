@@ -41,8 +41,7 @@ public class SessionService {
 
         validateTitle(request.title());
         List<String> tags = HashtagValidator.normalizeAndValidate(request.tags());
-        session.update(request.title(), request.editedMarkdown(), request.isPublic(), request.isFavorite(), tags,
-                request.insights());
+        session.update(request.title(), request.editedMarkdown(), request.isPublic(), request.isFavorite(), tags);
         return SessionDetailResponse.from(session);
     }
 

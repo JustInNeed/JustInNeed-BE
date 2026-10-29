@@ -56,9 +56,9 @@ class SessionControllerTest {
 
         session = new BrowsingSession(USER_ID, "Spring 조사", LocalDateTime.of(2026, 6, 1, 10, 0));
         session.complete(LocalDateTime.of(2026, 6, 1, 10, 30), 3);
-        session.update(null, null, false, true, List.of("Spring", "JPA"), null);
+        session.update(null, null, false, true, List.of("Spring", "JPA"));
         session.replaceSources(List.of(new Source("Spring Docs", "https://spring.io", "Spring reference")));
-        new Summary(session, "Spring 요약", "## Spring\n본문");
+        new Summary(session, "## Spring\n본문");
         sessionRepository.save(session);
     }
 
@@ -101,8 +101,7 @@ class SessionControllerTest {
                 "수정된 본문",
                 true,
                 false,
-                List.of("Java"),
-                List.of("하이라이트 1", "하이라이트 2")
+                List.of("Java")
         );
 
         mockMvc.perform(patch("/sessions/{id}", session.getId())
@@ -114,13 +113,12 @@ class SessionControllerTest {
                 .andExpect(jsonPath("$.data.isPublic").value(true))
                 .andExpect(jsonPath("$.data.isFavorite").value(false))
                 .andExpect(jsonPath("$.data.summary.markdown").value("수정된 본문"))
-                .andExpect(jsonPath("$.data.summary.insights", hasSize(2)))
-                .andExpect(jsonPath("$.data.summary.insights[0]").value("하이라이트 1"));
+                .andExpect(jsonPath("$.data.summary.insights").doesNotExist());
     }
 
     @Test
     void updateSessionRejectsBlankTitle() throws Exception {
-        SessionUpdateRequest request = new SessionUpdateRequest("   ", null, null, null, null, null);
+        SessionUpdateRequest request = new SessionUpdateRequest("   ", null, null, null, null);
 
         mockMvc.perform(patch("/sessions/{id}", session.getId())
                         .header(HttpHeaders.AUTHORIZATION, bearer)

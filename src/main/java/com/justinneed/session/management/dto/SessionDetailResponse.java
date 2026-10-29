@@ -38,14 +38,13 @@ public record SessionDetailResponse(
     }
 
     public record SummaryResponse(
-            String markdown,
-            List<String> insights
+            String markdown
     ) {
         private static SummaryResponse from(Summary summary) {
             if (summary == null) {
                 return null;
             }
-            return new SummaryResponse(summary.getMarkdown(), summary.getInsights());
+            return new SummaryResponse(summary.getMarkdown());
         }
     }
 }

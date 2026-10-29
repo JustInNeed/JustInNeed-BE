@@ -44,7 +44,7 @@ class InteractionTest extends CommunityTestSupport {
         interactions.exploring(viewerId, TargetType.NODE, node, false);
         interactions.exploring(viewerId, TargetType.NODE, node, true);
         assertThat(activity.count()).isEqualTo(1);
-        s.update(null, null, false, null, null, null);
+        s.update(null, null, false, null, null);
         assertThat(interactions.exploring(viewerId, TargetType.NODE, node, false).exploringCount()).isZero();
     }
 
@@ -61,7 +61,7 @@ class InteractionTest extends CommunityTestSupport {
         assertThat(snapshot.nodes().get(0).content()).isNull();
         mvc.perform(delete("/community/bookmarks/{id}", saved.bookmarkId()).header("Authorization", auth(ownerId)))
                 .andExpect(status().isNotFound());
-        s.update(null, null, false, null, null, null);
+        s.update(null, null, false, null, null);
         assertThat(graphs.original(viewerId, saved.bookmarkId()).highlightedNodeIds()).isEmpty();
         assertThat(bookmarks.findById(saved.bookmarkId()).orElseThrow().getSnapshot()).isEqualTo(snapshot);
         mvc.perform(delete("/community/bookmarks/{id}", saved.bookmarkId()).header("Authorization", auth(viewerId)))
