@@ -11,6 +11,7 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -36,6 +37,11 @@ public class Summary {
     @Column(nullable = false)
     private List<String> insights = new ArrayList<>();
 
+    // AI 가 만든 줄글 원본 (대제목 + 섹션). markdown 은 이걸 변환한 뒤 사용자가 편집하는 본문
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "essay")
+    private Map<String, Object> essay;
+
     protected Summary() {
     }
 
@@ -48,6 +54,16 @@ public class Summary {
 
     public void updateMarkdown(String markdown) {
         this.markdown = markdown;
+    }
+
+    /** AI 가 다시 분석하면 원본 줄글과 본문을 함께 교체한다. */
+    public void replaceEssay(Map<String, Object> essay, String markdown) {
+        this.essay = essay;
+        this.markdown = markdown;
+    }
+
+    public Map<String, Object> getEssay() {
+        return essay;
     }
 
     public void updateInsights(List<String> insights) {
