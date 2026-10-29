@@ -101,12 +101,15 @@ jobs:
           ssh -o BatchMode=yes -i ~/.ssh/ec2_key "${EC2_USER}@${EC2_HOST}" \
             "API_IMAGE='${API_IMAGE}' COMPOSE_FILE='${COMPOSE_FILE_PATH}' bash -s" <<'EOF'
           set -euo pipefail
-          # 수동 docker run 으로 띄운 컨테이너가 남아 있으면 이름·포트가 겹치므로 정리한다
+          # AI 컨테이너와 같이 쓰는 네트워크. AI 쪽이 먼저 만들었으면 그대로 쓴다
+          docker network inspect justinneed-net >/dev/null 2>&1 || docker network create justinneed-net
+          docker compose -f "$COMPOSE_FILE" pull api
+          # 이 compose 프로젝트(justinneed-be) 소속이 아닌 justinneed-be 컨테이너는 이름·포트가 겹치므로 정리한다
+          # (수동 docker run 으로 띄운 것, 예전 경로의 compose 로 띄운 것). 중단 시간을 줄이려고 pull 뒤에 한다
           if [ -n "$(docker ps -aq --filter name=^justinneed-be$)" ] && \
-             [ -z "$(docker ps -aq --filter name=^justinneed-be$ --filter label=com.docker.compose.project)" ]; then
+             [ -z "$(docker ps -aq --filter name=^justinneed-be$ --filter label=com.docker.compose.project=justinneed-be)" ]; then
             docker rm -f justinneed-be
           fi
-          docker compose -f "$COMPOSE_FILE" pull api
           docker compose -f "$COMPOSE_FILE" up -d api
           # 실행 중이 아닌 이전 SHA 이미지까지 정리해 20GB 디스크가 차지 않게 한다
           docker image prune -af
