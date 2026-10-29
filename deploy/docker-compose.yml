@@ -11,3 +11,11 @@ services:
     # 외부 노출은 Nginx(HTTPS) 가 담당하므로 127.0.0.1 에만 바인딩한다
     ports:
       - "127.0.0.1:8080:8080"
+    # AI 분석 컨테이너(justinneed-ai)와 같은 네트워크. Spring 이 http://justinneed-ai:8000 으로 호출한다
+    networks:
+      - justinneed-net
+
+# AI 레포 compose 와 같이 쓰는 네트워크. 배포 스크립트가 없으면 만든다
+networks:
+  justinneed-net:
+    external: true
