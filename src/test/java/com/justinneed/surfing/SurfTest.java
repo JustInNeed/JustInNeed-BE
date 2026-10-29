@@ -43,6 +43,7 @@ class SurfTest extends CommunityTestSupport {
         assertThat(service.retry(ownerId,s.sessionId()).status()).isEqualTo(SurfSession.State.ANALYZING);
         mvc.perform(get("/surfing/sessions/{id}/analysis-status",s.sessionId()).header("Authorization",auth(viewerId))).andExpect(status().isNotFound());
         mvc.perform(post("/surfing/sessions")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/surfing/sessions").header("Authorization",auth(ownerId))).andExpect(status().isBadRequest());
     }
     @Test void timeoutEndsAtDeadlineAndExcludedDomainBoundariesAreSafe() {
         String token=service.connect(ownerId).extensionToken();
