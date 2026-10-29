@@ -327,6 +327,7 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
 
         var detail = mvc.perform(get("/sessions/{id}", rome.getId()).with(as(me)))
                 .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.sources[*].visitedAt", hasSize(4)))
                 .andExpect(jsonPath("$.data.sources[*].visitedAt", everyItem(notNullValue())))
                 .andExpect(jsonPath("$.data.sources[*].visitedAt",
                         everyItem(matchesPattern("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*"))));
