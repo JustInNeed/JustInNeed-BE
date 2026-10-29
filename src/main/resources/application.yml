@@ -1,6 +1,12 @@
 spring:
   application:
     name: just-in-need-backend
+  # JSON 응답에도 charset=UTF-8 을 붙인다 (없으면 Safari 가 로케일 인코딩으로 추측해 한글이 깨짐)
+  # Boot 4 부터 server.servlet.encoding → spring.servlet.encoding 으로 이름이 바뀜
+  servlet:
+    encoding:
+      charset: UTF-8
+      force-response: true
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5433/justinneed}
     driver-class-name: org.postgresql.Driver
