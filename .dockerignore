@@ -1,0 +1,26 @@
+# 시크릿 / 로컬 설정
+.env
+.env.*
+
+# 빌드 산출물 (이미지 안에서 다시 빌드한다)
+build/
+out/
+.gradle/
+
+# 로컬 전용 자료
+docs/
+db/
+pgadmin/
+logs/
+tools/
+work/
+outputs/
+
+# 이미지와 무관한 파일
+.git/
+.github/
+.idea/
+*.iml
+.DS_Store
+docker-compose.yml
+HELP.md
