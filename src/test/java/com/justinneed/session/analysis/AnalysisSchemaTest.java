@@ -10,6 +10,7 @@ import com.justinneed.session.analysis.domain.SessionResult;
 import com.justinneed.session.analysis.repository.AiClusterModelRepository;
 import com.justinneed.session.analysis.repository.SessionRawPayloadRepository;
 import com.justinneed.session.analysis.repository.SessionResultRepository;
+import com.justinneed.session.analysis.service.RawPayloadCleanupScheduler;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.repository.BrowsingSessionRepository;
 import com.justinneed.session.summary.domain.Summary;
@@ -46,6 +47,9 @@ class AnalysisSchemaTest {
 
     @Autowired
     private BrowsingSessionRepository sessionRepository;
+
+    @Autowired
+    private RawPayloadCleanupScheduler cleanupScheduler;
 
     // AI 출력(pipeline/output.py)과 같은 모양
     private static final Map<String, Object> MINDMAP = Map.of(
@@ -135,6 +139,21 @@ class AnalysisSchemaTest {
         assertThat(deleted).isEqualTo(1);
         assertThat(rawRepository.findAll()).extracting(SessionRawPayload::getSessionId)
                 .containsExactlyInAnyOrder(21L, 22L);
+    }
+
+    @Test
+    void 정리_스케줄러는_보관_기한이_지난_원본만_지운다() {
+        Map<String, Object> payload = Map.of("kind", "rbc-session");
+        SessionRawPayload expired = new SessionRawPayload(30L, USER_ID, payload, LocalDateTime.now().minusDays(40));
+        expired.markAnalyzed(LocalDateTime.now().minusDays(22));
+        SessionRawPayload kept = new SessionRawPayload(31L, USER_ID, payload, LocalDateTime.now().minusDays(3));
+        kept.markAnalyzed(LocalDateTime.now().minusDays(3));
+        rawRepository.saveAll(List.of(expired, kept));
+        flushAndClear();
+
+        cleanupScheduler.purgeExpiredPayloads();
+
+        assertThat(rawRepository.findAll()).extracting(SessionRawPayload::getSessionId).containsExactly(31L);
     }
 
     @Test
