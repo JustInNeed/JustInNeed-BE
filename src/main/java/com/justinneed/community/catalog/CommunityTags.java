@@ -42,7 +42,7 @@ public class CommunityTags {
                 : tags.save(new CommunityHashtag(ownerId, entry.getValue()))).toList();
     }
 
-    /** Ids among the given ones whose hashtag and owner still exist and the owner has not made private. */
+    /** Ids among the given ones whose hashtag and (not withdrawn) owner still exist and the owner has not made private. */
     @Transactional(readOnly = true)
     public Set<Long> publicIds(Collection<Long> ids) {
         if (ids.isEmpty()) return Set.of();

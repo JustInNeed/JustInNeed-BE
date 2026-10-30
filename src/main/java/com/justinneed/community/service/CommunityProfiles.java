@@ -21,7 +21,7 @@ public class CommunityProfiles {
 
     @Transactional(readOnly = true)
     public CommunityProfile read(Long userId) {
-        if (!members.existsById(userId)) {
+        if (!members.existsByIdAndWithdrawnAtIsNull(userId)) {
             throw new CustomException(ErrorCode.MEMBER_NOT_FOUND);
         }
         return profiles.findById(userId).orElseGet(() -> new CommunityProfile(userId));
