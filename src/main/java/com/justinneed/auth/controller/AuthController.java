@@ -1,9 +1,12 @@
 package com.justinneed.auth.controller;
 
+import com.justinneed.auth.dto.LoginTokenResponse;
 import com.justinneed.auth.dto.LogoutRequest;
+import com.justinneed.auth.dto.TokenExchangeRequest;
 import com.justinneed.auth.dto.TokenRefreshRequest;
 import com.justinneed.auth.dto.TokenResponse;
 import com.justinneed.auth.service.AuthTokenService;
+import com.justinneed.auth.service.LoginCodeService;
 import com.justinneed.global.common.ApiResponse;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,9 +21,18 @@ public class AuthController {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final AuthTokenService authTokenService;
+    private final LoginCodeService loginCodeService;
 
-    public AuthController(AuthTokenService authTokenService) {
+    public AuthController(AuthTokenService authTokenService, LoginCodeService loginCodeService) {
         this.authTokenService = authTokenService;
+        this.loginCodeService = loginCodeService;
+    }
+
+    // 소셜 로그인 콜백(?code=)으로 받은 일회용 코드를 access/refresh 토큰으로 교환. (60초 안에 한 번만, 아니면 401)
+    @PostMapping("/token")
+    public ApiResponse<LoginTokenResponse> token(@RequestBody(required = false) TokenExchangeRequest request) {
+        String code = request == null ? null : request.code();
+        return ApiResponse.ok(loginCodeService.exchange(code));
     }
 
     // refresh 토큰으로 access(+refresh) 재발급. (DB 화이트리스트 확인 + 회전)
