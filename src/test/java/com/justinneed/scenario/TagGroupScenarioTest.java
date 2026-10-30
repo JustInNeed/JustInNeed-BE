@@ -33,6 +33,7 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
 
     private static final String INVALID_ORDER = "정렬할 그룹 목록이 올바르지 않습니다.";
     private static final String GROUP_NOT_FOUND = "해시태그 그룹을 찾을 수 없습니다.";
+    private static final String HASHTAG_REQUIRED = "해시태그를 1개 이상 선택해 주세요.";
 
     private static final String ROME = "로마 3박 4일 동선 짜기";
     private static final String FLIGHT = "유럽 항공권 비교 (인천→로마 IN, 프라하→인천 OUT)";
@@ -357,6 +358,53 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "이미 등록된 해시태그입니다."));
 
         mvc.perform(get("/tag-groups").with(as(me))).andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("해시태그 없이 그룹을 만들면(빈 배열 · 누락 · null) 400 이고 그룹이 안 생기며 기존 그룹 위치도 그대로다")
+    void createGroupRequiresHashtag() throws Exception {
+        Member me = member("sprout");
+        TagGroup europe = group(me, "유럽", List.of("로마"), 0);
+
+        mvc.perform(post("/tag-groups").with(as(me))
+                        .with(json(Map.of("name", "빈 그룹", "hashtags", List.of(), "position", 0))))
+                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, HASHTAG_REQUIRED));
+        mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of("name", "빈 그룹", "position", 0))))
+                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, HASHTAG_REQUIRED));
+        mvc.perform(post("/tag-groups").with(as(me))
+                        .with(json("{\"name\": \"빈 그룹\", \"hashtags\": null, \"position\": 0}")))
+                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, HASHTAG_REQUIRED));
+
+        mvc.perform(get("/tag-groups").with(as(me)))
+                .andExpect(jsonPath("$.data[*].id").value(contains(ids(europe.getId()))))
+                .andExpect(jsonPath("$.data[0].position").value(0));
+    }
+
+    @Test
+    @DisplayName("그룹 해시태그를 빈 배열로 수정하면 400 이고 이름 · 해시태그는 그대로다")
+    void updateGroupRejectsEmptyHashtags() throws Exception {
+        Member me = member("sprout");
+        TagGroup europe = group(me, "유럽 여행 준비", List.of("로마", "파리"), 0);
+
+        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me))
+                        .with(json(Map.of("name", "새 이름", "hashtags", List.of()))))
+                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, HASHTAG_REQUIRED));
+
+        mvc.perform(get("/tag-groups").with(as(me)))
+                .andExpect(jsonPath("$.data[0].name").value("유럽 여행 준비"))
+                .andExpect(jsonPath("$.data[0].hashtags").value(contains("로마", "파리")));
+    }
+
+    @Test
+    @DisplayName("그룹 수정에 hashtags 를 안 보내면(이름만 변경) 해시태그는 그대로다")
+    void updateGroupWithoutHashtagsKeepsThem() throws Exception {
+        Member me = member("sprout");
+        TagGroup europe = group(me, "유럽 여행 준비", List.of("로마", "파리"), 0);
+
+        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me)).with(json(Map.of("name", "새 이름"))))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.name").value("새 이름"))
+                .andExpect(jsonPath("$.data.hashtags").value(contains("로마", "파리")));
     }
 
     @Test

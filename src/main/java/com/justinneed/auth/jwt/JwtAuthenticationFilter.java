@@ -1,5 +1,6 @@
 package com.justinneed.auth.jwt;
 
+import com.justinneed.auth.repository.MemberRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,10 +21,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final TokenDenylist tokenDenylist;
+    private final MemberRepository memberRepository;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, TokenDenylist tokenDenylist) {
+    public JwtAuthenticationFilter(
+            JwtTokenProvider jwtTokenProvider,
+            TokenDenylist tokenDenylist,
+            MemberRepository memberRepository
+    ) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.tokenDenylist = tokenDenylist;
+        this.memberRepository = memberRepository;
     }
 
     @Override
@@ -33,9 +40,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (token != null && jwtTokenProvider.validate(token) && jwtTokenProvider.isAccessToken(token)
                 && !tokenDenylist.isDenied(token)) {
             Long memberId = jwtTokenProvider.getMemberId(token);
-            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                    memberId, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            // 탈퇴는 그때 쓴 토큰만 denylist 에 넣으므로, 다른 기기에 남은 토큰은 여기서 막는다
+            if (!memberRepository.existsByIdAndWithdrawnAtIsNotNull(memberId)) {
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                        memberId, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
         }
         chain.doFilter(request, response);
     }

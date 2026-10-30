@@ -44,7 +44,7 @@ public class AuthTokenService {
         return new TokenResponse(accessToken, refreshToken);
     }
 
-    /** 재발급 시: JWT 검증 + 화이트리스트 존재 확인 → 기존 토큰 회전(삭제) 후 재발급 */
+    /** 재발급 시: JWT 검증 → 화이트리스트에서 기존 토큰 삭제(회전) → 재발급 */
     @Transactional
     public TokenResponse reissue(String refreshToken) {
         if (refreshToken == null
@@ -52,10 +52,12 @@ public class AuthTokenService {
                 || !jwtTokenProvider.isRefreshToken(refreshToken)) {
             throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
-        RefreshToken stored = refreshTokenRepository.findByTokenHash(hash(refreshToken))
-                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_REFRESH_TOKEN));
 
-        refreshTokenRepository.delete(stored); // 회전: 사용된 refresh 토큰은 폐기
+        // 같은 토큰으로 동시에 재발급해도 행을 실제로 지운 요청 하나만 새 토큰을 받는다 (이미 쓴 토큰 · 없는 토큰도 0건)
+        int deleted = refreshTokenRepository.deleteByHash(hash(refreshToken));
+        if (deleted != 1) {
+            throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
+        }
         return issue(jwtTokenProvider.getMemberId(refreshToken));
     }
 
@@ -66,8 +68,7 @@ public class AuthTokenService {
             accessTokenDenylist.deny(accessToken, jwtTokenProvider.getExpiryEpochSecond(accessToken));
         }
         if (refreshToken != null && jwtTokenProvider.validate(refreshToken)) {
-            refreshTokenRepository.findByTokenHash(hash(refreshToken))
-                    .ifPresent(refreshTokenRepository::delete);
+            refreshTokenRepository.deleteByHash(hash(refreshToken)); // 이미 지워졌으면 0건으로 끝난다 (멱등)
         }
     }
 

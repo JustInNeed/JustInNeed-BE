@@ -109,14 +109,14 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 | GET | `/oauth2/authorization/{kakao\|naver}` | 소셜 로그인 진입 (브라우저 리다이렉트) |
 | GET | `/login/oauth2/code/{provider}` | 소셜 로그인 콜백. 성공 시 FE `/oauth/callback?code=..` 로 302 (토큰은 URL 에 싣지 않음), 실패 시 `OAUTH_FAILURE_REDIRECT_URI` 로 302 |
 | POST | `/auth/token` | 콜백으로 받은 일회용 코드 `{code}` 를 `{accessToken, refreshToken, needsNickname}` 으로 교환. 코드는 60초 안에 한 번만 사용 가능, 없거나 만료 · 이미 쓴 코드는 401 |
-| POST | `/auth/refresh` | refresh 토큰으로 access/refresh 재발급 (회전) |
+| POST | `/auth/refresh` | refresh 토큰으로 access/refresh 재발급 (회전). 이미 쓴 토큰 · 없는 토큰은 401, 같은 토큰으로 동시에 보내면 한 요청만 성공하고 나머지는 401 |
 | POST | `/auth/logout` | refresh 토큰 폐기 + access 토큰 즉시 무효화 (무효화 목록은 DB 저장이라 재시작 후에도 유지) |
-| GET | `/members/me` | 내 정보 조회. 탈퇴한 회원은 404 |
-| PATCH | `/members/me/nickname` | 닉네임 설정/변경. 영문 시작 3~8자(영문·숫자), 대소문자 무시 중복 불가 |
+| GET | `/members/me` | 내 정보 조회. 탈퇴한 회원의 토큰은 401 |
+| PATCH | `/members/me/nickname` | 닉네임 설정/변경. 영문 시작 3~8자(영문·숫자), 대소문자 무시 중복 불가 (중복이면 409, 같은 닉네임을 동시에 저장해도 한 명만 성공) |
 | GET | `/members/nickname/available?nickname=` | 닉네임 중복 확인. `{nickname, available}` 반환. 형식 규칙은 PATCH 와 같음(위반 시 400), 본인 닉네임은 사용 가능 |
 
 로그인 흐름: FE `/oauth2/authorization/{kakao|naver}` 진입 → 소셜 로그인 → BE 콜백 → FE `/oauth/callback?code=..` → FE 가 `POST /auth/token` 으로 토큰 교환 → `needsNickname=true` 면 닉네임 입력 화면.
-탈퇴(`DELETE /settings/account`)하면 회원 행의 소셜 식별자 · 닉네임 · 이메일을 비우므로, 같은 소셜 계정으로 다시 로그인하면 새 회원으로 가입되고 예전 닉네임도 다시 쓸 수 있습니다. 탈퇴한 회원은 커뮤니티(프로필 · 검색 · 추천 · 북마크 해시태그)에서도 보이지 않습니다.
+탈퇴(`DELETE /settings/account`)하면 회원 행의 소셜 식별자 · 닉네임 · 이메일을 비우므로, 같은 소셜 계정으로 다시 로그인하면 새 회원으로 가입되고 예전 닉네임도 다시 쓸 수 있습니다. 탈퇴한 회원은 커뮤니티(프로필 · 검색 · 추천 · 북마크 해시태그)에서도 보이지 않습니다. 탈퇴하면 다른 기기에 남은 access 토큰도 모든 보호 API 에서 401 입니다.
 
 ### 세션 / 해시태그 그룹
 
@@ -129,12 +129,12 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 | DELETE | `/sessions/{id}` | 세션 삭제. 실제 삭제가 아니라 soft delete 처리 |
 | POST | `/sessions/chunks` | 확장 프로그램이 세션 원본 청크를 보냄. `sessionId`(수집기 세션 id) · `segId` · `n` · `payload`, 마지막 청크는 `final` · `maxN` · `stopReason`. 처음 받으면 201, 이미 받은 청크면 저장하지 않고 200(`duplicate: true`) |
 | GET | `/tag-groups` | 해시태그 그룹 목록 조회. 그룹별 매칭 세션 포함 (세션 순서는 `GET /sessions` 와 같음, 생성 · 수정 · 순서 변경 응답도 동일) |
-| POST | `/tag-groups` | 새 해시태그 그룹 생성. `position` 생략 시 맨 뒤, 지정 시 해당 위치에 끼워 넣음 |
-| PATCH | `/tag-groups/{id}` | 그룹 이름과 해시태그 수정. 보낸 필드만 수정, 이름을 보낼 때 빈 값 · 공백만은 400 |
+| POST | `/tag-groups` | 새 해시태그 그룹 생성. `hashtags` 는 1개 이상 필수(비었거나 없으면 400). `position` 생략 시 맨 뒤, 지정 시 해당 위치에 끼워 넣음 |
+| PATCH | `/tag-groups/{id}` | 그룹 이름과 해시태그 수정. 보낸 필드만 수정, 이름을 보낼 때 빈 값 · 공백만은 400, `hashtags` 를 빈 배열로 보내면 400 |
 | DELETE | `/tag-groups/{id}` | 그룹 삭제 |
 | PATCH | `/tag-groups/order` | 그룹 표시 순서 변경 |
 
-인증이 필요한 API(`/sessions/**`, `/tag-groups/**`, `/members/**`)는 `Authorization: Bearer {accessToken}` 헤더가 필수이며, 없으면 401을 반환합니다. 사용자 식별은 access 토큰의 memberId 로 합니다.
+인증이 필요한 API(`/sessions/**`, `/tag-groups/**`, `/members/**`)는 `Authorization: Bearer {accessToken}` 헤더가 필수입니다. 토큰이 없거나 · 잘못됐거나 · 만료 · 무효화됐거나 · refresh 토큰이거나 · 탈퇴한 회원의 토큰이면 401 과 함께 `{"success":false,"data":null,"message":"로그인이 만료되었습니다. 다시 로그인해 주세요."}` 를 반환합니다 (`/auth/refresh` 실패는 "유효하지 않은 리프레시 토큰입니다."). 사용자 식별은 access 토큰의 memberId 로 합니다.
 
 모든 응답은 `{ success, data, message }` 형식입니다. 에러도 같은 형식으로 내려가며 `success=false`, `message`에 사유가 담깁니다.
 
