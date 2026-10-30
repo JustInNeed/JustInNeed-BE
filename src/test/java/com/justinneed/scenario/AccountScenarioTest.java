@@ -13,8 +13,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.justinneed.auth.domain.Member;
 import com.justinneed.auth.domain.SocialProvider;
+import com.justinneed.auth.domain.RevokedAccessToken;
 import com.justinneed.auth.dto.TokenResponse;
+import com.justinneed.auth.jwt.TokenDenylist;
+import com.justinneed.auth.jwt.TokenHashes;
+import com.justinneed.auth.repository.RevokedAccessTokenRepository;
 import com.justinneed.auth.service.AuthTokenService;
+import com.justinneed.auth.service.RevokedAccessTokenCleanupScheduler;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,6 +45,15 @@ class AccountScenarioTest extends ScenarioTestSupport {
 
     @Autowired
     private AuthTokenService authTokenService;
+
+    @Autowired
+    private TokenDenylist tokenDenylist;
+
+    @Autowired
+    private RevokedAccessTokenRepository revokedAccessTokens;
+
+    @Autowired
+    private RevokedAccessTokenCleanupScheduler revokedAccessTokenCleanupScheduler;
 
     @Test
     @DisplayName("가입 직후 내 정보를 열면 nickname 이 null 이라 FE 가 닉네임 입력 화면으로 보낸다")
@@ -182,6 +199,58 @@ class AccountScenarioTest extends ScenarioTestSupport {
         mvc.perform(get("/members/me").with(bearerToken(login.accessToken()))).andExpect(status().isUnauthorized());
         mvc.perform(post("/auth/refresh").with(json(Map.of("refreshToken", login.refreshToken()))))
                 .andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_REFRESH_MESSAGE));
+    }
+
+    @Test
+    @DisplayName("로그아웃한 access 토큰은 DB(revoked_access_tokens)에 해시로 남아, 서버를 다시 띄워도(새 TokenDenylist) 계속 거부된다")
+    void revokedAccessTokenSurvivesRestart() throws Exception {
+        Member me = member("sprout");
+        TokenResponse login = authTokenService.issue(me.getId());
+
+        mvc.perform(post("/auth/logout").with(bearerToken(login.accessToken()))).andExpect(okEnvelope());
+
+        mvc.perform(get("/members/me").with(bearerToken(login.accessToken()))).andExpect(status().isUnauthorized());
+        RevokedAccessToken row = revokedAccessTokens.findById(TokenHashes.sha256(login.accessToken())).orElseThrow();
+        assertThat(row.getExpiresAt()).isEqualTo(Instant.ofEpochSecond(jwt.getExpiryEpochSecond(login.accessToken()))
+                .atZone(ZoneId.systemDefault()).toLocalDateTime());
+        assertThat(revokedAccessTokens.existsById(login.accessToken())).isFalse(); // 원문은 저장하지 않는다
+        // 메모리 상태 없이 DB 만 보는 새 인스턴스 = 재시작 후의 서버
+        TokenDenylist afterRestart = new TokenDenylist(revokedAccessTokens);
+        assertThat(afterRestart.isDenied(login.accessToken())).isTrue();
+        assertThat(afterRestart.isDenied(jwt.createAccessToken(member("other").getId()))).isFalse();
+    }
+
+    @Test
+    @DisplayName("같은 access 토큰으로 두 번 로그아웃해도(버튼 연타) 200 이고 무효화 행은 하나다")
+    void doubleLogoutIsSafe() throws Exception {
+        Member me = member("sprout");
+        TokenResponse login = authTokenService.issue(me.getId());
+
+        mvc.perform(post("/auth/logout").with(bearerToken(login.accessToken()))).andExpect(okEnvelope());
+        mvc.perform(post("/auth/logout").with(bearerToken(login.accessToken()))).andExpect(okEnvelope());
+
+        assertThat(revokedAccessTokens.findAll())
+                .filteredOn(row -> row.getTokenHash().equals(TokenHashes.sha256(login.accessToken())))
+                .hasSize(1);
+    }
+
+    @Test
+    @DisplayName("토큰 만료 시각이 지난 무효화 행은 조회에서 무시되고, 정리 스케줄러가 지운다 (아직 유효한 행은 남김)")
+    void cleanupRemovesExpiredRevokedTokens() {
+        long past = Instant.now().minusSeconds(60).getEpochSecond();
+        long future = Instant.now().plusSeconds(3600).getEpochSecond();
+        tokenDenylist.deny("expired-access-token", past);
+        tokenDenylist.deny("live-access-token", future);
+
+        assertThat(tokenDenylist.isDenied("expired-access-token")).isFalse();
+        assertThat(tokenDenylist.isDenied("live-access-token")).isTrue();
+
+        revokedAccessTokenCleanupScheduler.purgeExpiredTokens();
+
+        assertThat(revokedAccessTokens.existsById(TokenHashes.sha256("expired-access-token"))).isFalse();
+        assertThat(revokedAccessTokens.existsById(TokenHashes.sha256("live-access-token"))).isTrue();
+        assertThat(revokedAccessTokens.findById(TokenHashes.sha256("live-access-token")).orElseThrow().getExpiresAt())
+                .isAfter(LocalDateTime.now());
     }
 
     @Test

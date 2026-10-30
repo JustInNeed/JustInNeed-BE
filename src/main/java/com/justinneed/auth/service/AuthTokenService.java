@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * access/refresh 토큰 발급·재발급·로그아웃을 담당.
- * refresh 토큰은 DB 화이트리스트(refresh_tokens)로 관리하고, access 토큰은 무상태 + (로그아웃 시) in-memory denylist.
+ * refresh 토큰은 DB 화이트리스트(refresh_tokens)로 관리하고, access 토큰은 무상태 + (로그아웃 · 탈퇴 시) DB denylist(revoked_access_tokens).
  */
 @Service
 public class AuthTokenService {
