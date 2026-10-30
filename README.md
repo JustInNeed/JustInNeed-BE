@@ -112,6 +112,7 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 | POST | `/auth/logout` | refresh 토큰 폐기 + access 토큰 즉시 무효화 |
 | GET | `/members/me` | 내 정보 조회 |
 | PATCH | `/members/me/nickname` | 닉네임 설정/변경. 영문 시작 3~8자(영문·숫자), 대소문자 무시 중복 불가 |
+| GET | `/members/nickname/available?nickname=` | 닉네임 중복 확인. `{nickname, available}` 반환. 형식 규칙은 PATCH 와 같음(위반 시 400), 본인 닉네임은 사용 가능 |
 
 ### 세션 / 해시태그 그룹
 
