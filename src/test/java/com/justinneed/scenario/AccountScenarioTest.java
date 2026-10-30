@@ -16,7 +16,6 @@ import com.justinneed.auth.domain.SocialProvider;
 import com.justinneed.auth.dto.TokenResponse;
 import com.justinneed.auth.service.AuthTokenService;
 import java.util.Map;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -196,7 +195,6 @@ class AccountScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @Disabled("API 미구현: 닉네임 중복 확인 GET /members/nickname/available?nickname= (D표 반영 결정, 응답 필드 nickname · available 은 제안) — 구현되면 켠다")
     @DisplayName("닉네임 중복 확인 버튼: 이미 쓰는 닉네임(대소문자 무시)이면 available=false, 아니면 true")
     void nicknameAvailability() throws Exception {
         member("wanderer");
