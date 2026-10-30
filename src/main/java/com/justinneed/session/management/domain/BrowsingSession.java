@@ -44,7 +44,7 @@ public class BrowsingSession extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private SessionStatus status = SessionStatus.COMPLETED;
+    private SessionStatus status = SessionStatus.COLLECTING;
 
     @Column(name = "is_favorite", nullable = false)
     private boolean favorite;

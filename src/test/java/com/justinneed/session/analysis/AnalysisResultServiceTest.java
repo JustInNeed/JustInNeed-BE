@@ -115,6 +115,8 @@ class AnalysisResultServiceTest {
 
     @Test
     void AI_결과를_세션_요약_결과_원본에_나눠_저장한다() {
+        assertThat(sessionRepository.findById(sessionId).orElseThrow().getStatus()).isEqualTo(SessionStatus.COLLECTING);
+
         service.save(sessionId, result(RESULT_JSON));
         entityManager.flush();
         entityManager.clear();
