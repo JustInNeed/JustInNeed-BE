@@ -4,22 +4,19 @@ import com.justinneed.auth.domain.RefreshToken;
 import com.justinneed.auth.dto.TokenResponse;
 import com.justinneed.auth.jwt.JwtTokenProvider;
 import com.justinneed.auth.jwt.TokenDenylist;
+import com.justinneed.auth.jwt.TokenHashes;
 import com.justinneed.auth.repository.RefreshTokenRepository;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.HexFormat;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * access/refresh 토큰 발급·재발급·로그아웃을 담당.
- * refresh 토큰은 DB 화이트리스트(refresh_tokens)로 관리하고, access 토큰은 무상태 + (로그아웃 시) in-memory denylist.
+ * refresh 토큰은 DB 화이트리스트(refresh_tokens)로 관리하고, access 토큰은 무상태 + (로그아웃 · 탈퇴 시) DB denylist(revoked_access_tokens).
  */
 @Service
 public class AuthTokenService {
@@ -92,12 +89,6 @@ public class AuthTokenService {
 
     // refresh 토큰 원문 대신 SHA-256 해시를 저장/조회 (DB 유출 시 토큰 노출 방지)
     private String hash(String token) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hashed = digest.digest(token.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(hashed);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 미지원 환경", e);
-        }
+        return TokenHashes.sha256(token);
     }
 }

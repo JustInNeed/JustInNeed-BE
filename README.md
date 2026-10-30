@@ -107,12 +107,16 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 | Method | Path | 설명 |
 | --- | --- | --- |
 | GET | `/oauth2/authorization/{kakao\|naver}` | 소셜 로그인 진입 (브라우저 리다이렉트) |
-| GET | `/login/oauth2/code/{provider}` | 소셜 로그인 콜백. 성공 시 FE `/oauth/callback?accessToken=..&refreshToken=..&needsNickname=..` 로 302 |
+| GET | `/login/oauth2/code/{provider}` | 소셜 로그인 콜백. 성공 시 FE `/oauth/callback?code=..` 로 302 (토큰은 URL 에 싣지 않음), 실패 시 `OAUTH_FAILURE_REDIRECT_URI` 로 302 |
+| POST | `/auth/token` | 콜백으로 받은 일회용 코드 `{code}` 를 `{accessToken, refreshToken, needsNickname}` 으로 교환. 코드는 60초 안에 한 번만 사용 가능, 없거나 만료 · 이미 쓴 코드는 401 |
 | POST | `/auth/refresh` | refresh 토큰으로 access/refresh 재발급 (회전) |
-| POST | `/auth/logout` | refresh 토큰 폐기 + access 토큰 즉시 무효화 |
-| GET | `/members/me` | 내 정보 조회 |
+| POST | `/auth/logout` | refresh 토큰 폐기 + access 토큰 즉시 무효화 (무효화 목록은 DB 저장이라 재시작 후에도 유지) |
+| GET | `/members/me` | 내 정보 조회. 탈퇴한 회원은 404 |
 | PATCH | `/members/me/nickname` | 닉네임 설정/변경. 영문 시작 3~8자(영문·숫자), 대소문자 무시 중복 불가 |
 | GET | `/members/nickname/available?nickname=` | 닉네임 중복 확인. `{nickname, available}` 반환. 형식 규칙은 PATCH 와 같음(위반 시 400), 본인 닉네임은 사용 가능 |
+
+로그인 흐름: FE `/oauth2/authorization/{kakao|naver}` 진입 → 소셜 로그인 → BE 콜백 → FE `/oauth/callback?code=..` → FE 가 `POST /auth/token` 으로 토큰 교환 → `needsNickname=true` 면 닉네임 입력 화면.
+탈퇴(`DELETE /settings/account`)하면 회원 행의 소셜 식별자 · 닉네임 · 이메일을 비우므로, 같은 소셜 계정으로 다시 로그인하면 새 회원으로 가입되고 예전 닉네임도 다시 쓸 수 있습니다. 탈퇴한 회원은 커뮤니티(프로필 · 검색 · 추천 · 북마크 해시태그)에서도 보이지 않습니다.
 
 ### 세션 / 해시태그 그룹
 

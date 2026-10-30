@@ -37,7 +37,7 @@ public class PublicGraphService {
 
     public Graph graph(Long ownerId, Long hashtagId) {
         var profile = profiles.lock(ownerId);
-        var owner = members.findById(ownerId).orElseThrow(CommunityErrors::missing);
+        var owner = members.findByIdAndWithdrawnAtIsNull(ownerId).orElseThrow(CommunityErrors::missing);
         var tagIndex = new LinkedHashMap<String, CommunityHashtag>();
         tags.owned(ownerId).forEach(t -> tagIndex.put(t.getNormalizedName(), t));
         var indexedNodes = new HashMap<String, CommunityNode>();
@@ -97,7 +97,7 @@ public class PublicGraphService {
         var bookmark = bookmarks.owned(viewerId, bookmarkId);
         if (bookmark.getSaveType() != SaveType.MINI_MINDMAP) throw CommunityErrors.invalid("Mini mindmap required");
         Long ownerId = bookmark.getSourceMindmapId();
-        if (ownerId == null || !members.existsById(ownerId)) return new Original(200, false, null, List.of());
+        if (ownerId == null || !members.existsByIdAndWithdrawnAtIsNull(ownerId)) return new Original(200, false, null, List.of());
         var graph = graph(ownerId, null);
         var saved = bookmark.getSnapshot().nodes().stream().map(BookmarkSnapshot.Node::nodeId).toList();
         return new Original(200, !graph.nodes().isEmpty(), graph,

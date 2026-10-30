@@ -1,34 +1,36 @@
 package com.justinneed.auth.jwt;
 
+import com.justinneed.auth.repository.RevokedAccessTokenRepository;
 import java.time.Instant;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 로그아웃 처리된 토큰을 무효화하기 위한 denylist.
- * 러프 단계: in-memory 저장(앱 재시작 시 비워짐). 운영 단계에선 Redis/DB 로 교체 권장.
- * 각 토큰은 자체 만료 시각까지만 보관하고, 만료된 항목은 조회 시 정리한다.
+ * 로그아웃 · 탈퇴로 만료 전에 무효화한 access 토큰의 denylist.
+ * DB 테이블(revoked_access_tokens)에 토큰 SHA-256 해시와 토큰 만료 시각을 저장하므로 배포 · 재시작 후에도 유지된다.
+ * 만료 시각이 지난 행은 조회에서 무시하고, RevokedAccessTokenCleanupScheduler 가 주기적으로 지운다.
  */
 @Component
 public class TokenDenylist {
 
-    // token -> 만료 epoch second
-    private final Map<String, Long> denied = new ConcurrentHashMap<>();
+    private final RevokedAccessTokenRepository revokedAccessTokenRepository;
 
+    public TokenDenylist(RevokedAccessTokenRepository revokedAccessTokenRepository) {
+        this.revokedAccessTokenRepository = revokedAccessTokenRepository;
+    }
+
+    @Transactional
     public void deny(String token, long expiryEpochSecond) {
-        denied.put(token, expiryEpochSecond);
+        LocalDateTime expiresAt = Instant.ofEpochSecond(expiryEpochSecond)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDateTime();
+        revokedAccessTokenRepository.insertIfAbsent(TokenHashes.sha256(token), expiresAt);
     }
 
     public boolean isDenied(String token) {
-        Long expiry = denied.get(token);
-        if (expiry == null) {
-            return false;
-        }
-        if (expiry < Instant.now().getEpochSecond()) {
-            denied.remove(token); // 이미 만료된 토큰은 보관 불필요
-            return false;
-        }
-        return true;
+        return revokedAccessTokenRepository.existsByTokenHashAndExpiresAtAfter(
+                TokenHashes.sha256(token), LocalDateTime.now());
     }
 }

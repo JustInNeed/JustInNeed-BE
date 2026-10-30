@@ -84,7 +84,7 @@ public class ProfileEditService {
     public SessionView session(Long viewerId, Long id) {
         var session = sessions.findById(id).orElseThrow(CommunityErrors::missing);
         var view = pins.detail(session.getUserId(), viewerId, id);
-        var member = members.findById(session.getUserId()).orElseThrow(CommunityErrors::missing);
+        var member = members.findByIdAndWithdrawnAtIsNull(session.getUserId()).orElseThrow(CommunityErrors::missing);
         return new SessionView(200, id, view.title(), member.getId(), member.getNickname(),
                 view.tags(), view.urls(), view.markdown(), profiles.read(member.getId()).getVisibility());
     }
