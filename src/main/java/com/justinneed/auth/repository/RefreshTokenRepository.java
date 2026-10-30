@@ -14,7 +14,10 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     @Query("delete from RefreshToken r where r.tokenHash = :tokenHash")
     int deleteByHash(@Param("tokenHash") String tokenHash);
 
-    void deleteByMemberId(Long memberId);
+    // 탈퇴 시 전부 삭제. 조회 후 삭제가 아니라 한 번에 지워 동시 재발급과 겹쳐도 충돌하지 않는다
+    @Modifying
+    @Query("delete from RefreshToken r where r.memberId = :memberId")
+    void deleteByMemberId(@Param("memberId") Long memberId);
 
     // 만료된 토큰 행 정리용 (RefreshTokenCleanupScheduler)
     long deleteByExpiresAtBefore(LocalDateTime threshold);
