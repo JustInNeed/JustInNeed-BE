@@ -4,10 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
+import com.justinneed.auth.domain.Member;
+import com.justinneed.auth.domain.SocialProvider;
+import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
 import com.justinneed.session.analysis.client.AiAnalysisClient;
@@ -61,12 +65,16 @@ class AnalysisRequestServiceTest {
     @Autowired
     private AiClusterModelRepository modelRepository;
 
+    @Autowired
+    private MemberRepository memberRepository;
+
     @AfterEach
     void tearDown() {
         rawRepository.deleteAll();
         resultRepository.deleteAll();
         modelRepository.deleteAll();
         sessionRepository.deleteAll();
+        memberRepository.deleteAll();
     }
 
     @Test
@@ -126,6 +134,19 @@ class AnalysisRequestServiceTest {
 
         assertThat(status(sessionId)).isEqualTo(SessionStatus.FAILED);
         assertThat(endedAt(sessionId)).isEqualTo(LocalDateTime.of(2026, 10, 4, 18, 33, 54));
+    }
+
+    @Test
+    void 탈퇴한_회원의_세션은_AI_로_보내지_않고_FAILED_로_둔다() {
+        Member withdrawn = memberRepository.save(new Member(SocialProvider.KAKAO, "withdrawn-1", null, null));
+        withdrawn.withdraw(null, LocalDateTime.now());
+        memberRepository.save(withdrawn);
+        Long sessionId = session(SessionStatus.READY, RAW, withdrawn.getId());
+
+        service.requestAnalysis(sessionId);
+
+        verify(aiClient, never()).requestAnalysis(any());
+        assertThat(status(sessionId)).isEqualTo(SessionStatus.FAILED);
     }
 
     @Test

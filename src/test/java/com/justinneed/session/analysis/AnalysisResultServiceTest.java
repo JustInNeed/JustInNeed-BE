@@ -3,6 +3,9 @@ package com.justinneed.session.analysis;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.justinneed.auth.domain.Member;
+import com.justinneed.auth.domain.SocialProvider;
+import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
 import com.justinneed.session.analysis.domain.ClusterModelScope;
@@ -97,6 +100,9 @@ class AnalysisResultServiceTest {
     private AiClusterModelRepository modelRepository;
 
     @Autowired
+    private MemberRepository memberRepository;
+
+    @Autowired
     private EntityManager entityManager;
 
     @Autowired
@@ -183,6 +189,25 @@ class AnalysisResultServiceTest {
                 .extracting(e -> ((CustomException) e).getErrorCode())
                 .isEqualTo(ErrorCode.ANALYSIS_LLM_FAILED);
         assertNothingSaved();
+    }
+
+    @Test
+    void 분석_도중_탈퇴했으면_결과를_저장하지_않고_FAILED_로_둔다() {
+        Member withdrawn = memberRepository.save(new Member(SocialProvider.KAKAO, "withdrawn-result", null, null));
+        withdrawn.withdraw(null, LocalDateTime.now());
+        BrowsingSession session = new BrowsingSession(withdrawn.getId(), "분석 전 제목", LocalDateTime.of(2026, 10, 30, 9, 59));
+        session.markReady();
+        session.startAnalysis(LocalDateTime.of(2026, 10, 30, 10, 30));
+        Long withdrawnSessionId = sessionRepository.save(session).getId();
+        entityManager.flush();
+
+        assertThatThrownBy(() -> service.save(withdrawnSessionId, result(RESULT_JSON)))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(ErrorCode.ANALYSIS_MEMBER_WITHDRAWN);
+        assertThat(sessionRepository.findById(withdrawnSessionId).orElseThrow().getStatus()).isEqualTo(SessionStatus.FAILED);
+        assertThat(resultRepository.findById(withdrawnSessionId)).isEmpty();
+        assertThat(modelRepository.findByScopeAndUserId(ClusterModelScope.USER, withdrawn.getId())).isEmpty();
     }
 
     @Test
