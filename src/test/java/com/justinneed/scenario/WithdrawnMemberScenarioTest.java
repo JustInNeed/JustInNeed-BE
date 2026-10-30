@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.justinneed.auth.domain.Member;
+import com.justinneed.auth.jwt.JwtTokenProvider;
 import com.justinneed.session.management.domain.Source;
 import com.justinneed.session.taggroup.repository.TagGroupRepository;
 import java.util.ArrayList;
@@ -23,6 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 
 /**
@@ -38,6 +40,9 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
 
     @Autowired
     private TagGroupRepository tagGroups;
+
+    @Value("${app.jwt.secret}")
+    private String jwtSecret;
 
     private Member me;
     private Wanderer wanderer;
@@ -59,6 +64,11 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
                 .andExpect(okEnvelope());
     }
 
+    /** 탈퇴 때 쓰지 않은 토큰. 유효 시간을 달리해 만들어 jti 없이도 무효화 목록에 든 토큰과 달라지게 한다. */
+    private String otherDeviceToken(Member member) {
+        return new JwtTokenProvider(jwtSecret, 1800, 1800).createAccessToken(member.getId());
+    }
+
     private Long saveBundle(Member owner, String... hashtags) throws Exception {
         List<Long> ids = new ArrayList<>();
         for (String hashtag : hashtags) {
@@ -77,7 +87,7 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
     @DisplayName("탈퇴 후 같은 회원 id 로 새로 만든 access 토큰(서버 재시작으로 무효화 목록을 잃은 상황)으로도 내 정보 · 닉네임 변경은 401")
     void withdrawnMemberIsUnauthorizedEvenWithFreshToken() throws Exception {
         withdraw(me);
-        String freshToken = jwt.createAccessToken(me.getId());
+        String freshToken = otherDeviceToken(me);
 
         mvc.perform(get("/members/me").with(bearerToken(freshToken)))
                 .andExpect(status().isUnauthorized());
@@ -91,7 +101,7 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("웹에서 탈퇴하면 휴대폰에 남은 access 토큰도 모든 보호 API 에서 401 이고 그룹도 못 만든다")
     void otherDeviceTokenIsRejectedAfterWithdrawal() throws Exception {
-        String phone = jwt.createAccessToken(me.getId());
+        String phone = otherDeviceToken(me);
         String web = jwt.createAccessToken(me.getId());
         List<String> protectedPaths = List.of("/members/me", "/sessions", "/sessions/hashtags", "/tag-groups",
                 "/settings/integrations", "/settings/collection/excluded-urls");

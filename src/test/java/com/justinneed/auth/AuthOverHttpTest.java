@@ -6,7 +6,6 @@ import com.jayway.jsonpath.JsonPath;
 import com.justinneed.auth.domain.Member;
 import com.justinneed.auth.domain.RefreshToken;
 import com.justinneed.auth.domain.SocialProvider;
-import com.justinneed.auth.dto.TokenResponse;
 import com.justinneed.auth.jwt.JwtTokenProvider;
 import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.auth.repository.RefreshTokenRepository;
@@ -46,7 +45,7 @@ import tools.jackson.databind.ObjectMapper;
  */
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = "spring.datasource.url=jdbc:h2:mem:auth-concurrency;MODE=PostgreSQL;DB_CLOSE_DELAY=-1")
+        properties = "spring.datasource.url=jdbc:h2:mem:auth-concurrency;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000")
 @ActiveProfiles("test")
 @DisplayName("실제 서버로 확인하는 인증 요청")
 class AuthOverHttpTest {
@@ -107,13 +106,13 @@ class AuthOverHttpTest {
     }
 
     @Test
-    @DisplayName("같은 refresh 토큰으로 동시에 로그아웃해도(버튼 연타) 둘 다 200 이고 토큰 행은 남지 않는다")
+    @DisplayName("access 토큰이 만료돼 refresh 토큰만 보내는 로그아웃을 동시에 해도(버튼 연타) 둘 다 200 이고 토큰 행은 남지 않는다")
     void concurrentLogoutWithSameToken() throws Exception {
         for (int round = 0; round < ROUNDS; round++) {
             Long memberId = newMember().getId();
-            TokenResponse login = authTokenService.issue(memberId);
+            String refreshToken = authTokenService.issue(memberId).refreshToken();
 
-            List<HttpResponse<String>> responses = race(logout(login), logout(login));
+            List<HttpResponse<String>> responses = race(logout(refreshToken), logout(refreshToken));
 
             assertThat(statuses(responses)).containsExactly(200, 200);
             assertThat(refreshRowsOf(memberId)).isEmpty();
@@ -171,12 +170,8 @@ class AuthOverHttpTest {
         return post("/auth/refresh", "{\"refreshToken\":\"" + refreshToken + "\"}");
     }
 
-    private HttpRequest logout(TokenResponse login) {
-        return HttpRequest.newBuilder(uri("/auth/logout"))
-                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + login.accessToken())
-                .POST(HttpRequest.BodyPublishers.ofString("{\"refreshToken\":\"" + login.refreshToken() + "\"}"))
-                .build();
+    private HttpRequest logout(String refreshToken) {
+        return post("/auth/logout", "{\"refreshToken\":\"" + refreshToken + "\"}");
     }
 
     private HttpRequest updateNickname(Member member, String nickname) {
