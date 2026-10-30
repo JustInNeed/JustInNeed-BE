@@ -27,6 +27,10 @@ public enum ErrorCode {
     INVALID_WITHDRAW_CONFIRMATION(HttpStatus.BAD_REQUEST, "탈퇴 확인 문구가 올바르지 않습니다."),
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다."),
     INVALID_TAG_GROUP_POSITION(HttpStatus.BAD_REQUEST, "그룹 위치 값이 올바르지 않습니다."),
+    TAG_GROUP_HASHTAG_REQUIRED(HttpStatus.BAD_REQUEST, "해시태그를 1개 이상 선택해 주세요."),
+    INVALID_PAGE_REQUEST(HttpStatus.BAD_REQUEST, "페이지 값이 올바르지 않습니다."),
+    INVALID_LOGIN_CODE(HttpStatus.UNAUTHORIZED, "로그인 정보가 만료되었어요. 다시 로그인해 주세요."),
+    LOGIN_EXPIRED(HttpStatus.UNAUTHORIZED, "로그인이 만료되었습니다. 다시 로그인해 주세요."),
     INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 리프레시 토큰입니다.");
 
     private final HttpStatus status;

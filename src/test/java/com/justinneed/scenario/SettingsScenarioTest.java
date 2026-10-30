@@ -1,5 +1,6 @@
 package com.justinneed.scenario;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasItem;
@@ -15,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.justinneed.auth.domain.Member;
+import com.justinneed.auth.domain.SocialProvider;
 import com.justinneed.auth.dto.TokenResponse;
 import com.justinneed.auth.service.AuthTokenService;
 import com.justinneed.settings.collection.domain.ExcludedUrl;
@@ -451,6 +453,25 @@ class SettingsScenarioTest extends ScenarioTestSupport {
             mvc.perform(get("/members/me").with(bearerToken(login.accessToken()))).andExpect(status().isUnauthorized());
             mvc.perform(post("/auth/refresh").with(json(Map.of("refreshToken", login.refreshToken()))))
                     .andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, "유효하지 않은 리프레시 토큰입니다."));
+        }
+
+        @Test
+        @DisplayName("탈퇴하면 계정의 소셜 식별자 · 닉네임 · 이메일이 비워져, 그 닉네임을 다른 사람이 바로 쓸 수 있다")
+        void withdrawFreesNickname() throws Exception {
+            Member me = member("sprout", SocialProvider.KAKAO, "sprout@kakao.com");
+            Member other = member(null);
+
+            mvc.perform(delete("/settings/account").with(as(me))
+                    .with(json(Map.of("confirmText", "WITHDRAW", "reason", "졸업해서요")))).andExpect(okEnvelope());
+
+            Member withdrawn = members.findById(me.getId()).orElseThrow();
+            assertThat(withdrawn.isWithdrawn()).isTrue();
+            assertThat(withdrawn.getProviderId()).isEqualTo("withdrawn:" + me.getId());
+            assertThat(withdrawn.getNickname()).isNull();
+            assertThat(withdrawn.getEmail()).isNull();
+            mvc.perform(patch("/members/me/nickname").with(as(other)).with(json(Map.of("nickname", "sprout"))))
+                    .andExpect(okEnvelope())
+                    .andExpect(jsonPath("$.data.nickname").value("sprout"));
         }
 
         @ParameterizedTest(name = "\"{0}\"")

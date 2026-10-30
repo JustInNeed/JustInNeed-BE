@@ -13,6 +13,7 @@ import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.community.domain.CommunityProfile;
 import com.justinneed.community.repository.CommunityProfileRepository;
 import com.justinneed.session.management.domain.BrowsingSession;
+import com.justinneed.session.management.domain.SessionStatus;
 import com.justinneed.session.management.domain.Source;
 import com.justinneed.session.management.repository.BrowsingSessionRepository;
 import com.justinneed.session.summary.domain.Summary;
@@ -27,6 +28,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.ResultMatcher;
@@ -174,6 +176,21 @@ public abstract class ScenarioTestSupport {
         if (markdown != null) {
             new Summary(session, markdown);
         }
+        return sessions.saveAndFlush(session);
+    }
+
+    /**
+     * 상태를 직접 정한 세션 (진행 중 · 실패). 상태는 수집 · 분석 흐름에서만 바뀌므로 테스트에선 필드를 바로 정한다.
+     * endedAt 이 null 이면 종료 시각이 없는 세션.
+     */
+    protected BrowsingSession sessionWithStatus(Member owner, String title, String startedAt, String endedAt,
+            SessionStatus status, List<String> tags) {
+        BrowsingSession session = new BrowsingSession(owner.getId(), title, LocalDateTime.parse(startedAt));
+        if (endedAt != null) {
+            session.complete(LocalDateTime.parse(endedAt), 1);
+        }
+        session.update(null, null, false, false, tags);
+        ReflectionTestUtils.setField(session, "status", status);
         return sessions.saveAndFlush(session);
     }
 

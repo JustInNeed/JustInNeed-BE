@@ -22,6 +22,9 @@ import java.time.LocalDateTime;
 )
 public class Member extends BaseEntity {
 
+    // 탈퇴(익명화)한 회원 행의 provider_id 접두어. 뒤에 회원 id 를 붙여 (social_provider, provider_id) 유니크를 지킨다
+    public static final String WITHDRAWN_PROVIDER_ID_PREFIX = "withdrawn:";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -62,9 +65,18 @@ public class Member extends BaseEntity {
         this.nickname = nickname;
     }
 
+    // 탈퇴: 탈퇴 시각 · 사유를 남기고 소셜 식별자 · 닉네임 · 이메일을 비운다 (같은 소셜 계정으로 새로 가입할 수 있게)
     public void withdraw(String reason, LocalDateTime withdrawnAt) {
         this.withdrawalReason = reason;
         this.withdrawnAt = withdrawnAt;
+        anonymize();
+    }
+
+    // provider_id 는 not null 이라 비우는 대신 "withdrawn:{id}" 로 바꾼다. 닉네임(유니크) · 이메일은 null
+    public void anonymize() {
+        this.providerId = WITHDRAWN_PROVIDER_ID_PREFIX + id;
+        this.nickname = null;
+        this.email = null;
     }
 
     public boolean isWithdrawn() {

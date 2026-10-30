@@ -35,6 +35,9 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
     private static final String MINDMAPS = "/community/me/bookmarks/mindmaps";
     private static final String PRAGUE_CASTLE = "https://www.hrad.cz/en/prague-castle-for-visitors";
     private static final String PRAGUE_EU = "https://www.prague.eu/en";
+    private static final String NIGHTJET = "https://www.nightjet.com/en";
+    private static final String WIEN = "https://www.wien.info/en";
+    private static final String BELVEDERE = "https://www.belvedere.at/en";
     private static final String ISO_INSTANT = "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z";
 
     private Member me;
@@ -65,6 +68,12 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
 
     private List<Long> pragueNodes() throws Exception {
         return List.of(nodeId(me, wanderer.member(), PRAGUE_CASTLE), nodeId(me, wanderer.member(), PRAGUE_EU));
+    }
+
+    private void setWandererHashtagPublic(String hashtag, boolean isPublic) throws Exception {
+        mvc.perform(patch("/community/me/hashtags/{id}/visibility", hashtagId(wanderer.member(), hashtag))
+                        .with(as(wanderer.member())).with(json(Map.of("isPublic", isPublic))))
+                .andExpect(okEnvelope());
     }
 
     @Test
@@ -144,6 +153,62 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.mindmap.nodes[*].sourceUrl").value(not(hasItem(PRAGUE_CASTLE))));
         mvc.perform(get(MINDMAPS).with(as(me)))
                 .andExpect(jsonPath("$.data.mindmaps[0].nodes[*].sourceUrl").value(containsInAnyOrder(PRAGUE_CASTLE, PRAGUE_EU)));
+    }
+
+    @Test
+    @DisplayName("해시태그 묶음 탭: 저장한 뒤 작성자가 비공개로 돌린 해시태그는 묶음에서 빠지고, 태그가 하나도 안 남은 묶음은 목록에서 빠진다")
+    void bundleHidesHashtagsMadePrivateLater() throws Exception {
+        Long both = saveBundle("프라하", "야간열차");
+        Long vienna = saveBundle("비엔나");
+
+        setWandererHashtagPublic("야간열차", false);
+        setWandererHashtagPublic("비엔나", false);
+
+        mvc.perform(get(BUNDLES).with(as(me)))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.bundles[*].bookmarkId").value(contains(ids(both))))
+                .andExpect(jsonPath("$.data.bundles[0].hashtags").value(contains("프라하")))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
+
+        // 스냅샷은 그대로라 다시 공개로 돌리면 다시 보인다
+        setWandererHashtagPublic("야간열차", true);
+        setWandererHashtagPublic("비엔나", true);
+
+        mvc.perform(get(BUNDLES).with(as(me)))
+                .andExpect(jsonPath("$.data.bundles[*].bookmarkId").value(contains(ids(vienna, both))))
+                .andExpect(jsonPath("$.data.bundles[1].hashtags").value(contains("프라하", "야간열차")));
+    }
+
+    @Test
+    @DisplayName("미니 마인드맵 탭: 저장한 뒤 작성자가 비공개로 돌린 해시태그는 그 연결선 · 그 태그에만 달린 노드와 함께 빠지고, 태그가 하나도 안 남은 카드는 빠진다")
+    void miniMindmapHidesHashtagsMadePrivateLater() throws Exception {
+        Long viennaTag = hashtagId(wanderer.member(), "비엔나");
+        Long mixed = saveMiniMindmap(List.of(nodeId(me, wanderer.member(), PRAGUE_CASTLE),
+                nodeId(me, wanderer.member(), NIGHTJET), nodeId(me, wanderer.member(), WIEN)));
+        Long viennaOnly = saveMiniMindmap(List.of(nodeId(me, wanderer.member(), BELVEDERE)));
+
+        setWandererHashtagPublic("비엔나", false);
+
+        mvc.perform(get(MINDMAPS).with(as(me)))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.mindmaps[*].bookmarkId").value(contains(ids(mixed))))
+                .andExpect(jsonPath("$.data.mindmaps[0].hashtags[*].name")
+                        .value(containsInAnyOrder("프라하", "카를교", "체코", "야간열차")))
+                .andExpect(jsonPath("$.data.mindmaps[0].nodes[*].sourceUrl").value(containsInAnyOrder(PRAGUE_CASTLE, NIGHTJET)))
+                // 프라하 성 × 프라하 세션 태그 3개 + 나이트젯 × 야간열차 · 프라하
+                .andExpect(jsonPath("$.data.mindmaps[0].edges", hasSize(5)))
+                .andExpect(jsonPath("$.data.mindmaps[0].edges[*].from").value(not(hasItem("tag:" + viennaTag))))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
+
+        setWandererHashtagPublic("비엔나", true);
+
+        mvc.perform(get(MINDMAPS).with(as(me)))
+                .andExpect(jsonPath("$.data.mindmaps[*].bookmarkId").value(contains(ids(viennaOnly, mixed))))
+                .andExpect(jsonPath("$.data.mindmaps[0].hashtags[*].name").value(contains("비엔나")))
+                .andExpect(jsonPath("$.data.mindmaps[0].nodes[*].sourceUrl").value(contains(BELVEDERE)))
+                .andExpect(jsonPath("$.data.mindmaps[1].nodes[*].sourceUrl")
+                        .value(containsInAnyOrder(PRAGUE_CASTLE, NIGHTJET, WIEN)))
+                .andExpect(jsonPath("$.data.mindmaps[1].edges", hasSize(6)));
     }
 
     @Test

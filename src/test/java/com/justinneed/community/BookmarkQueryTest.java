@@ -3,6 +3,7 @@ package com.justinneed.community;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import com.justinneed.community.bookmark.*;
+import com.justinneed.community.catalog.*;
 import com.justinneed.community.domain.NodeVisibility;
 import java.time.Instant;
 import java.util.List;
@@ -11,11 +12,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 class BookmarkQueryTest extends CommunityTestSupport {
     @Autowired CommunityBookmarkRepository bookmarks;
+    @Autowired CommunityHashtagRepository tags;
     @Test
     void listsOnlyOwnersSnapshotsWithStablePaginationAndRelations() throws Exception {
-        var snapshot = new BookmarkSnapshot("Saved", List.of(new BookmarkSnapshot.Tag(1L, ownerId, "Java")),
+        var tag = tags.saveAndFlush(new CommunityHashtag(ownerId, "Java")).getId();
+        var snapshot = new BookmarkSnapshot("Saved", List.of(new BookmarkSnapshot.Tag(tag, ownerId, "Java")),
                 List.of(new BookmarkSnapshot.Node(7L, "Saved node", "https://example.com", null, NodeVisibility.URL_ONLY)),
-                List.of(new BookmarkSnapshot.Edge("tag:1", "node:7")));
+                List.of(new BookmarkSnapshot.Edge("tag:" + tag, "node:7")));
         for (int i = 0; i < 2; i++) bookmarks.save(new CommunityBookmark(ownerId, SaveType.HASHTAG_BUNDLE,
                 TargetType.HASHTAG, "key" + i, null, List.of(1L), snapshot, Instant.parse("2026-09-20T00:00:00Z")));
         bookmarks.saveAndFlush(new CommunityBookmark(ownerId, SaveType.MINI_MINDMAP, TargetType.NODE,
@@ -33,5 +36,14 @@ class BookmarkQueryTest extends CommunityTestSupport {
                 .andExpect(status().isBadRequest());
         mvc.perform(get("/community/me/bookmarks/mindmaps").param("page", "-1").header("Authorization", auth(ownerId)))
                 .andExpect(status().isBadRequest());
+    }
+    @Test
+    void hidesSnapshotHashtagsWhoseHashtagNoLongerExists() throws Exception {
+        var gone = new BookmarkSnapshot("Saved", List.of(new BookmarkSnapshot.Tag(Long.MAX_VALUE, ownerId, "Gone")),
+                List.of(), List.of());
+        bookmarks.saveAndFlush(new CommunityBookmark(viewerId, SaveType.HASHTAG_BUNDLE, TargetType.HASHTAG, "gone",
+                null, List.of(Long.MAX_VALUE), gone, Instant.now()));
+        mvc.perform(get("/community/me/bookmarks/hashtag-bundles").header("Authorization", auth(viewerId)))
+                .andExpect(jsonPath("$.data.bundles.length()").value(0)).andExpect(jsonPath("$.data.hasNext").value(false));
     }
 }

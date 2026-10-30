@@ -13,16 +13,20 @@ public class RecommendationService {
     private final CommunityProfiles profiles;
     private final CommunityBookmarkRepository bookmarks;
     private final PublicDirectory directory;
-    public RecommendationService(CommunityProfiles profiles, CommunityBookmarkRepository bookmarks, PublicDirectory directory) {
-        this.profiles = profiles; this.bookmarks = bookmarks; this.directory = directory;
+    private final CommunityTags tags;
+    public RecommendationService(CommunityProfiles profiles, CommunityBookmarkRepository bookmarks, PublicDirectory directory,
+            CommunityTags tags) {
+        this.profiles = profiles; this.bookmarks = bookmarks; this.directory = directory; this.tags = tags;
     }
     public Recommendations interests(Long actor, int limit) {
         return recommend(actor, profiles.read(actor).getInterests(), limit);
     }
     public Recommendations recent(Long actor, int limit) {
         profiles.read(actor);
-        var basis = bookmarks.findTop20ByUserIdOrderBySavedAtDescIdDesc(actor).stream()
-                .flatMap(b -> b.getSnapshot().hashtags().stream()).map(t -> t.name()).toList();
+        var saved = bookmarks.findTop20ByUserIdOrderBySavedAtDescIdDesc(actor).stream()
+                .flatMap(b -> b.getSnapshot().hashtags().stream()).toList();
+        var visible = tags.publicIds(saved.stream().map(t -> t.hashtagId()).toList());
+        var basis = saved.stream().filter(t -> visible.contains(t.hashtagId())).map(t -> t.name()).toList();
         return recommend(actor, basis, limit);
     }
     private Recommendations recommend(Long actor, List<String> basis, int limit) {
