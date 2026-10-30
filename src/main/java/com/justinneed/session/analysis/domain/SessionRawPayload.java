@@ -12,7 +12,7 @@ import org.hibernate.type.SqlTypes;
 
 /**
  * 확장 프로그램이 보낸 세션 원본 (수집기 stepC json, 세션당 1행).
- * 분석 화면은 원본이 아니라 AI 결과로 집계하므로, 원본은 재분석 용도로만 분석 완료 후 21일 보관한다.
+ * 분석 화면은 원본이 아니라 AI 결과로 집계하므로, 원본은 분석 완료 후 21일만 보관한다.
  */
 @Entity
 @Table(
@@ -51,7 +51,7 @@ public class SessionRawPayload {
         this.receivedAt = receivedAt;
     }
 
-    /** 분석이 끝나면 호출. 재분석하면 그 시점부터 다시 21일. */
+    /** 분석이 끝나면 호출. 그 시점부터 21일 뒤 삭제 대상이 된다. */
     public void markAnalyzed(LocalDateTime analyzedAt) {
         this.expiresAt = analyzedAt.plusDays(RETENTION_DAYS);
     }

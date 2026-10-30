@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 세션 원본(session_raw_payloads)을 분석 완료 후 21일이 지나면 삭제한다.
- * 분석 화면은 AI 결과(session_results)로 집계하므로 원본은 재분석 용도로만 보관한다.
+ * 분석 화면은 AI 결과(session_results)로 집계하므로 원본은 분석 실패 재시도 · 피처 정의 변경 시 재계산 용도로만 보관한다.
  * 졸업 평가용 원본은 삭제 전에 따로 백업한다.
  */
 @Component
