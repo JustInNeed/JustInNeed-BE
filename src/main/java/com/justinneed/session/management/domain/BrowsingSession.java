@@ -90,7 +90,9 @@ public class BrowsingSession extends BaseEntity {
         this.status = SessionStatus.READY;
     }
 
-    public void startAnalysis() {
+    // 수집이 끝난 시각을 함께 남긴다. 목록의 종료 시각 정렬 · 소요 시간에 쓰인다 (분석이 실패해도 유지)
+    public void startAnalysis(LocalDateTime endedAt) {
+        this.endedAt = endedAt;
         this.status = SessionStatus.ANALYZING;
     }
 

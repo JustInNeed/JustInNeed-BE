@@ -2,6 +2,7 @@ package com.justinneed.session.analysis.service;
 
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
+import com.justinneed.session.analysis.RawLinkVisits;
 import com.justinneed.session.analysis.client.AiAnalysisClient;
 import com.justinneed.session.analysis.domain.AiClusterModel;
 import com.justinneed.session.analysis.domain.ClusterModelScope;
@@ -13,6 +14,7 @@ import com.justinneed.session.analysis.repository.SessionResultRepository;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.domain.SessionStatus;
 import com.justinneed.session.management.repository.BrowsingSessionRepository;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -112,7 +114,7 @@ public class AnalysisRequestService {
             return null;
         }
 
-        session.startAnalysis();
+        session.startAnalysis(RawLinkVisits.sessionEndedAt(rawPayload.getPayload()).orElseGet(LocalDateTime::now));
         Long userId = session.getUserId();
         return new AiAnalyzeRequest(
                 sessionId,

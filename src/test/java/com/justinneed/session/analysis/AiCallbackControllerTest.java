@@ -51,7 +51,7 @@ class AiCallbackControllerTest {
     void setUp() {
         BrowsingSession session = new BrowsingSession(1L, "분석 전 제목", LocalDateTime.of(2026, 10, 30, 9, 59));
         session.markReady();
-        session.startAnalysis();
+        session.startAnalysis(LocalDateTime.of(2026, 10, 30, 10, 30));
         sessionId = sessionRepository.save(session).getId();
         Map<String, Object> raw = objectMapper.readValue(AnalysisResultServiceTest.RAW_JSON, new TypeReference<>() {
         });
