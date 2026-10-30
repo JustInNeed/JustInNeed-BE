@@ -1,5 +1,6 @@
 package com.justinneed.session.analysis;
 
+import com.justinneed.JustInNeedApplication;
 import com.justinneed.session.analysis.category.SiteCategory;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -23,7 +24,7 @@ import java.util.Optional;
  */
 public final class RawLinkVisits {
 
-    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+    private static final ZoneId KST = ZoneId.of(JustInNeedApplication.TIME_ZONE);
 
     private final Map<String, LinkVisit> visits;
 

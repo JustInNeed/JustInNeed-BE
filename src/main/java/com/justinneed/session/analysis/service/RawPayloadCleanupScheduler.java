@@ -1,5 +1,6 @@
 package com.justinneed.session.analysis.service;
 
+import com.justinneed.JustInNeedApplication;
 import com.justinneed.session.analysis.repository.SessionRawPayloadRepository;
 import java.time.LocalDateTime;
 import org.slf4j.Logger;
@@ -24,8 +25,8 @@ public class RawPayloadCleanupScheduler {
         this.rawPayloadRepository = rawPayloadRepository;
     }
 
-    // 매일 04:30 (서버 로컬 시간)
-    @Scheduled(cron = "0 30 4 * * *")
+    // 매일 04:30 (KST)
+    @Scheduled(cron = "0 30 4 * * *", zone = JustInNeedApplication.TIME_ZONE)
     @Transactional
     public void purgeExpiredPayloads() {
         int deleted = rawPayloadRepository.deleteExpired(LocalDateTime.now());

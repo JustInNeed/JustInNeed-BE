@@ -1,5 +1,6 @@
 package com.justinneed.auth.service;
 
+import com.justinneed.JustInNeedApplication;
 import com.justinneed.auth.repository.RefreshTokenRepository;
 import java.time.LocalDateTime;
 import org.slf4j.Logger;
@@ -23,8 +24,8 @@ public class RefreshTokenCleanupScheduler {
         this.refreshTokenRepository = refreshTokenRepository;
     }
 
-    // 매일 04:00 (서버 로컬 시간)
-    @Scheduled(cron = "0 0 4 * * *")
+    // 매일 04:00 (KST)
+    @Scheduled(cron = "0 0 4 * * *", zone = JustInNeedApplication.TIME_ZONE)
     @Transactional
     public void purgeExpiredTokens() {
         long deleted = refreshTokenRepository.deleteByExpiresAtBefore(LocalDateTime.now());
