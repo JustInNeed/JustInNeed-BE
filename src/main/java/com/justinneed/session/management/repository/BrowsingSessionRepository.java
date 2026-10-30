@@ -16,6 +16,10 @@ public interface BrowsingSessionRepository extends JpaRepository<BrowsingSession
     // 끝난 상태. 이 밖의 상태(수집 중 · 분석 대기 · 분석 중 등)는 모두 진행 중으로 본다
     List<SessionStatus> FINISHED_STATUSES = List.of(SessionStatus.COMPLETED, SessionStatus.FAILED);
 
+    // 목록 · 태그 그룹 조회(findListPage · findListByUserId)는 summary 를 fetch join 으로 함께 읽는다.
+    // summary 는 mappedBy 쪽 1:1 이라 바이트코드 강화 없이는 LAZY 가 안 돼, 따로 두면 세션마다 summary 조회가 한 번씩 더 나간다 (N+1).
+    // fetch 대상이 1:1 이라 행 수가 늘지 않아 Slice 의 limit / offset 도 DB 에서 그대로 적용된다
+
     // 세션 목록 · 태그 그룹 공통 정렬 (REC-10-1 기록 종료 시각 기준 최신순)
     // 1. 진행 중 세션을 맨 위에 두고, 그 안에서는 시작 시각 최신순 (종료 시각은 보지 않는다)
     // 2. 끝난 세션(완료 · 실패)은 종료 시각 최신순, 종료 시각이 없으면 뒤로
@@ -40,6 +44,7 @@ public interface BrowsingSessionRepository extends JpaRepository<BrowsingSession
     @Query("""
             select session
             from BrowsingSession session
+            left join fetch session.summary
             where session.userId = :userId
               and session.deletedAt is null
               and (:favoriteOnly = false or session.favorite = true)
@@ -59,6 +64,7 @@ public interface BrowsingSessionRepository extends JpaRepository<BrowsingSession
     @Query("""
             select session
             from BrowsingSession session
+            left join fetch session.summary
             where session.userId = :userId
               and session.deletedAt is null
             """ + LIST_ORDER)
