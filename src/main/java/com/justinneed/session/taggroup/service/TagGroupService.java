@@ -45,6 +45,7 @@ public class TagGroupService {
     @Transactional
     public TagGroupResponse createTagGroup(Long userId, TagGroupCreateRequest request) {
         List<String> hashtags = HashtagValidator.normalizeAndValidate(emptyIfNull(request.hashtags()));
+        rejectEmptyHashtags(hashtags);
         List<TagGroup> existing = tagGroupRepository.findByUserIdOrderByPositionAscIdAsc(userId);
         int position = request.position() == null ? existing.size() : request.position();
         if (position < 0 || position > existing.size()) {
@@ -63,6 +64,7 @@ public class TagGroupService {
     public TagGroupResponse updateTagGroup(Long userId, Long groupId, TagGroupUpdateRequest request) {
         TagGroup group = getOwnedGroup(userId, groupId);
         List<String> hashtags = HashtagValidator.normalizeAndValidate(request.hashtags());
+        rejectEmptyHashtags(hashtags);
         group.update(request.name(), hashtags);
 
         List<BrowsingSession> sessions = sessionRepository.findListByUserId(userId);
@@ -109,6 +111,13 @@ public class TagGroupService {
         List<TagGroup> groups = tagGroupRepository.findByUserIdOrderByPositionAscIdAsc(userId);
         for (int i = 0; i < groups.size(); i++) {
             groups.get(i).updatePosition(i);
+        }
+    }
+
+    // 그룹은 해시태그를 골라서 만든다 (REC-7-5). null 은 수정 요청에서 '해시태그는 그대로'라는 뜻이라 통과시킨다
+    private void rejectEmptyHashtags(List<String> hashtags) {
+        if (hashtags != null && hashtags.isEmpty()) {
+            throw new CustomException(ErrorCode.TAG_GROUP_HASHTAG_REQUIRED);
         }
     }
 
