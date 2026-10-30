@@ -85,6 +85,15 @@ public class BrowsingSession extends BaseEntity {
         this.sources = new ArrayList<>(sources);
     }
 
+    // 확장 수집이 끝나 AI 분석을 기다리는 상태로
+    public void markReady() {
+        this.status = SessionStatus.READY;
+    }
+
+    public void startAnalysis() {
+        this.status = SessionStatus.ANALYZING;
+    }
+
     // AI 분석 결과 반영. pageCount 는 AI pages(짧은 방문 제외)가 아니라 원본 기준 방문 링크 수
     public void completeAnalysis(String title, List<String> tags, List<Source> sources, int pageCount) {
         if (title != null && !title.isBlank()) {

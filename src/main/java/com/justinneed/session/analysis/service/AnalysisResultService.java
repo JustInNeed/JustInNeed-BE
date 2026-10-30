@@ -19,6 +19,7 @@ import com.justinneed.session.analysis.repository.AiClusterModelRepository;
 import com.justinneed.session.analysis.repository.SessionRawPayloadRepository;
 import com.justinneed.session.analysis.repository.SessionResultRepository;
 import com.justinneed.session.management.domain.BrowsingSession;
+import com.justinneed.session.management.domain.SessionStatus;
 import com.justinneed.session.management.domain.Source;
 import com.justinneed.session.management.repository.BrowsingSessionRepository;
 import com.justinneed.session.summary.domain.Summary;
@@ -29,6 +30,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,12 +47,14 @@ import org.springframework.transaction.annotation.Transactional;
  * 원본     → sessions.page_count (방문 링크 수), markAnalyzed (21일 뒤 삭제)
  * </pre>
  *
+ * AI 콜백(/internal/ai/sessions/{id}/result)으로 받으며, 세션이 ANALYZING 일 때만 저장한다.
  * LLM 이 실패해 마인드맵 · 줄글이 없거나 대체 구조면 아무것도 저장하지 않고 세션을 FAILED 로 바꾼 뒤 예외를 던진다.
  * (실패 상태를 남겨야 하므로 CustomException 은 롤백하지 않는다. 검사는 모두 저장 전에 한다.)
  */
 @Service
 public class AnalysisResultService {
 
+    private static final Logger log = LoggerFactory.getLogger(AnalysisResultService.class);
     private static final String SOURCE_LLM = "llm";
 
     private final BrowsingSessionRepository sessionRepository;
@@ -74,6 +79,9 @@ public class AnalysisResultService {
     public void save(Long sessionId, AiAnalysisResult result) {
         BrowsingSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        if (session.getStatus() != SessionStatus.ANALYZING) {
+            throw new CustomException(ErrorCode.ANALYSIS_NOT_IN_PROGRESS);
+        }
 
         if (isLlmFailed(result)) {
             session.failAnalysis();
@@ -98,6 +106,18 @@ public class AnalysisResultService {
                 toSources(listOrEmpty(result.selected()), linkVisits),
                 linkVisits.linkCount());
         rawPayload.markAnalyzed(LocalDateTime.now());
+    }
+
+    // AI 가 분석 중 오류를 알려 오면 FAILED 로 둔다 (원본은 남아 있어 다시 요청할 수 있다)
+    @Transactional
+    public void fail(Long sessionId, String reason) {
+        BrowsingSession session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        if (session.getStatus() != SessionStatus.ANALYZING) {
+            throw new CustomException(ErrorCode.ANALYSIS_NOT_IN_PROGRESS);
+        }
+        session.failAnalysis();
+        log.warn("[ai analysis] session {} 분석 실패: {}", sessionId, reason);
     }
 
     // 마인드맵 · 줄글이 없거나(LLM 미호출) 대체 구조(LLM 호출 실패)면 실패로 본다

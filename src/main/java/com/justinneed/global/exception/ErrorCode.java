@@ -9,7 +9,11 @@ public enum ErrorCode {
     EXCLUDED_URL_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "URL은 최대 100개까지 등록할 수 있습니다."),
     SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "세션을 찾을 수 없습니다."),
     RAW_PAYLOAD_NOT_FOUND(HttpStatus.NOT_FOUND, "세션 원본을 찾을 수 없습니다."),
-    ANALYSIS_LLM_FAILED(HttpStatus.BAD_GATEWAY, "AI 요약 생성에 실패했습니다."),
+    // AI 콜백에 대한 응답. 5xx 면 AI 가 재시도하므로 4xx 로 둔다
+    ANALYSIS_LLM_FAILED(HttpStatus.UNPROCESSABLE_CONTENT, "AI 요약 생성에 실패했습니다."),
+    SESSION_NOT_COLLECTING(HttpStatus.CONFLICT, "수집 중인 세션이 아닙니다."),
+    ANALYSIS_NOT_IN_PROGRESS(HttpStatus.CONFLICT, "분석 중인 세션이 아닙니다."),
+    INVALID_INTERNAL_TOKEN(HttpStatus.UNAUTHORIZED, "내부 호출 토큰이 올바르지 않습니다."),
     INTEREST_NOT_FOUND(HttpStatus.NOT_FOUND, "관심 해시태그를 찾을 수 없습니다."),
     TAG_GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "해시태그 그룹을 찾을 수 없습니다."),
     TITLE_REQUIRED(HttpStatus.BAD_REQUEST, "제목을 입력해 주세요."),
