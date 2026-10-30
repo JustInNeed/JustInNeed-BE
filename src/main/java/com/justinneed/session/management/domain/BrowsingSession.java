@@ -44,7 +44,7 @@ public class BrowsingSession extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private SessionStatus status = SessionStatus.COMPLETED;
+    private SessionStatus status = SessionStatus.COLLECTING;
 
     @Column(name = "is_favorite", nullable = false)
     private boolean favorite;
@@ -83,6 +83,21 @@ public class BrowsingSession extends BaseEntity {
 
     public void replaceSources(List<Source> sources) {
         this.sources = new ArrayList<>(sources);
+    }
+
+    // AI 분석 결과 반영. pageCount 는 AI pages(짧은 방문 제외)가 아니라 원본 기준 방문 링크 수
+    public void completeAnalysis(String title, List<String> tags, List<Source> sources, int pageCount) {
+        if (title != null && !title.isBlank()) {
+            this.title = title;
+        }
+        this.tags = new ArrayList<>(tags);
+        this.sources = new ArrayList<>(sources);
+        this.pageCount = pageCount;
+        this.status = SessionStatus.COMPLETED;
+    }
+
+    public void failAnalysis() {
+        this.status = SessionStatus.FAILED;
     }
 
     public void attachSummary(Summary summary) {

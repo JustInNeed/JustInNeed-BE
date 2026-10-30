@@ -46,6 +46,8 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	// 운영과 같은 KST 기준으로 테스트 (CI 서버가 UTC 여도 동일하게)
+	jvmArgs '-Duser.timezone=Asia/Seoul'
 }
 
 // 로컬 실행(bootRun) 시 .env 파일을 읽어 환경변수로 주입한다.

@@ -26,6 +26,8 @@ COPY --from=build /workspace/build/libs/*.jar app.jar
 USER app
 
 ENV SPRING_PROFILES_ACTIVE=prod
+# 서버 시간대 KST (앱도 main 에서 Asia/Seoul 로 고정한다. 로그 시각까지 맞추려고 OS 도 같이 둔다)
+ENV TZ=Asia/Seoul
 # 힙을 고정하지 않으면 JVM 이 RAM 의 1/4 을 잡아 같은 VM 의 분석 서비스(Python)와 경합한다
 ENV JAVA_OPTS="-Xmx512m"
 

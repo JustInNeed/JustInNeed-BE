@@ -77,7 +77,7 @@ public class SessionResult extends BaseEntity {
         this.userId = userId;
     }
 
-    /** 재분석하면 결과 전체를 교체한다. */
+    /** AI 결과 항목을 한 번에 채운다. */
     public void replace(
             Map<String, Object> mindmap,
             List<Map<String, Object>> selectedUnits,

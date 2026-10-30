@@ -46,7 +46,7 @@ public class Summary {
         this.markdown = markdown;
     }
 
-    /** AI 가 다시 분석하면 원본 줄글과 본문을 함께 교체한다. */
+    /** AI 결과 저장 시 호출. 줄글 원본과 그걸 변환한 본문을 함께 넣는다. */
     public void replaceEssay(Map<String, Object> essay, String markdown) {
         this.essay = essay;
         this.markdown = markdown;
