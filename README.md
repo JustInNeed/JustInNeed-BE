@@ -122,6 +122,7 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 | GET | `/sessions/{id}` | 세션 상세 조회. 요약 본문과 출처를 함께 반환 |
 | PATCH | `/sessions/{id}` | 세션 편집. `title`, `editedMarkdown`, `isPublic`, `isFavorite`, `tags`, `insights` 중 보낸 필드만 수정 |
 | DELETE | `/sessions/{id}` | 세션 삭제. 실제 삭제가 아니라 soft delete 처리 |
+| POST | `/sessions/chunks` | 확장 프로그램이 세션 원본 청크를 보냄. `sessionId`(수집기 세션 id) · `segId` · `n` · `payload`, 마지막 청크는 `final` · `maxN` · `stopReason`. 처음 받으면 201, 이미 받은 청크면 저장하지 않고 200(`duplicate: true`) |
 | GET | `/tag-groups` | 해시태그 그룹 목록 조회. 그룹별 매칭 세션 포함 |
 | POST | `/tag-groups` | 새 해시태그 그룹 생성. `position` 생략 시 맨 뒤, 지정 시 해당 위치에 끼워 넣음 |
 | PATCH | `/tag-groups/{id}` | 그룹 이름과 해시태그 수정 |
