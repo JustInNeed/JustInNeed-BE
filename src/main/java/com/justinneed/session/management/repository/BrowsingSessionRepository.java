@@ -73,6 +73,22 @@ public interface BrowsingSessionRepository extends JpaRepository<BrowsingSession
             @Param("finished") List<SessionStatus> finished
     );
 
+    // 내 세션들의 태그 목록(세션당 한 줄), 목록과 같은 순서. 태그 컬럼만 읽어 summary 는 조회하지 않는다
+    default List<List<String>> findTagsByUserId(Long userId) {
+        return findTagsByUserId(userId, FINISHED_STATUSES);
+    }
+
+    @Query("""
+            select session.tags
+            from BrowsingSession session
+            where session.userId = :userId
+              and session.deletedAt is null
+            """ + LIST_ORDER)
+    List<List<String>> findTagsByUserId(
+            @Param("userId") Long userId,
+            @Param("finished") List<SessionStatus> finished
+    );
+
     long countByUserIdAndDeletedAtIsNull(Long userId);
 
     long countByUserIdAndFavoriteTrueAndDeletedAtIsNull(Long userId);

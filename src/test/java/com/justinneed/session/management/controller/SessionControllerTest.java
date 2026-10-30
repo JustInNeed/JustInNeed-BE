@@ -111,6 +111,20 @@ class SessionControllerTest {
     }
 
     @Test
+    @DisplayName("GET /sessions/hashtags 는 /sessions/{id} 가 아니라 해시태그 후보로 매칭되고, 대소문자 무시 중복 없이 목록 순서로 준다")
+    void getHashtagsReturnsDistinctTagsInListOrder() throws Exception {
+        BrowsingSession newer = new BrowsingSession(USER_ID, "JPA 심화", LocalDateTime.of(2026, 6, 2, 10, 0));
+        newer.complete(LocalDateTime.of(2026, 6, 2, 11, 0), 2);
+        newer.update(null, null, false, false, List.of("jpa", "Hibernate"));
+        sessionRepository.save(newer);
+
+        mockMvc.perform(get("/sessions/hashtags").header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").value(contains("jpa", "Hibernate", "Spring")));
+    }
+
+    @Test
     void getSessionReturnsSummaryAndSources() throws Exception {
         mockMvc.perform(get("/sessions/{id}", session.getId()).header(HttpHeaders.AUTHORIZATION, bearer))
                 .andExpect(status().isOk())

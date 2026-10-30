@@ -9,7 +9,9 @@ import com.justinneed.session.management.dto.SessionListResponse;
 import com.justinneed.session.management.dto.SessionPageResponse;
 import com.justinneed.session.management.dto.SessionUpdateRequest;
 import com.justinneed.session.management.repository.BrowsingSessionRepository;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -40,6 +42,18 @@ public class SessionService {
         long totalCount = sessionRepository.countByUserIdAndDeletedAtIsNull(userId);
         long favoriteCount = sessionRepository.countByUserIdAndFavoriteTrueAndDeletedAtIsNull(userId);
         return new SessionPageResponse(sessions, slice.hasNext(), totalCount, favoriteCount);
+    }
+
+    // 그룹 만들기의 해시태그 후보: 내 세션 전체의 태그를 목록 순서로 훑어 처음 나온 순서대로, 대소문자 무시 중복 제거
+    public List<String> getHashtags(Long userId) {
+        Map<String, String> hashtagByKey = new LinkedHashMap<>();
+        for (List<String> tags : sessionRepository.findTagsByUserId(userId)) {
+            for (String tag : tags) {
+                // 처음 나온 표기를 남긴다
+                hashtagByKey.putIfAbsent(tag.toLowerCase(), tag);
+            }
+        }
+        return List.copyOf(hashtagByKey.values());
     }
 
     public SessionDetailResponse getSession(Long userId, Long sessionId) {
