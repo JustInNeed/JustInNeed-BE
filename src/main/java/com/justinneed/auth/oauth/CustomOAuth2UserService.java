@@ -34,10 +34,17 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
         OAuth2User oAuth2User = super.loadUser(userRequest);
-
         String registrationId = userRequest.getClientRegistration().getRegistrationId();
+        return resolve(registrationId, oAuth2User.getAttributes());
+    }
+
+    /**
+     * 소셜 프로필 attributes 로 회원을 조회/생성하고 principal 을 만든다.
+     * 프로바이더 호출(super.loadUser)과 분리해 두어 테스트에서 프로필 JSON 만으로 부를 수 있다.
+     */
+    public OAuth2User resolve(String registrationId, Map<String, Object> profileAttributes) {
         SocialProvider provider = SocialProvider.valueOf(registrationId.toUpperCase());
-        OAuth2UserInfo info = OAuth2UserInfo.of(provider, oAuth2User.getAttributes());
+        OAuth2UserInfo info = OAuth2UserInfo.of(provider, profileAttributes);
 
         Member member = memberRepository.findBySocialProviderAndProviderId(provider, info.getProviderId())
                 .orElseGet(() -> memberRepository.save(
@@ -46,7 +53,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             throw new OAuth2AuthenticationException("withdrawn_account");
         }
 
-        Map<String, Object> attributes = new HashMap<>(oAuth2User.getAttributes());
+        Map<String, Object> attributes = new HashMap<>(profileAttributes);
         attributes.put(ATTR_MEMBER_ID, member.getId());
         attributes.put(ATTR_NEEDS_NICKNAME, member.getNickname() == null);
         attributes.put(ATTR_PROVIDER_ID, info.getProviderId());
