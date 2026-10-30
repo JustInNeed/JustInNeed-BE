@@ -7,10 +7,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
@@ -48,7 +51,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         SocialProvider provider = SocialProvider.valueOf(registrationId.toUpperCase());
         OAuth2UserInfo info = OAuth2UserInfo.of(provider, profileAttributes);
 
-        Member member = findOrCreate(provider, info);
+        Member member = loadMember(provider, info);
 
         Map<String, Object> attributes = new HashMap<>(profileAttributes);
         attributes.put(ATTR_MEMBER_ID, member.getId());
@@ -61,6 +64,15 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 ATTR_PROVIDER_ID);
     }
 
+    // DB 오류는 인증 실패로 바꿔야 실패 핸들러가 로그인 화면(?error=oauth)으로 보낸다 (MEM-1-1). 아니면 BE 주소에서 500
+    private Member loadMember(SocialProvider provider, OAuth2UserInfo info) {
+        try {
+            return findOrCreate(provider, info);
+        } catch (DataAccessException e) {
+            throw new OAuth2AuthenticationException(new OAuth2Error("member_unavailable"), e);
+        }
+    }
+
     private Member findOrCreate(SocialProvider provider, OAuth2UserInfo info) {
         Optional<Member> found = memberRepository.findBySocialProviderAndProviderId(provider, info.getProviderId());
         if (found.isPresent() && !found.get().isWithdrawn()) {
@@ -68,7 +80,13 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         }
         // 익명화 도입 전에 탈퇴한 행은 아직 소셜 식별자를 쥐고 있다 → 먼저 비우고(유니크 제약) 새 회원을 만든다
         found.ifPresent(this::anonymizeWithdrawn);
-        return memberRepository.save(new Member(provider, info.getProviderId(), null, info.getEmail()));
+        try {
+            return memberRepository.save(new Member(provider, info.getProviderId(), null, info.getEmail()));
+        } catch (DataIntegrityViolationException race) {
+            // 같은 계정의 첫 로그인이 동시에 들어오면 먼저 만들어진 회원을 쓴다
+            return memberRepository.findBySocialProviderAndProviderId(provider, info.getProviderId())
+                    .orElseThrow(() -> race);
+        }
     }
 
     private void anonymizeWithdrawn(Member withdrawn) {

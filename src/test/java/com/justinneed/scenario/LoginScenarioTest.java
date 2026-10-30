@@ -301,6 +301,18 @@ class LoginScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
+    @DisplayName("코드를 받은 뒤 60초 안에 탈퇴하면 코드를 토큰으로 바꿀 수 없다")
+    void withdrawnMemberCannotExchangeCode() throws Exception {
+        OAuth2User principal = login("kakao", kakaoProfile(7101L, null));
+        Member member = members.findById(memberIdOf(principal)).orElseThrow();
+        String code = loginCode(principal);
+
+        withdraw(member);
+
+        exchange(code).andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_LOGIN_CODE_MESSAGE));
+    }
+
+    @Test
     @DisplayName("코드가 없거나 · 비었거나 · 발급한 적 없는 값이면 401")
     void missingOrUnknownCodeIsRejected() throws Exception {
         mvc.perform(post("/auth/token"))

@@ -320,6 +320,18 @@ class AccountScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
+    @DisplayName("탈퇴 처리와 겹쳐 refresh 토큰 행이 남아 있어도 탈퇴 회원에게는 새 토큰을 주지 않는다")
+    void withdrawnMemberCannotRefresh() throws Exception {
+        Member me = member("sprout");
+        TokenResponse login = authTokenService.issue(me.getId());
+        me.withdraw(null, LocalDateTime.now());
+        members.saveAndFlush(me);
+
+        mvc.perform(post("/auth/refresh").with(json(Map.of("refreshToken", login.refreshToken()))))
+                .andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_REFRESH_MESSAGE));
+    }
+
+    @Test
     @DisplayName("토큰 없이 로그아웃해도 200 이라 FE 는 항상 저장된 토큰을 지우고 나갈 수 있다")
     void logoutIsIdempotent() throws Exception {
         mvc.perform(post("/auth/logout")).andExpect(okEnvelope());

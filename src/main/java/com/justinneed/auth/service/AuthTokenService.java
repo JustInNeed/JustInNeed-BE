@@ -4,6 +4,7 @@ import com.justinneed.auth.domain.RefreshToken;
 import com.justinneed.auth.dto.TokenResponse;
 import com.justinneed.auth.jwt.JwtTokenProvider;
 import com.justinneed.auth.jwt.TokenDenylist;
+import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.auth.jwt.TokenHashes;
 import com.justinneed.auth.repository.RefreshTokenRepository;
 import com.justinneed.global.exception.CustomException;
@@ -24,15 +25,18 @@ public class AuthTokenService {
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
     private final TokenDenylist accessTokenDenylist;
+    private final MemberRepository memberRepository;
 
     public AuthTokenService(
             JwtTokenProvider jwtTokenProvider,
             RefreshTokenRepository refreshTokenRepository,
-            TokenDenylist accessTokenDenylist
+            TokenDenylist accessTokenDenylist,
+            MemberRepository memberRepository
     ) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.refreshTokenRepository = refreshTokenRepository;
         this.accessTokenDenylist = accessTokenDenylist;
+        this.memberRepository = memberRepository;
     }
 
     /** 로그인 시: 토큰 발급 + refresh 화이트리스트 등록 */
@@ -58,7 +62,12 @@ public class AuthTokenService {
         if (deleted != 1) {
             throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
-        return issue(jwtTokenProvider.getMemberId(refreshToken));
+        Long memberId = jwtTokenProvider.getMemberId(refreshToken);
+        // 탈퇴 처리와 겹쳐 토큰이 남은 경우에도 새 토큰을 주지 않는다
+        if (memberRepository.existsByIdAndWithdrawnAtIsNotNull(memberId)) {
+            throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
+        }
+        return issue(memberId);
     }
 
     /** 로그아웃 시: refresh 화이트리스트에서 삭제 + access 즉시 무효화(denylist) */
