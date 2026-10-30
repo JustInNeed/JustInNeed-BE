@@ -38,34 +38,15 @@ class AccountSettingsServiceTest {
     }
 
     @Test
-    void updateNicknameChangesAvailableNickname() {
-        when(memberRepository.findByIdAndWithdrawnAtIsNull(1L)).thenReturn(Optional.of(member));
-        when(memberRepository.existsByNicknameIgnoreCaseAndIdNot("justin", 1L)).thenReturn(false);
-
-        var response = service.updateNickname(1L, "justin");
-
-        assertThat(member.getNickname()).isEqualTo("justin");
-        assertThat(response.code()).isEqualTo(200);
-        assertThat(response.nickname()).isEqualTo("justin");
-    }
-
-    @Test
-    void updateNicknameRejectsDuplicateNickname() {
-        when(memberRepository.findByIdAndWithdrawnAtIsNull(1L)).thenReturn(Optional.of(member));
-        when(memberRepository.existsByNicknameIgnoreCaseAndIdNot("justin", 1L)).thenReturn(true);
-
-        assertThatThrownBy(() -> service.updateNickname(1L, "justin"))
-                .isInstanceOf(CustomException.class)
-                .extracting("errorCode")
-                .isEqualTo(ErrorCode.DUPLICATE_NICKNAME);
-    }
-
-    @Test
     void withdrawRevokesTokensAndMarksMemberWithdrawn() {
         when(memberRepository.findByIdAndWithdrawnAtIsNull(1L)).thenReturn(Optional.of(member));
         var response = service.withdraw(1L, new AccountWithdrawRequest("WITHDRAW", "unused"), "access-token");
 
         assertThat(member.isWithdrawn()).isTrue();
+        // 같은 소셜 계정으로 다시 가입할 수 있게 소셜 식별자 · 닉네임 · 이메일을 비운다
+        assertThat(member.getProviderId()).startsWith(Member.WITHDRAWN_PROVIDER_ID_PREFIX);
+        assertThat(member.getNickname()).isNull();
+        assertThat(member.getEmail()).isNull();
         assertThat(response.withdrawn()).isTrue();
         assertThat(response.extensionLogin()).isFalse();
         verify(authTokenService).revokeAll(1L, "access-token");

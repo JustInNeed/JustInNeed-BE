@@ -1,9 +1,9 @@
 package com.justinneed.global.config;
 
+import com.justinneed.auth.jwt.JwtAuthenticationEntryPoint;
 import com.justinneed.auth.jwt.JwtAuthenticationFilter;
 import com.justinneed.auth.oauth.CustomOAuth2UserService;
 import com.justinneed.auth.oauth.OAuth2SuccessHandler;
-import jakarta.servlet.http.HttpServletResponse;
 import java.util.Arrays;
 import java.util.List;
 import org.slf4j.Logger;
@@ -27,6 +27,7 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final String failureRedirectUri;
     private final List<String> allowedOrigins;
 
@@ -34,12 +35,14 @@ public class SecurityConfig {
             CustomOAuth2UserService customOAuth2UserService,
             OAuth2SuccessHandler oAuth2SuccessHandler,
             JwtAuthenticationFilter jwtAuthenticationFilter,
+            JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
             @Value("${app.oauth.failure-redirect-uri}") String failureRedirectUri,
             @Value("${app.cors.allowed-origins}") String allowedOrigins
     ) {
         this.customOAuth2UserService = customOAuth2UserService;
         this.oAuth2SuccessHandler = oAuth2SuccessHandler;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
         this.failureRedirectUri = failureRedirectUri;
         this.allowedOrigins = Arrays.stream(allowedOrigins.split(","))
                 .map(String::trim)
@@ -77,10 +80,8 @@ public class SecurityConfig {
                             response.sendRedirect(failureRedirectUri);
                         })
                 )
-                // 보호 리소스에 인증 없이 접근 시 리다이렉트 대신 401 반환 (API 친화적)
-                .exceptionHandling(ex -> ex.authenticationEntryPoint(
-                        (request, response, authException) ->
-                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED)))
+                // 보호 리소스에 인증 없이 접근 시 리다이렉트 대신 401 + 공통 에러 응답 (API 친화적)
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 // 모든 요청 전에 JWT access 토큰 검사
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

@@ -81,4 +81,63 @@ class MemberControllerTest {
                         .content("{\"nickname\":\"TAKEN\"}"))
                 .andExpect(status().isConflict());
     }
+
+    @Test
+    void nicknameAvailableWhenUnused() throws Exception {
+        mockMvc.perform(get("/members/nickname/available")
+                        .param("nickname", "yesong1")
+                        .header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.nickname").value("yesong1"))
+                .andExpect(jsonPath("$.data.available").value(true));
+    }
+
+    @Test
+    void nicknameUnavailableWhenTakenIgnoringCase() throws Exception {
+        mockMvc.perform(get("/members/nickname/available")
+                        .param("nickname", "TAKEN")
+                        .header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.nickname").value("TAKEN"))
+                .andExpect(jsonPath("$.data.available").value(false));
+    }
+
+    @Test
+    void ownNicknameIsAvailable() throws Exception {
+        String takenOwnerBearer = "Bearer " + jwtTokenProvider.createAccessToken(
+                memberRepository.findBySocialProviderAndProviderId(SocialProvider.NAVER, "naver-1")
+                        .orElseThrow().getId());
+
+        mockMvc.perform(get("/members/nickname/available")
+                        .param("nickname", "Taken")
+                        .header(HttpHeaders.AUTHORIZATION, takenOwnerBearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.available").value(true));
+    }
+
+    @Test
+    void nicknameAvailabilityRejectsInvalidFormat() throws Exception {
+        mockMvc.perform(get("/members/nickname/available")
+                        .param("nickname", "1abc")
+                        .header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("닉네임은 영문으로 시작하는 3~8자(영문·숫자)여야 합니다."));
+    }
+
+    @Test
+    void nicknameAvailabilityRejectsMissingParam() throws Exception {
+        mockMvc.perform(get("/members/nickname/available")
+                        .header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("닉네임을 입력해 주세요."));
+    }
+
+    @Test
+    void nicknameAvailabilityRequiresAuthentication() throws Exception {
+        mockMvc.perform(get("/members/nickname/available").param("nickname", "yesong1"))
+                .andExpect(status().isUnauthorized());
+    }
 }

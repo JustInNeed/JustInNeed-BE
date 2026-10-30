@@ -385,9 +385,7 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @Disabled("FE 기대와 다름: 최근 저장 기반 추천의 basisHashtags 는 내 북마크 스냅샷 태그를 그대로 써서, 저장한 뒤 작성자가 비공개로 돌린 "
-                + "'카페'가 추천 기준으로 계속 나옴 (추천 카드 · 매칭에는 안 쓰임) — 스냅샷 보존과 비공개 중 무엇을 따를지 결정 후 켠다")
-        @DisplayName("최근 저장 기반(COM-6-2): 작성자가 나중에 비공개로 돌린 해시태그는 추천 기준(basisHashtags)에도 안 나온다")
+        @DisplayName("최근 저장 기반(COM-6-2): 작성자가 나중에 비공개로 돌린 해시태그는 추천 기준(basisHashtags)에도 안 나오고, 다시 공개로 돌리면 돌아온다")
         void recentBookmarkBasisHidesPrivateHashtags() throws Exception {
             setWandererHashtagPublic("카페", true);
             bookmarkHashtag(me, wanderer.member(), "카페");
@@ -397,6 +395,12 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
             mvc.perform(get(BY_RECENT_BOOKMARKS).with(as(me)))
                     .andExpect(okEnvelope())
                     .andExpect(jsonPath("$.data.basisHashtags").value(contains("비엔나")));
+
+            // 북마크 스냅샷은 그대로라 작성자가 다시 공개로 돌리면 추천 기준에 다시 나온다
+            setWandererHashtagPublic("카페", true);
+
+            mvc.perform(get(BY_RECENT_BOOKMARKS).with(as(me)))
+                    .andExpect(jsonPath("$.data.basisHashtags").value(contains("비엔나", "카페")));
         }
 
         @Test

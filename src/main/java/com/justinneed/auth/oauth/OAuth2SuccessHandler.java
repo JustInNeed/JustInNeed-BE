@@ -1,12 +1,14 @@
 package com.justinneed.auth.oauth;
 
-import com.justinneed.auth.dto.TokenResponse;
-import com.justinneed.auth.service.AuthTokenService;
+import com.justinneed.auth.service.LoginCodeService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
@@ -14,21 +16,26 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
- * 소셜 로그인 성공 시 access/refresh 토큰을 발급하고, 토큰을 쿼리스트링에 담아 FE 콜백으로 리다이렉트한다.
- * (쿠키는 추후 도입 예정 — 지금은 러프하게 쿼리스트링으로 전달)
+ * 소셜 로그인 성공 시 일회용 로그인 코드를 발급하고, 코드만 쿼리스트링에 담아 FE 콜백으로 리다이렉트한다.
+ * 토큰은 URL 에 싣지 않는다 (FE 호스팅 접근 로그 · 브라우저 기록에 남음). FE 가 POST /auth/token 으로 코드를 토큰과 바꾼다.
  */
 @Component
 public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-    private final AuthTokenService authTokenService;
+    private static final Logger log = LoggerFactory.getLogger(OAuth2SuccessHandler.class);
+
+    private final LoginCodeService loginCodeService;
     private final String successRedirectUri;
+    private final String failureRedirectUri;
 
     public OAuth2SuccessHandler(
-            AuthTokenService authTokenService,
-            @Value("${app.oauth.success-redirect-uri}") String successRedirectUri
+            LoginCodeService loginCodeService,
+            @Value("${app.oauth.success-redirect-uri}") String successRedirectUri,
+            @Value("${app.oauth.failure-redirect-uri}") String failureRedirectUri
     ) {
-        this.authTokenService = authTokenService;
+        this.loginCodeService = loginCodeService;
         this.successRedirectUri = successRedirectUri;
+        this.failureRedirectUri = failureRedirectUri;
     }
 
     @Override
@@ -38,12 +45,17 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         Long memberId = ((Number) principal.getAttributes().get(CustomOAuth2UserService.ATTR_MEMBER_ID)).longValue();
         boolean needsNickname = Boolean.TRUE.equals(principal.getAttributes().get(CustomOAuth2UserService.ATTR_NEEDS_NICKNAME));
 
-        TokenResponse tokens = authTokenService.issue(memberId);
+        String code;
+        try {
+            code = loginCodeService.issue(memberId, needsNickname);
+        } catch (DataAccessException e) {
+            log.warn("[OAuth2 login failed] 로그인 코드 발급 실패: {}", e.getMessage());
+            getRedirectStrategy().sendRedirect(request, response, failureRedirectUri);
+            return;
+        }
 
         String targetUrl = UriComponentsBuilder.fromUriString(successRedirectUri)
-                .queryParam("accessToken", tokens.accessToken())
-                .queryParam("refreshToken", tokens.refreshToken())
-                .queryParam("needsNickname", needsNickname)
+                .queryParam("code", code)
                 .build()
                 .toUriString();
 

@@ -7,7 +7,6 @@ import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
 import com.justinneed.settings.account.dto.request.AccountWithdrawRequest;
 import com.justinneed.settings.account.dto.response.AccountWithdrawResponse;
-import com.justinneed.settings.account.dto.response.NicknameUpdateResponse;
 import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,17 +23,6 @@ public class AccountSettingsService {
     public AccountSettingsService(MemberRepository memberRepository, AuthTokenService authTokenService) {
         this.memberRepository = memberRepository;
         this.authTokenService = authTokenService;
-    }
-
-    @Transactional
-    public NicknameUpdateResponse updateNickname(Long memberId, String nickname) {
-        Member member = findActiveMember(memberId);
-        if (memberRepository.existsByNicknameIgnoreCaseAndIdNot(nickname, memberId)) {
-            throw new CustomException(ErrorCode.DUPLICATE_NICKNAME);
-        }
-
-        member.updateNickname(nickname);
-        return new NicknameUpdateResponse(200, memberId, nickname, LocalDateTime.now());
     }
 
     @Transactional

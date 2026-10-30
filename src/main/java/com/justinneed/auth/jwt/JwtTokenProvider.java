@@ -7,6 +7,7 @@ import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
+import java.util.UUID;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -43,6 +44,8 @@ public class JwtTokenProvider {
     private String create(Long memberId, String type, long validitySeconds) {
         Instant now = Instant.now();
         return Jwts.builder()
+                // iat 가 초 단위라 jti 가 없으면 같은 초에 만든 토큰이 글자까지 똑같아진다
+                .id(UUID.randomUUID().toString())
                 .subject(String.valueOf(memberId))
                 .claim(CLAIM_TYPE, type)
                 .issuedAt(Date.from(now))

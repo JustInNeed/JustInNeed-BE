@@ -1,15 +1,19 @@
 package com.justinneed.scenario;
 
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.justinneed.auth.domain.Member;
+import com.justinneed.session.management.domain.SessionStatus;
 import com.justinneed.session.taggroup.domain.TagGroup;
 import com.justinneed.session.taggroup.repository.TagGroupRepository;
 import java.util.List;
@@ -29,6 +33,7 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
 
     private static final String INVALID_ORDER = "정렬할 그룹 목록이 올바르지 않습니다.";
     private static final String GROUP_NOT_FOUND = "해시태그 그룹을 찾을 수 없습니다.";
+    private static final String HASHTAG_REQUIRED = "해시태그를 1개 이상 선택해 주세요.";
 
     private static final String ROME = "로마 3박 4일 동선 짜기";
     private static final String FLIGHT = "유럽 항공권 비교 (인천→로마 IN, 프라하→인천 OUT)";
@@ -61,6 +66,90 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data[0].sessions[0].tags").value(contains("로마", "콜로세움", "바티칸", "먹거리")))
                 .andExpect(jsonPath("$.data[1].name").value("React 학습"))
                 .andExpect(jsonPath("$.data[1].sessions", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("그룹 안 세션도 목록과 같은 순서: 진행 중 세션이 맨 위, 나머지는 실패 세션을 포함해 종료 시각 최신순, 종료 시각이 없으면 맨 뒤 — 조회 · 생성 · 수정 · 순서 변경 응답 모두")
+    void groupSessionsFollowListOrder() throws Exception {
+        Member me = member("sprout");
+        seedMockSessions(me);
+        sessionWithStatus(me, "로마 근교 당일치기", "2026-04-10T09:00:00", null, SessionStatus.ANALYZING, List.of("로마"));
+        // 로마(04-26 22:48 종료)와 항공권(04-25 15:21 종료) 사이
+        sessionWithStatus(me, "파리 숙소 비교", "2026-04-25T20:00:00", "2026-04-25T21:00:00", SessionStatus.FAILED,
+                List.of("파리"));
+        sessionWithStatus(me, "항공권 마일리지", "2026-04-27T09:00:00", null, SessionStatus.FAILED, List.of("항공권"));
+        TagGroup europe = group(me, "유럽", List.of("로마", "파리", "항공권"), 0);
+        String[] expected = {"로마 근교 당일치기", ROME, "파리 숙소 비교", FLIGHT, PARIS, "항공권 마일리지"};
+
+        mvc.perform(get("/tag-groups").with(as(me)))
+                .andExpect(jsonPath("$.data[0].sessions[*].title").value(contains(expected)));
+        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me))
+                        .with(json(Map.of("hashtags", List.of("항공권", "파리", "로마")))))
+                .andExpect(jsonPath("$.data.sessions[*].title").value(contains(expected)));
+        Long copyId = readLong(mvc.perform(post("/tag-groups").with(as(me))
+                        .with(json(Map.of("name", "유럽 사본", "hashtags", List.of("로마", "파리", "항공권")))))
+                .andExpect(jsonPath("$.data.sessions[*].title").value(contains(expected))), "$.data.id");
+        mvc.perform(patch("/tag-groups/order").with(as(me))
+                        .with(json(Map.of("groupIds", List.of(copyId, europe.getId())))))
+                .andExpect(jsonPath("$.data[0].sessions[*].title").value(contains(expected)))
+                .andExpect(jsonPath("$.data[1].sessions[*].title").value(contains(expected)));
+    }
+
+    @Test
+    @DisplayName("그룹 만들기 해시태그 후보(GET /sessions/hashtags): 내 세션 전체 태그를 목록 순서대로 처음 나온 순서로, 대소문자 무시 중복 없이 준다")
+    void hashtagCandidatesFollowListOrder() throws Exception {
+        Member me = member("sprout");
+        seedMockSessions(me);
+        // 진행 중 세션이 목록 맨 위라 이 세션 태그가 먼저 나오고, 표기도 처음 나온 'etias' 가 남는다 (비자 세션의 'ETIAS' 는 빠짐)
+        sessionWithStatus(me, "분석 중", "2026-04-01T09:00:00", null, SessionStatus.ANALYZING, List.of("etias", "Spring"));
+
+        mvc.perform(get("/sessions/hashtags").with(as(me)))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data").value(contains(
+                        "etias", "Spring",
+                        "로마", "콜로세움", "바티칸", "먹거리",
+                        "항공권", "스카이스캐너", "예산",
+                        "파리", "미술관", "루브르", "오르세",
+                        // 유레일 세션의 '예산' 은 이미 나왔으므로 빠진다
+                        "유레일", "기차",
+                        "바르셀로나", "가우디", "사그라다파밀리아",
+                        "비자", "쉥겐",
+                        "프라하", "카를교", "체코")));
+    }
+
+    @Test
+    @DisplayName("해시태그 후보에 삭제한 세션 · 다른 사람 세션의 태그는 안 나온다")
+    void hashtagCandidatesExcludeDeletedAndForeign() throws Exception {
+        Member me = member("sprout");
+        MockSessions mock = seedMockSessions(me);
+        session(member("wanderer"), "동유럽 3주 살이", "2026-04-27T09:00:00", "2026-04-27T10:00:00", 30, false, true,
+                List.of("동유럽", "프라하"), List.of(), null);
+        mvc.perform(delete("/sessions/{id}", mock.paris().getId()).with(as(me))).andExpect(okEnvelope());
+
+        mvc.perform(get("/sessions/hashtags").with(as(me)))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data", hasSize(18)))
+                .andExpect(jsonPath("$.data").value(not(hasItem("파리"))))
+                .andExpect(jsonPath("$.data").value(not(hasItem("루브르"))))
+                .andExpect(jsonPath("$.data").value(not(hasItem("동유럽"))))
+                .andExpect(jsonPath("$.data").value(hasItem("프라하")));
+    }
+
+    @Test
+    @DisplayName("세션이 없으면 해시태그 후보는 빈 배열 — /sessions/{id} 로 잡혀 400 이 나지 않는다")
+    void hashtagCandidatesEmpty() throws Exception {
+        Member me = member("sprout");
+
+        mvc.perform(get("/sessions/hashtags").with(as(me)))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("로그인하지 않고 해시태그 후보를 부르면 401")
+    void hashtagCandidatesRequireLogin() throws Exception {
+        mvc.perform(get("/sessions/hashtags")).andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -214,6 +303,47 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
+    @DisplayName("그룹 이름을 빈 값 · 공백으로 수정하면 400 '그룹 이름을 입력해 주세요.' 이고 이름 · 해시태그는 그대로다")
+    void blankNameUpdateIsRejected() throws Exception {
+        Member me = member("sprout");
+        TagGroup europe = group(me, "유럽 여행 준비", List.of("로마", "파리"), 0);
+
+        for (String blank : List.of("", "   ", "\t", " \n ")) {
+            mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me))
+                            .with(json(Map.of("name", blank, "hashtags", List.of("항공권")))))
+                    .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "그룹 이름을 입력해 주세요."));
+        }
+        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me)).with(json(Map.of("name", "가".repeat(51)))))
+                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "그룹 이름은 최대 50자까지 입력할 수 있습니다."));
+
+        mvc.perform(get("/tag-groups").with(as(me)))
+                .andExpect(jsonPath("$.data[0].name").value("유럽 여행 준비"))
+                .andExpect(jsonPath("$.data[0].hashtags").value(contains("로마", "파리")));
+    }
+
+    @Test
+    @DisplayName("그룹 수정에 name 을 안 보내면 이름은 그대로, 보내면 바뀐다 (앞뒤 공백이 있어도 글자가 있으면 통과)")
+    void nameIsOptionalOnUpdate() throws Exception {
+        Member me = member("sprout");
+        TagGroup europe = group(me, "유럽 여행 준비", List.of("로마", "파리"), 0);
+
+        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me)).with(json(Map.of("hashtags", List.of("파리")))))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.name").value("유럽 여행 준비"))
+                .andExpect(jsonPath("$.data.hashtags").value(contains("파리")));
+        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me)).with(json("{\"name\": null}")))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.name").value("유럽 여행 준비"));
+        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me)).with(json(Map.of("name", " 파리만 "))))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.name").value(" 파리만 "));
+
+        mvc.perform(get("/tag-groups").with(as(me)))
+                .andExpect(jsonPath("$.data[0].name").value(" 파리만 "))
+                .andExpect(jsonPath("$.data[0].hashtags").value(contains("파리")));
+    }
+
+    @Test
     @DisplayName("그룹 해시태그가 10개를 넘거나 · 형식이 틀리거나 · 중복이면 400 이고 그룹은 안 생긴다")
     void groupHashtagValidation() throws Exception {
         Member me = member("sprout");
@@ -228,6 +358,53 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "이미 등록된 해시태그입니다."));
 
         mvc.perform(get("/tag-groups").with(as(me))).andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("해시태그 없이 그룹을 만들면(빈 배열 · 누락 · null) 400 이고 그룹이 안 생기며 기존 그룹 위치도 그대로다")
+    void createGroupRequiresHashtag() throws Exception {
+        Member me = member("sprout");
+        TagGroup europe = group(me, "유럽", List.of("로마"), 0);
+
+        mvc.perform(post("/tag-groups").with(as(me))
+                        .with(json(Map.of("name", "빈 그룹", "hashtags", List.of(), "position", 0))))
+                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, HASHTAG_REQUIRED));
+        mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of("name", "빈 그룹", "position", 0))))
+                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, HASHTAG_REQUIRED));
+        mvc.perform(post("/tag-groups").with(as(me))
+                        .with(json("{\"name\": \"빈 그룹\", \"hashtags\": null, \"position\": 0}")))
+                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, HASHTAG_REQUIRED));
+
+        mvc.perform(get("/tag-groups").with(as(me)))
+                .andExpect(jsonPath("$.data[*].id").value(contains(ids(europe.getId()))))
+                .andExpect(jsonPath("$.data[0].position").value(0));
+    }
+
+    @Test
+    @DisplayName("그룹 해시태그를 빈 배열로 수정하면 400 이고 이름 · 해시태그는 그대로다")
+    void updateGroupRejectsEmptyHashtags() throws Exception {
+        Member me = member("sprout");
+        TagGroup europe = group(me, "유럽 여행 준비", List.of("로마", "파리"), 0);
+
+        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me))
+                        .with(json(Map.of("name", "새 이름", "hashtags", List.of()))))
+                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, HASHTAG_REQUIRED));
+
+        mvc.perform(get("/tag-groups").with(as(me)))
+                .andExpect(jsonPath("$.data[0].name").value("유럽 여행 준비"))
+                .andExpect(jsonPath("$.data[0].hashtags").value(contains("로마", "파리")));
+    }
+
+    @Test
+    @DisplayName("그룹 수정에 hashtags 를 안 보내면(이름만 변경) 해시태그는 그대로다")
+    void updateGroupWithoutHashtagsKeepsThem() throws Exception {
+        Member me = member("sprout");
+        TagGroup europe = group(me, "유럽 여행 준비", List.of("로마", "파리"), 0);
+
+        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me)).with(json(Map.of("name", "새 이름"))))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.name").value("새 이름"))
+                .andExpect(jsonPath("$.data.hashtags").value(contains("로마", "파리")));
     }
 
     @Test
