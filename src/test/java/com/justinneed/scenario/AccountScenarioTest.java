@@ -12,23 +12,31 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.justinneed.auth.domain.Member;
+import com.justinneed.auth.domain.RefreshToken;
 import com.justinneed.auth.domain.SocialProvider;
 import com.justinneed.auth.domain.RevokedAccessToken;
 import com.justinneed.auth.dto.TokenResponse;
 import com.justinneed.auth.jwt.TokenDenylist;
 import com.justinneed.auth.jwt.TokenHashes;
+import com.justinneed.auth.repository.RefreshTokenRepository;
 import com.justinneed.auth.repository.RevokedAccessTokenRepository;
 import com.justinneed.auth.service.AuthTokenService;
 import com.justinneed.auth.service.RevokedAccessTokenCleanupScheduler;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 
 /**
@@ -54,6 +62,12 @@ class AccountScenarioTest extends ScenarioTestSupport {
 
     @Autowired
     private RevokedAccessTokenCleanupScheduler revokedAccessTokenCleanupScheduler;
+
+    @Autowired
+    private RefreshTokenRepository refreshTokens;
+
+    @Value("${app.jwt.secret}")
+    private String jwtSecret;
 
     @Test
     @DisplayName("가입 직후 내 정보를 열면 nickname 이 null 이라 FE 가 닉네임 입력 화면으로 보낸다")
@@ -156,8 +170,6 @@ class AccountScenarioTest extends ScenarioTestSupport {
     void refreshRotatesTokens() throws Exception {
         Member me = member("sprout");
         TokenResponse login = authTokenService.issue(me.getId()); // 소셜 로그인 성공 시 발급되는 토큰
-        // JWT 발급 시각이 초 단위라 같은 초에 재발급하면 같은 토큰이 나온다 → 1초 넘겨서 재발급
-        Thread.sleep(1100);
 
         var refreshed = mvc.perform(post("/auth/refresh").with(json(Map.of("refreshToken", login.refreshToken()))))
                 .andExpect(okEnvelope())
@@ -170,6 +182,60 @@ class AccountScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.nickname").value("sprout"));
         mvc.perform(post("/auth/refresh").with(json(Map.of("refreshToken", login.refreshToken()))))
                 .andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_REFRESH_MESSAGE));
+    }
+
+    @Test
+    @DisplayName("기다리지 않고 재발급을 연달아 해도(같은 초) 매번 200 이고 새 토큰으로 이어진다")
+    void consecutiveRefreshesInSameSecond() throws Exception {
+        Member me = member("sprout");
+        String first = authTokenService.issue(me.getId()).refreshToken();
+
+        String second = read(mvc.perform(post("/auth/refresh").with(json(Map.of("refreshToken", first))))
+                .andExpect(okEnvelope()), "$.data.refreshToken");
+        String third = read(mvc.perform(post("/auth/refresh").with(json(Map.of("refreshToken", second))))
+                .andExpect(okEnvelope()), "$.data.refreshToken");
+
+        assertThat(List.of(first, second, third)).doesNotHaveDuplicates();
+    }
+
+    @Test
+    @DisplayName("한 회원에게 같은 순간 토큰을 두 번 발급해도 access · refresh 토큰이 모두 다르다")
+    void tokensIssuedAtSameInstantAreUnique() {
+        Member me = member("sprout");
+
+        TokenResponse first = authTokenService.issue(me.getId());
+        TokenResponse second = authTokenService.issue(me.getId());
+
+        assertThat(second.accessToken()).isNotEqualTo(first.accessToken());
+        assertThat(second.refreshToken()).isNotEqualTo(first.refreshToken());
+    }
+
+    @Test
+    @DisplayName("jti 없이 발급된 기존 access · refresh 토큰도 만료 전까지 그대로 쓸 수 있다")
+    void tokensWithoutJtiKeepWorking() throws Exception {
+        Member me = member("sprout");
+        String accessToken = tokenWithoutJti(me.getId(), "access");
+        String refreshToken = tokenWithoutJti(me.getId(), "refresh");
+        refreshTokens.save(new RefreshToken(me.getId(), TokenHashes.sha256(refreshToken),
+                LocalDateTime.now().plusDays(1)));
+
+        mvc.perform(get("/members/me").with(bearerToken(accessToken)))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.nickname").value("sprout"));
+        mvc.perform(post("/auth/refresh").with(json(Map.of("refreshToken", refreshToken))))
+                .andExpect(okEnvelope());
+    }
+
+    /** jti 를 넣기 전 JwtTokenProvider 가 만들던 모양의 토큰. */
+    private String tokenWithoutJti(Long memberId, String type) {
+        Instant now = Instant.now();
+        return Jwts.builder()
+                .subject(String.valueOf(memberId))
+                .claim("type", type)
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plusSeconds(3600)))
+                .signWith(Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8)))
+                .compact();
     }
 
     @Test

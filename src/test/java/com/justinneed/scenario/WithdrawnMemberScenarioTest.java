@@ -71,8 +71,6 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
     @DisplayName("탈퇴 후 같은 회원 id 로 새로 만든 access 토큰(서버 재시작으로 무효화 목록을 잃은 상황)으로도 내 정보 · 닉네임 변경은 404")
     void withdrawnMemberIsNotFoundEvenWithFreshToken() throws Exception {
         withdraw(me);
-        // JWT 발급 시각이 초 단위라 같은 초에 만들면 탈퇴 때 쓴(무효화된) 토큰과 똑같아진다 → 1초 넘겨서 새로 만든다
-        Thread.sleep(1100);
         String freshToken = jwt.createAccessToken(me.getId());
 
         mvc.perform(get("/members/me").with(bearerToken(freshToken)))
