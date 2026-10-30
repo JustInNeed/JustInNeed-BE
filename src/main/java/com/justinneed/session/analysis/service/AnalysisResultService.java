@@ -1,6 +1,8 @@
 package com.justinneed.session.analysis.service;
 
 import tools.jackson.databind.ObjectMapper;
+import com.justinneed.auth.domain.Member;
+import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
 import com.justinneed.session.analysis.EssayMarkdownConverter;
@@ -61,17 +63,20 @@ public class AnalysisResultService {
     private final SessionResultRepository resultRepository;
     private final SessionRawPayloadRepository rawPayloadRepository;
     private final AiClusterModelRepository clusterModelRepository;
+    private final MemberRepository memberRepository;
     private final ObjectMapper objectMapper;
 
     public AnalysisResultService(BrowsingSessionRepository sessionRepository,
             SessionResultRepository resultRepository,
             SessionRawPayloadRepository rawPayloadRepository,
             AiClusterModelRepository clusterModelRepository,
+            MemberRepository memberRepository,
             ObjectMapper objectMapper) {
         this.sessionRepository = sessionRepository;
         this.resultRepository = resultRepository;
         this.rawPayloadRepository = rawPayloadRepository;
         this.clusterModelRepository = clusterModelRepository;
+        this.memberRepository = memberRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -81,6 +86,11 @@ public class AnalysisResultService {
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         if (session.getStatus() != SessionStatus.ANALYZING) {
             throw new CustomException(ErrorCode.ANALYSIS_NOT_IN_PROGRESS);
+        }
+        // 분석 도중 탈퇴했으면 결과를 저장하지 않는다. 4xx 라 AI 도 재시도하지 않는다
+        if (memberRepository.findById(session.getUserId()).map(Member::isWithdrawn).orElse(false)) {
+            session.failAnalysis();
+            throw new CustomException(ErrorCode.ANALYSIS_MEMBER_WITHDRAWN);
         }
 
         if (isLlmFailed(result)) {

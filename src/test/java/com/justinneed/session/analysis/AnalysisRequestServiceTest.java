@@ -4,10 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
+import com.justinneed.auth.domain.Member;
+import com.justinneed.auth.domain.SocialProvider;
+import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
 import com.justinneed.session.analysis.client.AiAnalysisClient;
@@ -61,12 +65,16 @@ class AnalysisRequestServiceTest {
     @Autowired
     private AiClusterModelRepository modelRepository;
 
+    @Autowired
+    private MemberRepository memberRepository;
+
     @AfterEach
     void tearDown() {
         rawRepository.deleteAll();
         resultRepository.deleteAll();
         modelRepository.deleteAll();
         sessionRepository.deleteAll();
+        memberRepository.deleteAll();
     }
 
     @Test
@@ -80,6 +88,65 @@ class AnalysisRequestServiceTest {
         verify(aiClient, timeout(3000)).requestAnalysis(request.capture());
         assertThat(request.getValue().sessionId()).isEqualTo(sessionId);
         assertThat(status(sessionId)).isEqualTo(SessionStatus.ANALYZING);
+    }
+
+    @Test
+    void 분석을_시작하면_원본의_종료_시각을_KST_로_세션에_남긴다() {
+        Long sessionId = session(SessionStatus.READY, Map.of(
+                "session", Map.of("endedAt", "2026-10-04T09:33:54.171Z"),
+                "pages", List.of(Map.of("meta", Map.of("endedAt", "2026-10-04T23:00:00Z")))));
+
+        service.requestAnalysis(sessionId);
+
+        assertThat(endedAt(sessionId)).isEqualTo(LocalDateTime.of(2026, 10, 4, 18, 33, 54, 171_000_000));
+    }
+
+    @Test
+    void 원본에_세션_종료_시각이_없으면_페이지_종료_시각_중_가장_늦은_값을_쓴다() {
+        Long sessionId = session(SessionStatus.READY, Map.of(
+                "session", Map.of("sessionId", "abc"),
+                "pages", List.of(
+                        Map.of("meta", Map.of("endedAt", "2026-10-04T09:00:00Z")),
+                        Map.of("meta", Map.of("endedAt", "2026-10-04T09:30:00Z")),
+                        Map.of("meta", Map.of("url", "https://a.com")))));
+
+        service.requestAnalysis(sessionId);
+
+        assertThat(endedAt(sessionId)).isEqualTo(LocalDateTime.of(2026, 10, 4, 18, 30));
+    }
+
+    @Test
+    void 원본에_종료_시각이_전혀_없으면_분석을_시작한_시각을_쓴다() {
+        Long sessionId = session(SessionStatus.READY);
+        LocalDateTime before = LocalDateTime.now().minusSeconds(1);
+
+        service.requestAnalysis(sessionId);
+
+        assertThat(endedAt(sessionId)).isAfter(before);
+    }
+
+    @Test
+    void AI_요청이_실패해_FAILED_가_되어도_종료_시각은_남는다() {
+        doThrow(new ResourceAccessException("connection refused")).when(aiClient).requestAnalysis(any());
+        Long sessionId = session(SessionStatus.READY, Map.of("session", Map.of("endedAt", "2026-10-04T09:33:54Z")));
+
+        service.requestAnalysis(sessionId);
+
+        assertThat(status(sessionId)).isEqualTo(SessionStatus.FAILED);
+        assertThat(endedAt(sessionId)).isEqualTo(LocalDateTime.of(2026, 10, 4, 18, 33, 54));
+    }
+
+    @Test
+    void 탈퇴한_회원의_세션은_AI_로_보내지_않고_FAILED_로_둔다() {
+        Member withdrawn = memberRepository.save(new Member(SocialProvider.KAKAO, "withdrawn-1", null, null));
+        withdrawn.withdraw(null, LocalDateTime.now());
+        memberRepository.save(withdrawn);
+        Long sessionId = session(SessionStatus.READY, RAW, withdrawn.getId());
+
+        service.requestAnalysis(sessionId);
+
+        verify(aiClient, never()).requestAnalysis(any());
+        assertThat(status(sessionId)).isEqualTo(SessionStatus.FAILED);
     }
 
     @Test
@@ -145,15 +212,23 @@ class AnalysisRequestServiceTest {
 
     // status 가 null 이면 기본값(COLLECTING) 그대로
     private Long session(SessionStatus status) {
-        BrowsingSession session = new BrowsingSession(USER_ID, "세션", LocalDateTime.of(2026, 10, 30, 10, 0));
+        return session(status, RAW);
+    }
+
+    private Long session(SessionStatus status, Map<String, Object> raw) {
+        return session(status, raw, USER_ID);
+    }
+
+    private Long session(SessionStatus status, Map<String, Object> raw, Long userId) {
+        BrowsingSession session = new BrowsingSession(userId, "세션", LocalDateTime.of(2026, 10, 30, 10, 0));
         if (status == SessionStatus.READY || status == SessionStatus.ANALYZING) {
             session.markReady();
         }
         if (status == SessionStatus.ANALYZING) {
-            session.startAnalysis();
+            session.startAnalysis(LocalDateTime.of(2026, 10, 30, 10, 30));
         }
         Long sessionId = sessionRepository.save(session).getId();
-        rawRepository.save(new SessionRawPayload(sessionId, USER_ID, RAW, LocalDateTime.now()));
+        rawRepository.save(new SessionRawPayload(sessionId, userId, raw, LocalDateTime.now()));
         return sessionId;
     }
 
@@ -161,6 +236,10 @@ class AnalysisRequestServiceTest {
         SessionResult result = new SessionResult(sessionId, userId);
         result.replace(null, List.of(), List.of(), Map.of(), List.of(), unitFeatures, "global", "C");
         resultRepository.save(result);
+    }
+
+    private LocalDateTime endedAt(Long sessionId) {
+        return sessionRepository.findById(sessionId).orElseThrow().getEndedAt();
     }
 
     private SessionStatus status(Long sessionId) {

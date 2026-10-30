@@ -13,6 +13,7 @@ public enum ErrorCode {
     ANALYSIS_LLM_FAILED(HttpStatus.UNPROCESSABLE_CONTENT, "AI 요약 생성에 실패했습니다."),
     SESSION_NOT_COLLECTING(HttpStatus.CONFLICT, "수집 중인 세션이 아닙니다."),
     ANALYSIS_NOT_IN_PROGRESS(HttpStatus.CONFLICT, "분석 중인 세션이 아닙니다."),
+    ANALYSIS_MEMBER_WITHDRAWN(HttpStatus.CONFLICT, "탈퇴한 회원의 세션은 분석 결과를 저장하지 않습니다."),
     INVALID_INTERNAL_TOKEN(HttpStatus.UNAUTHORIZED, "내부 호출 토큰이 올바르지 않습니다."),
     INTEREST_NOT_FOUND(HttpStatus.NOT_FOUND, "관심 해시태그를 찾을 수 없습니다."),
     TAG_GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "해시태그 그룹을 찾을 수 없습니다."),

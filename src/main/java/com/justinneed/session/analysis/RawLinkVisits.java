@@ -6,9 +6,11 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -52,6 +54,28 @@ public final class RawLinkVisits {
             visits.merge(url, new LinkVisit(url, enteredAt, SiteCategory.classify(url)), RawLinkVisits::earlier);
         }
         return new RawLinkVisits(visits);
+    }
+
+    // 세션 종료 시각(KST). session.endedAt, 없으면(비정상 종료) 페이지별 meta.endedAt 중 가장 늦은 값
+    @SuppressWarnings("unchecked")
+    public static Optional<LocalDateTime> sessionEndedAt(Map<String, Object> payload) {
+        if (payload == null) {
+            return Optional.empty();
+        }
+        if (payload.get("session") instanceof Map<?, ?> session) {
+            LocalDateTime endedAt = toKst(((Map<String, Object>) session).get("endedAt"));
+            if (endedAt != null) {
+                return Optional.of(endedAt);
+            }
+        }
+        if (!(payload.get("pages") instanceof List<?> pages)) {
+            return Optional.empty();
+        }
+        return pages.stream()
+                .filter(page -> page instanceof Map<?, ?> map && map.get("meta") instanceof Map<?, ?>)
+                .map(page -> toKst(((Map<?, ?>) ((Map<?, ?>) page).get("meta")).get("endedAt")))
+                .filter(Objects::nonNull)
+                .max(Comparator.naturalOrder());
     }
 
     public int linkCount() {

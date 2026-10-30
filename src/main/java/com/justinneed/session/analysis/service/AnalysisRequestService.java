@@ -1,7 +1,10 @@
 package com.justinneed.session.analysis.service;
 
+import com.justinneed.auth.domain.Member;
+import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
+import com.justinneed.session.analysis.RawLinkVisits;
 import com.justinneed.session.analysis.client.AiAnalysisClient;
 import com.justinneed.session.analysis.domain.AiClusterModel;
 import com.justinneed.session.analysis.domain.ClusterModelScope;
@@ -13,6 +16,7 @@ import com.justinneed.session.analysis.repository.SessionResultRepository;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.domain.SessionStatus;
 import com.justinneed.session.management.repository.BrowsingSessionRepository;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -45,6 +49,7 @@ public class AnalysisRequestService {
     private final SessionRawPayloadRepository rawPayloadRepository;
     private final SessionResultRepository resultRepository;
     private final AiClusterModelRepository clusterModelRepository;
+    private final MemberRepository memberRepository;
     private final AiAnalysisClient aiClient;
     private final ApplicationEventPublisher eventPublisher;
     private final TransactionTemplate transactionTemplate;
@@ -53,6 +58,7 @@ public class AnalysisRequestService {
             SessionRawPayloadRepository rawPayloadRepository,
             SessionResultRepository resultRepository,
             AiClusterModelRepository clusterModelRepository,
+            MemberRepository memberRepository,
             AiAnalysisClient aiClient,
             ApplicationEventPublisher eventPublisher,
             PlatformTransactionManager transactionManager) {
@@ -60,6 +66,7 @@ public class AnalysisRequestService {
         this.rawPayloadRepository = rawPayloadRepository;
         this.resultRepository = resultRepository;
         this.clusterModelRepository = clusterModelRepository;
+        this.memberRepository = memberRepository;
         this.aiClient = aiClient;
         this.eventPublisher = eventPublisher;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
@@ -98,11 +105,17 @@ public class AnalysisRequestService {
         }
     }
 
-    // READY 가 아니면(이미 요청됨 등) 건너뛴다. 원본이 없으면 분석할 수 없으므로 FAILED
+    // READY 가 아니면(이미 요청됨 등) 건너뛴다. 원본이 없거나 탈퇴한 회원의 세션은 AI 로 보내지 않고 FAILED
     private AiAnalyzeRequest startAnalysis(Long sessionId) {
         BrowsingSession session = sessionRepository.findById(sessionId).orElse(null);
         if (session == null || session.getStatus() != SessionStatus.READY) {
             log.info("[ai analysis] session {} 는 READY 가 아니라 분석 요청을 건너뜀", sessionId);
+            return null;
+        }
+        Long userId = session.getUserId();
+        if (memberRepository.findById(userId).map(Member::isWithdrawn).orElse(false)) {
+            log.info("[ai analysis] session {} 는 탈퇴한 회원의 세션이라 FAILED", sessionId);
+            session.failAnalysis();
             return null;
         }
         SessionRawPayload rawPayload = rawPayloadRepository.findById(sessionId).orElse(null);
@@ -112,8 +125,7 @@ public class AnalysisRequestService {
             return null;
         }
 
-        session.startAnalysis();
-        Long userId = session.getUserId();
+        session.startAnalysis(RawLinkVisits.sessionEndedAt(rawPayload.getPayload()).orElseGet(LocalDateTime::now));
         return new AiAnalyzeRequest(
                 sessionId,
                 rawPayload.getPayload(),
