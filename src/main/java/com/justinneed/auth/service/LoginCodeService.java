@@ -5,6 +5,7 @@ import com.justinneed.auth.dto.LoginTokenResponse;
 import com.justinneed.auth.dto.TokenResponse;
 import com.justinneed.auth.jwt.TokenHashes;
 import com.justinneed.auth.repository.LoginCodeRepository;
+import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
 import java.security.SecureRandom;
@@ -29,10 +30,13 @@ public class LoginCodeService {
     private final SecureRandom secureRandom = new SecureRandom();
     private final LoginCodeRepository loginCodeRepository;
     private final AuthTokenService authTokenService;
+    private final MemberRepository memberRepository;
 
-    public LoginCodeService(LoginCodeRepository loginCodeRepository, AuthTokenService authTokenService) {
+    public LoginCodeService(LoginCodeRepository loginCodeRepository, AuthTokenService authTokenService,
+            MemberRepository memberRepository) {
         this.loginCodeRepository = loginCodeRepository;
         this.authTokenService = authTokenService;
+        this.memberRepository = memberRepository;
     }
 
     /** 로그인 성공 시: 코드 발급. 원문은 리다이렉트 URL 로만 나간다 */
@@ -56,6 +60,11 @@ public class LoginCodeService {
         String codeHash = TokenHashes.sha256(code);
         LoginCode loginCode = loginCodeRepository.findById(codeHash)
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_LOGIN_CODE));
+
+        // 코드를 받은 뒤 60초 안에 탈퇴한 경우
+        if (memberRepository.existsByIdAndWithdrawnAtIsNotNull(loginCode.getMemberId())) {
+            throw new CustomException(ErrorCode.INVALID_LOGIN_CODE);
+        }
 
         // 같은 코드로 동시에 바꿔도 행을 실제로 지운 요청 하나만 토큰을 받는다 (만료 여부도 DB 기준으로 함께 확인)
         int used = loginCodeRepository.deleteUsable(codeHash, LocalDateTime.now());
