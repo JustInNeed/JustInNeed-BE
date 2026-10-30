@@ -122,7 +122,7 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 
 | Method | Path | 설명 |
 | --- | --- | --- |
-| GET | `/sessions` | 세션 목록 조회 |
+| GET | `/sessions` | 세션 목록 조회 (무한 스크롤). `page`(기본 0) · `size`(기본 10, 1~50) · `favorite`(기본 false, true 면 즐겨찾기만). `{ sessions, hasNext, totalCount, favoriteCount }` 반환 — `totalCount` · `favoriteCount` 는 필터 · 페이지와 상관없는 내 전체 세션 수 / 즐겨찾기 수. 음수 page · 범위 밖 size 는 400 |
 | GET | `/sessions/{id}` | 세션 상세 조회. 요약 본문과 출처를 함께 반환 |
 | PATCH | `/sessions/{id}` | 세션 편집. `title`, `editedMarkdown`, `isPublic`, `isFavorite`, `tags`, `insights` 중 보낸 필드만 수정 |
 | DELETE | `/sessions/{id}` | 세션 삭제. 실제 삭제가 아니라 soft delete 처리 |
@@ -142,7 +142,6 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 - 세션 생성(`POST /sessions`) 및 행동 로그 수집·분석·LLM 요약 파이프라인
 - 마인드맵 뷰
 - 어드민 관련 기능
-- 즐겨찾기 전용 세션 목록 뷰
 
 현재 세션 및 커뮤니티 API는 `Authorization: Bearer <access-token>` 인증을 사용합니다. 사용자 ID는 JWT에서 가져오며, `X-User-Id` 헤더나 기본 사용자 ID를 사용하지 않습니다.
 

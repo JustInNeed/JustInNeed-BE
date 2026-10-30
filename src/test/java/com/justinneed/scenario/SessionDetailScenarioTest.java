@@ -312,8 +312,8 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
         mvc.perform(get("/sessions/{id}", rome.getId()).with(as(me)))
                 .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, SESSION_NOT_FOUND));
         mvc.perform(get("/sessions").with(as(me)))
-                .andExpect(jsonPath("$.data", hasSize(6)))
-                .andExpect(jsonPath("$.data[*].id").value(not(hasItem(rome.getId().intValue()))));
+                .andExpect(jsonPath("$.data.sessions", hasSize(6)))
+                .andExpect(jsonPath("$.data.sessions[*].id").value(not(hasItem(rome.getId().intValue()))));
         mvc.perform(delete("/sessions/{id}", rome.getId()).with(as(me)))
                 .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, SESSION_NOT_FOUND));
     }

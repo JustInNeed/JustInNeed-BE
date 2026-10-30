@@ -73,8 +73,11 @@ class SessionControllerTest {
     void getSessionsReturnsList() throws Exception {
         mockMvc.perform(get("/sessions").header(HttpHeaders.AUTHORIZATION, bearer))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data", hasSize(1)))
-                .andExpect(jsonPath("$.data[0].title").value("Spring 조사"));
+                .andExpect(jsonPath("$.data.sessions", hasSize(1)))
+                .andExpect(jsonPath("$.data.sessions[0].title").value("Spring 조사"))
+                .andExpect(jsonPath("$.data.hasNext").value(false))
+                .andExpect(jsonPath("$.data.totalCount").value(1))
+                .andExpect(jsonPath("$.data.favoriteCount").value(1));
     }
 
     @Test
@@ -83,7 +86,8 @@ class SessionControllerTest {
 
         mockMvc.perform(get("/sessions").header(HttpHeaders.AUTHORIZATION, otherBearer))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data", hasSize(0)));
+                .andExpect(jsonPath("$.data.sessions", hasSize(0)))
+                .andExpect(jsonPath("$.data.totalCount").value(0));
     }
 
     @Test
