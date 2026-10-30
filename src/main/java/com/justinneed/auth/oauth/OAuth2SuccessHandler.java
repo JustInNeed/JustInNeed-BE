@@ -5,7 +5,10 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
@@ -19,15 +22,20 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Component
 public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(OAuth2SuccessHandler.class);
+
     private final LoginCodeService loginCodeService;
     private final String successRedirectUri;
+    private final String failureRedirectUri;
 
     public OAuth2SuccessHandler(
             LoginCodeService loginCodeService,
-            @Value("${app.oauth.success-redirect-uri}") String successRedirectUri
+            @Value("${app.oauth.success-redirect-uri}") String successRedirectUri,
+            @Value("${app.oauth.failure-redirect-uri}") String failureRedirectUri
     ) {
         this.loginCodeService = loginCodeService;
         this.successRedirectUri = successRedirectUri;
+        this.failureRedirectUri = failureRedirectUri;
     }
 
     @Override
@@ -37,7 +45,14 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         Long memberId = ((Number) principal.getAttributes().get(CustomOAuth2UserService.ATTR_MEMBER_ID)).longValue();
         boolean needsNickname = Boolean.TRUE.equals(principal.getAttributes().get(CustomOAuth2UserService.ATTR_NEEDS_NICKNAME));
 
-        String code = loginCodeService.issue(memberId, needsNickname);
+        String code;
+        try {
+            code = loginCodeService.issue(memberId, needsNickname);
+        } catch (DataAccessException e) {
+            log.warn("[OAuth2 login failed] 로그인 코드 발급 실패: {}", e.getMessage());
+            getRedirectStrategy().sendRedirect(request, response, failureRedirectUri);
+            return;
+        }
 
         String targetUrl = UriComponentsBuilder.fromUriString(successRedirectUri)
                 .queryParam("code", code)
