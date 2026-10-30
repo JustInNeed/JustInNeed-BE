@@ -66,6 +66,10 @@ class AccountSettingsServiceTest {
         var response = service.withdraw(1L, new AccountWithdrawRequest("WITHDRAW", "unused"), "access-token");
 
         assertThat(member.isWithdrawn()).isTrue();
+        // 같은 소셜 계정으로 다시 가입할 수 있게 소셜 식별자 · 닉네임 · 이메일을 비운다
+        assertThat(member.getProviderId()).startsWith(Member.WITHDRAWN_PROVIDER_ID_PREFIX);
+        assertThat(member.getNickname()).isNull();
+        assertThat(member.getEmail()).isNull();
         assertThat(response.withdrawn()).isTrue();
         assertThat(response.extensionLogin()).isFalse();
         verify(authTokenService).revokeAll(1L, "access-token");

@@ -2,6 +2,7 @@ package com.justinneed.scenario;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -15,6 +16,7 @@ import com.justinneed.auth.jwt.TokenHashes;
 import com.justinneed.auth.oauth.CustomOAuth2UserService;
 import com.justinneed.auth.oauth.OAuth2SuccessHandler;
 import com.justinneed.auth.repository.LoginCodeRepository;
+import com.justinneed.auth.service.LegacyWithdrawnMemberCleanup;
 import com.justinneed.auth.service.LoginCodeCleanupScheduler;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -56,6 +58,9 @@ class LoginScenarioTest extends ScenarioTestSupport {
 
     @Autowired
     private LoginCodeCleanupScheduler loginCodeCleanupScheduler;
+
+    @Autowired
+    private LegacyWithdrawnMemberCleanup legacyWithdrawnMemberCleanup;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -106,6 +111,28 @@ class LoginScenarioTest extends ScenarioTestSupport {
 
     private ResultActions exchange(String code) throws Exception {
         return mvc.perform(post("/auth/token").with(json(code == null ? "{}" : Map.of("code", code))));
+    }
+
+    private void withdraw(Member member) throws Exception {
+        mvc.perform(delete("/settings/account").with(as(member)).with(json(Map.of("confirmText", "WITHDRAW"))))
+                .andExpect(okEnvelope());
+    }
+
+    /** 익명화 도입 전 방식으로 탈퇴한 행: withdrawn_at 만 채워지고 소셜 식별자 · 닉네임 · 이메일은 그대로 남아 있다. */
+    private void withdrawLikeBefore(Member member) {
+        entityManager.flush();
+        entityManager.createQuery(
+                        "update Member m set m.withdrawnAt = :now, m.withdrawalReason = :reason where m.id = :id")
+                .setParameter("now", LocalDateTime.now())
+                .setParameter("reason", "예전 탈퇴")
+                .setParameter("id", member.getId())
+                .executeUpdate();
+        entityManager.clear();
+    }
+
+    private boolean nicknameAvailable(Member viewer, String nickname) throws Exception {
+        return read(mvc.perform(get("/members/nickname/available").param("nickname", nickname).with(as(viewer)))
+                .andExpect(okEnvelope()), "$.data.available");
     }
 
     /** 저장된 코드 행의 만료 시각을 지난 시각으로 돌린다 (60초 기다리는 대신). */
@@ -296,5 +323,88 @@ class LoginScenarioTest extends ScenarioTestSupport {
         assertThat(loginCodes.existsById(TokenHashes.sha256(expired))).isFalse();
         assertThat(loginCodes.existsById(TokenHashes.sha256(valid))).isTrue();
         exchange(valid).andExpect(okEnvelope());
+    }
+
+    @Test
+    @DisplayName("탈퇴한 소셜 계정으로 다시 로그인하면 새 회원(닉네임 없음 · needsNickname=true)으로 가입되고, 예전 닉네임도 다시 쓸 수 있다")
+    void withdrawnAccountSignsUpAgain() throws Exception {
+        Long oldId = memberIdOf(login("kakao", kakaoProfile(4100000020L, "sprout@kakao.com")));
+        Member old = members.findById(oldId).orElseThrow();
+        mvc.perform(patch("/members/me/nickname").with(as(old)).with(json(Map.of("nickname", "sprout"))))
+                .andExpect(okEnvelope());
+        withdraw(old);
+
+        Member anonymized = members.findById(oldId).orElseThrow();
+        assertThat(anonymized.isWithdrawn()).isTrue();
+        assertThat(anonymized.getProviderId()).isEqualTo("withdrawn:" + oldId);
+        assertThat(anonymized.getNickname()).isNull();
+        assertThat(anonymized.getEmail()).isNull();
+
+        OAuth2User again = login("kakao", kakaoProfile(4100000020L, "sprout@kakao.com"));
+        Long newId = memberIdOf(again);
+        assertThat(newId).isNotEqualTo(oldId);
+        assertThat(needsNickname(again)).isTrue();
+        Member rejoined = members.findById(newId).orElseThrow();
+        assertThat(rejoined.getProviderId()).isEqualTo("4100000020");
+        assertThat(rejoined.getNickname()).isNull();
+        assertThat(rejoined.getEmail()).isEqualTo("sprout@kakao.com");
+
+        var exchanged = exchange(loginCode(again))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.needsNickname").value(true));
+        String accessToken = read(exchanged, "$.data.accessToken");
+        mvc.perform(get("/members/me").with(bearerToken(accessToken)))
+                .andExpect(jsonPath("$.data.id").value(newId))
+                .andExpect(jsonPath("$.data.nickname").value(nullValue()));
+        mvc.perform(patch("/members/me/nickname").with(bearerToken(accessToken)).with(json(Map.of("nickname", "sprout"))))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.nickname").value("sprout"));
+    }
+
+    @Test
+    @DisplayName("익명화 전에 탈퇴해 소셜 id · 닉네임이 남은 행도, 다시 로그인하면 그 행을 비우고 새 회원으로 가입시켜 예전 닉네임이 풀린다")
+    void legacyWithdrawnAccountSignsUpAgain() throws Exception {
+        Member legacy = members.saveAndFlush(new Member(SocialProvider.NAVER, "naver-legacy", "oldname", "old@naver.com"));
+        Member someone = member(null);
+        withdrawLikeBefore(legacy);
+        assertThat(nicknameAvailable(someone, "oldname")).isFalse();
+
+        OAuth2User again = login("naver", naverProfile("naver-legacy", "old@naver.com"));
+
+        assertThat(memberIdOf(again)).isNotEqualTo(legacy.getId());
+        assertThat(needsNickname(again)).isTrue();
+        Member old = members.findById(legacy.getId()).orElseThrow();
+        assertThat(old.getProviderId()).isEqualTo("withdrawn:" + legacy.getId());
+        assertThat(old.getNickname()).isNull();
+        assertThat(old.getEmail()).isNull();
+        assertThat(old.isWithdrawn()).isTrue();
+        assertThat(nicknameAvailable(someone, "oldname")).isTrue();
+        exchange(loginCode(again)).andExpect(jsonPath("$.data.needsNickname").value(true));
+    }
+
+    @Test
+    @DisplayName("앱 시작 시 익명화 전에 탈퇴한 행을 한 번에 익명화한다 (활동 중 · 이미 익명화된 회원은 그대로, 여러 번 돌려도 같음)")
+    void startupCleanupAnonymizesLegacyWithdrawnMembers() throws Exception {
+        Member legacy = members.saveAndFlush(new Member(SocialProvider.KAKAO, "4100000030", "legacy1", "l@kakao.com"));
+        Member active = members.saveAndFlush(new Member(SocialProvider.KAKAO, "4100000031", "active1", "a@kakao.com"));
+        Member recent = members.saveAndFlush(new Member(SocialProvider.KAKAO, "4100000032", "recent1", null));
+        withdraw(recent);
+        withdrawLikeBefore(legacy);
+
+        legacyWithdrawnMemberCleanup.run(null);
+        legacyWithdrawnMemberCleanup.run(null);
+        entityManager.flush();
+        entityManager.clear();
+
+        Member cleaned = members.findById(legacy.getId()).orElseThrow();
+        assertThat(cleaned.getProviderId()).isEqualTo("withdrawn:" + legacy.getId());
+        assertThat(cleaned.getNickname()).isNull();
+        assertThat(cleaned.getEmail()).isNull();
+        assertThat(cleaned.isWithdrawn()).isTrue();
+        Member untouched = members.findById(active.getId()).orElseThrow();
+        assertThat(untouched.getProviderId()).isEqualTo("4100000031");
+        assertThat(untouched.getNickname()).isEqualTo("active1");
+        assertThat(members.findById(recent.getId()).orElseThrow().getProviderId())
+                .isEqualTo("withdrawn:" + recent.getId());
     }
 }
