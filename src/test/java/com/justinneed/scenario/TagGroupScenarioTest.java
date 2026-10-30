@@ -242,6 +242,47 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
+    @DisplayName("그룹 이름을 빈 값 · 공백으로 수정하면 400 '그룹 이름을 입력해 주세요.' 이고 이름 · 해시태그는 그대로다")
+    void blankNameUpdateIsRejected() throws Exception {
+        Member me = member("sprout");
+        TagGroup europe = group(me, "유럽 여행 준비", List.of("로마", "파리"), 0);
+
+        for (String blank : List.of("", "   ", "\t", " \n ")) {
+            mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me))
+                            .with(json(Map.of("name", blank, "hashtags", List.of("항공권")))))
+                    .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "그룹 이름을 입력해 주세요."));
+        }
+        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me)).with(json(Map.of("name", "가".repeat(51)))))
+                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "그룹 이름은 최대 50자까지 입력할 수 있습니다."));
+
+        mvc.perform(get("/tag-groups").with(as(me)))
+                .andExpect(jsonPath("$.data[0].name").value("유럽 여행 준비"))
+                .andExpect(jsonPath("$.data[0].hashtags").value(contains("로마", "파리")));
+    }
+
+    @Test
+    @DisplayName("그룹 수정에 name 을 안 보내면 이름은 그대로, 보내면 바뀐다 (앞뒤 공백이 있어도 글자가 있으면 통과)")
+    void nameIsOptionalOnUpdate() throws Exception {
+        Member me = member("sprout");
+        TagGroup europe = group(me, "유럽 여행 준비", List.of("로마", "파리"), 0);
+
+        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me)).with(json(Map.of("hashtags", List.of("파리")))))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.name").value("유럽 여행 준비"))
+                .andExpect(jsonPath("$.data.hashtags").value(contains("파리")));
+        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me)).with(json("{\"name\": null}")))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.name").value("유럽 여행 준비"));
+        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me)).with(json(Map.of("name", " 파리만 "))))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.name").value(" 파리만 "));
+
+        mvc.perform(get("/tag-groups").with(as(me)))
+                .andExpect(jsonPath("$.data[0].name").value(" 파리만 "))
+                .andExpect(jsonPath("$.data[0].hashtags").value(contains("파리")));
+    }
+
+    @Test
     @DisplayName("그룹 해시태그가 10개를 넘거나 · 형식이 틀리거나 · 중복이면 400 이고 그룹은 안 생긴다")
     void groupHashtagValidation() throws Exception {
         Member me = member("sprout");
