@@ -138,6 +138,25 @@ class AuthOverHttpTest {
         }
     }
 
+    @Test
+    @DisplayName("실제 서버(Tomcat)의 401 도 UTF-8 JSON 공통 에러 응답이고, FE 출처면 CORS 헤더가 붙는다")
+    void unauthorizedOverRealServer() throws Exception {
+        HttpRequest request = HttpRequest.newBuilder(uri("/members/me"))
+                .header(HttpHeaders.ORIGIN, "http://localhost:3000")
+                .GET()
+                .build();
+
+        HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
+
+        assertThat(response.statusCode()).isEqualTo(401);
+        assertThat(response.headers().firstValue(HttpHeaders.CONTENT_TYPE))
+                .hasValue("application/json;charset=UTF-8");
+        assertThat(response.headers().firstValue(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN))
+                .hasValue("http://localhost:3000");
+        assertThat(new String(response.body(), StandardCharsets.UTF_8))
+                .isEqualTo(errorJson("로그인이 만료되었습니다. 다시 로그인해 주세요."));
+    }
+
     private Member newMember() {
         return members.save(new Member(SocialProvider.KAKAO, "http-" + UUID.randomUUID(), null, null));
     }

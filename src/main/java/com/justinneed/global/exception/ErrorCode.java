@@ -23,6 +23,7 @@ public enum ErrorCode {
     INVALID_TAG_GROUP_POSITION(HttpStatus.BAD_REQUEST, "그룹 위치 값이 올바르지 않습니다."),
     INVALID_PAGE_REQUEST(HttpStatus.BAD_REQUEST, "페이지 값이 올바르지 않습니다."),
     INVALID_LOGIN_CODE(HttpStatus.UNAUTHORIZED, "로그인 정보가 만료되었어요. 다시 로그인해 주세요."),
+    LOGIN_EXPIRED(HttpStatus.UNAUTHORIZED, "로그인이 만료되었습니다. 다시 로그인해 주세요."),
     INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 리프레시 토큰입니다.");
 
     private final HttpStatus status;
