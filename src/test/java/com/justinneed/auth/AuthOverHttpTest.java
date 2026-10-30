@@ -7,9 +7,11 @@ import com.justinneed.auth.domain.Member;
 import com.justinneed.auth.domain.RefreshToken;
 import com.justinneed.auth.domain.SocialProvider;
 import com.justinneed.auth.dto.TokenResponse;
+import com.justinneed.auth.jwt.JwtTokenProvider;
 import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.auth.repository.RefreshTokenRepository;
 import com.justinneed.auth.service.AuthTokenService;
+import com.justinneed.global.common.ApiResponse;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -35,6 +37,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * 실제 서버 · 실제 스레드로 보내는 인증 요청. 동시 요청은 트랜잭션이 각각 커밋돼야 재현되므로
@@ -62,6 +65,12 @@ class AuthOverHttpTest {
 
     @Autowired
     private AuthTokenService authTokenService;
+
+    @Autowired
+    private JwtTokenProvider jwt;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     private final HttpClient client = HttpClient.newHttpClient();
     private ExecutorService pool;
@@ -111,6 +120,24 @@ class AuthOverHttpTest {
         }
     }
 
+    @Test
+    @DisplayName("두 회원이 같은 닉네임을 동시에 저장하면 한 명만 200, 다른 한 명은 409 '이미 사용 중인 닉네임입니다.' 이고 닉네임 행은 하나다")
+    void concurrentSameNickname() throws Exception {
+        for (int round = 0; round < ROUNDS; round++) {
+            String nickname = "race" + round;
+
+            List<HttpResponse<String>> responses = race(
+                    updateNickname(newMember(), nickname),
+                    updateNickname(newMember(), nickname));
+
+            assertThat(statuses(responses)).containsExactly(200, 409);
+            assertThat(JsonPath.<String>read(responses.get(0).body(), "$.data.nickname")).isEqualTo(nickname);
+            assertThat(responses.get(1).body())
+                    .isEqualTo(errorJson("이미 사용 중인 닉네임입니다."));
+            assertThat(members.findAll()).filteredOn(member -> nickname.equals(member.getNickname())).hasSize(1);
+        }
+    }
+
     private Member newMember() {
         return members.save(new Member(SocialProvider.KAKAO, "http-" + UUID.randomUUID(), null, null));
     }
@@ -130,6 +157,14 @@ class AuthOverHttpTest {
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + login.accessToken())
                 .POST(HttpRequest.BodyPublishers.ofString("{\"refreshToken\":\"" + login.refreshToken() + "\"}"))
+                .build();
+    }
+
+    private HttpRequest updateNickname(Member member, String nickname) {
+        return HttpRequest.newBuilder(uri("/members/me/nickname"))
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + jwt.createAccessToken(member.getId()))
+                .method("PATCH", HttpRequest.BodyPublishers.ofString("{\"nickname\":\"" + nickname + "\"}"))
                 .build();
     }
 
@@ -170,6 +205,10 @@ class AuthOverHttpTest {
         }
         responses.sort(Comparator.comparingInt(HttpResponse::statusCode));
         return responses;
+    }
+
+    private String errorJson(String message) {
+        return objectMapper.writeValueAsString(ApiResponse.error(message));
     }
 
     private List<Integer> statuses(List<HttpResponse<String>> responses) {

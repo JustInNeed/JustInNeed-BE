@@ -6,6 +6,7 @@ import com.justinneed.auth.dto.NicknameAvailabilityResponse;
 import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +31,12 @@ public class MemberService {
             throw new CustomException(ErrorCode.DUPLICATE_NICKNAME);
         }
         member.updateNickname(nickname);
+        try {
+            // 커밋 때 터지면 잡을 곳이 없으므로 여기서 플러시한다 (위 확인을 동시에 통과한 요청은 유니크 제약에 걸린다)
+            memberRepository.saveAndFlush(member);
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(ErrorCode.DUPLICATE_NICKNAME);
+        }
         return MemberResponse.from(member);
     }
 
