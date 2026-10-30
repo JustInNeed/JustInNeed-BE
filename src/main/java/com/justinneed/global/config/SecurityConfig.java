@@ -61,6 +61,8 @@ public class SecurityConfig {
                                 "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         // 헬스체크(로드밸런서·모니터링)용. 그 외 actuator 엔드포인트는 인증 필요
                         .requestMatchers("/actuator/health").permitAll()
+                        // AI 컨테이너 → Spring 콜백. JWT 대신 컨트롤러에서 내부 토큰(X-Internal-Token)을 확인한다
+                        .requestMatchers("/internal/ai/**").permitAll()
                         // 세션·태그그룹 API는 로그인 회원만 (access 토큰의 memberId = user_id)
                         // 그 외(예: /members/**)도 access 토큰 필요
                         .anyRequest().authenticated()

@@ -73,3 +73,10 @@ app:
   cors:
     # 쉼표로 여러 origin 지정 가능 (예: http://localhost:3000,https://app.example.com)
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+  # AI 분석 컨테이너. Spring → AI 분석 요청, AI → Spring 결과 콜백(/internal/ai/**) 둘 다 같은 내부 토큰을 쓴다
+  ai:
+    base-url: ${AI_BASE_URL:http://localhost:8000}
+    internal-token: ${AI_INTERNAL_TOKEN:dev-only-ai-internal-token}
+    # AI 는 접수만 하고 바로 202 를 돌려주므로 짧게 둔다 (분석 결과는 콜백으로 온다)
+    connect-timeout: 3s
+    read-timeout: 10s

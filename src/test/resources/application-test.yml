@@ -31,3 +31,6 @@ app:
     failure-redirect-uri: http://localhost:3000/login?error=oauth
   cors:
     allowed-origins: http://localhost:3000
+  ai:
+    base-url: http://localhost:18000
+    internal-token: test-ai-internal-token

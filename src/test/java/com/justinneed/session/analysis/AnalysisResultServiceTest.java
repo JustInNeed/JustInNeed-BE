@@ -19,6 +19,7 @@ import com.justinneed.session.management.domain.Source;
 import com.justinneed.session.management.repository.BrowsingSessionRepository;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,7 +38,7 @@ class AnalysisResultServiceTest {
     private static final Long USER_ID = 1L;
 
     // 원본(stepC) 중 링크 판단에 쓰는 부분만. cat.example.com 은 page 가 두 개로 나뉘어 있고, dog 는 컷오프 유닛이 없는 링크
-    private static final String RAW_JSON = """
+    static final String RAW_JSON = """
             {"kind": "rbc-session",
              "session": {"startedAt": "2026-10-30T00:59:00.000Z"},
              "pages": [
@@ -53,7 +54,7 @@ class AnalysisResultServiceTest {
             """;
 
     // AI 출력(pipeline/output.py build_output)과 같은 모양
-    private static final String RESULT_JSON = """
+    static final String RESULT_JSON = """
             {"sessionId": "s-1", "userId": "t-1", "modelSource": "global", "scoreMethod": "C",
              "state": {"unitFeatures": [{"unit_key": "https://blog.naver.com/cat/1#u1", "cursor_speed_mean": 1.2}],
                        "userModel": {"k": 4, "centroids": [[0.1], [0.2], [0.3], [0.4]]}},
@@ -105,8 +106,10 @@ class AnalysisResultServiceTest {
 
     @BeforeEach
     void setUp() {
-        BrowsingSession session = sessionRepository.save(
-                new BrowsingSession(USER_ID, "분석 전 제목", LocalDateTime.of(2026, 10, 30, 9, 59)));
+        BrowsingSession session = new BrowsingSession(USER_ID, "분석 전 제목", LocalDateTime.of(2026, 10, 30, 9, 59));
+        session.markReady();
+        session.startAnalysis();
+        sessionRepository.save(session);
         sessionId = session.getId();
         Map<String, Object> raw = objectMapper.readValue(RAW_JSON, new TypeReference<>() {
         });
@@ -115,8 +118,6 @@ class AnalysisResultServiceTest {
 
     @Test
     void AI_결과를_세션_요약_결과_원본에_나눠_저장한다() {
-        assertThat(sessionRepository.findById(sessionId).orElseThrow().getStatus()).isEqualTo(SessionStatus.COLLECTING);
-
         service.save(sessionId, result(RESULT_JSON));
         entityManager.flush();
         entityManager.clear();
@@ -182,6 +183,27 @@ class AnalysisResultServiceTest {
                 .extracting(e -> ((CustomException) e).getErrorCode())
                 .isEqualTo(ErrorCode.ANALYSIS_LLM_FAILED);
         assertNothingSaved();
+    }
+
+    @Test
+    void 분석_중인_세션이_아니면_저장하지_않고_상태도_그대로_둔다() {
+        BrowsingSession completed = sessionRepository.findById(sessionId).orElseThrow();
+        completed.completeAnalysis("이미 끝남", List.of(), List.of(), 1);
+        entityManager.flush();
+
+        assertThatThrownBy(() -> service.save(sessionId, result(RESULT_JSON)))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(ErrorCode.ANALYSIS_NOT_IN_PROGRESS);
+        assertThat(sessionRepository.findById(sessionId).orElseThrow().getStatus()).isEqualTo(SessionStatus.COMPLETED);
+        assertThat(resultRepository.findById(sessionId)).isEmpty();
+    }
+
+    @Test
+    void AI_가_분석_오류를_알리면_FAILED_로_바꾼다() {
+        service.fail(sessionId, "RuntimeError: boom");
+
+        assertThat(sessionRepository.findById(sessionId).orElseThrow().getStatus()).isEqualTo(SessionStatus.FAILED);
     }
 
     @Test
