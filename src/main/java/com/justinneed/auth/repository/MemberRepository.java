@@ -15,6 +15,9 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     boolean existsByIdAndWithdrawnAtIsNull(Long id);
 
+    // 인증 필터용: 행이 있고 탈퇴했을 때만 true (회원 행이 없는 id 는 false)
+    boolean existsByIdAndWithdrawnAtIsNotNull(Long id);
+
     // 익명화 도입 전에 탈퇴해 소셜 식별자 · 닉네임을 아직 쥐고 있는 회원 (LegacyWithdrawnMemberCleanup)
     List<Member> findByWithdrawnAtIsNotNullAndProviderIdNotLike(String providerIdPattern);
 

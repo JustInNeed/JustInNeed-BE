@@ -54,7 +54,7 @@ class SessionListQueryCountTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("세션 목록: 세션이 1개든 10개든 SQL 수가 같다 — 토큰 확인 1 + 목록 1 + 전체 · 즐겨찾기 개수 2")
+    @DisplayName("세션 목록: 세션이 1개든 10개든 SQL 수가 같다 — 토큰 확인 1 + 탈퇴 확인 1 + 목록 1 + 전체 · 즐겨찾기 개수 2")
     void listQueryCountDoesNotGrowWithSessions() throws Exception {
         Member me = member("sprout");
         seedSessions(me, 0, 1);
@@ -67,7 +67,7 @@ class SessionListQueryCountTest extends ScenarioTestSupport {
 
         assertThat(ten).isEqualTo(one);
         assertThat(favoritesOnly).isEqualTo(one);
-        assertThat(one).isLessThanOrEqualTo(4);
+        assertThat(one).isLessThanOrEqualTo(5);
     }
 
     @Test
@@ -91,8 +91,8 @@ class SessionListQueryCountTest extends ScenarioTestSupport {
 
         assertThat(getTen).isEqualTo(getOne);
         assertThat(patchTen).isEqualTo(patchOne);
-        // 토큰 확인 1 + 그룹 1 + 세션 1
-        assertThat(getOne).isLessThanOrEqualTo(3);
+        // 토큰 확인 1 + 탈퇴 확인 1 + 그룹 1 + 세션 1
+        assertThat(getOne).isLessThanOrEqualTo(4);
     }
 
     /** 요청 하나가 실행한 JDBC 문 수. */

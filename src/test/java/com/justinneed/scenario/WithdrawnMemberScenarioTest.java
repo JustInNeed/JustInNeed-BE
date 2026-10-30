@@ -1,5 +1,6 @@
 package com.justinneed.scenario;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
@@ -14,17 +15,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.justinneed.auth.domain.Member;
 import com.justinneed.session.management.domain.Source;
+import com.justinneed.session.taggroup.repository.TagGroupRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 
 /**
- * 탈퇴한 회원: 본인 토큰으로도 · 다른 사람 화면에서도 없는 회원으로 보인다.
- * 서버 재시작 등으로 탈퇴 전 토큰이 무효화 목록에 없더라도 회원 조회 단계에서 막혀야 한다.
+ * 탈퇴한 회원: 본인 토큰은 기기와 상관없이 401 이고, 다른 사람 화면에서는 없는 회원으로 보인다.
+ * 다른 기기 토큰이나 서버 재시작 등으로 무효화 목록에 없는 토큰도 인증 필터에서 막혀야 한다.
  */
 @DisplayName("탈퇴한 회원")
 class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
@@ -32,6 +35,9 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
     private static final String MEMBER_NOT_FOUND = "회원을 찾을 수 없습니다.";
     private static final String PRAGUE_CASTLE = "https://www.hrad.cz/en/prague-castle-for-visitors";
     private static final String PRAGUE_EU = "https://www.prague.eu/en";
+
+    @Autowired
+    private TagGroupRepository tagGroups;
 
     private Member me;
     private Wanderer wanderer;
@@ -68,18 +74,53 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("탈퇴 후 같은 회원 id 로 새로 만든 access 토큰(서버 재시작으로 무효화 목록을 잃은 상황)으로도 내 정보 · 닉네임 변경은 404")
-    void withdrawnMemberIsNotFoundEvenWithFreshToken() throws Exception {
+    @DisplayName("탈퇴 후 같은 회원 id 로 새로 만든 access 토큰(서버 재시작으로 무효화 목록을 잃은 상황)으로도 내 정보 · 닉네임 변경은 401")
+    void withdrawnMemberIsUnauthorizedEvenWithFreshToken() throws Exception {
         withdraw(me);
         String freshToken = jwt.createAccessToken(me.getId());
 
         mvc.perform(get("/members/me").with(bearerToken(freshToken)))
-                .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, MEMBER_NOT_FOUND));
+                .andExpect(status().isUnauthorized());
         mvc.perform(patch("/members/me/nickname").with(bearerToken(freshToken))
                         .with(json(Map.of("nickname", "comeback"))))
-                .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, MEMBER_NOT_FOUND));
+                .andExpect(status().isUnauthorized());
         mvc.perform(get("/community/me/hashtags").with(bearerToken(freshToken)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("웹에서 탈퇴하면 휴대폰에 남은 access 토큰도 모든 보호 API 에서 401 이고 그룹도 못 만든다")
+    void otherDeviceTokenIsRejectedAfterWithdrawal() throws Exception {
+        String phone = jwt.createAccessToken(me.getId());
+        String web = jwt.createAccessToken(me.getId());
+        List<String> protectedPaths = List.of("/members/me", "/sessions", "/sessions/hashtags", "/tag-groups",
+                "/settings/integrations", "/settings/collection/excluded-urls");
+        for (String path : protectedPaths) {
+            mvc.perform(get(path).with(bearerToken(phone))).andExpect(okEnvelope());
+        }
+
+        mvc.perform(delete("/settings/account").with(bearerToken(web))
+                        .with(json(Map.of("confirmText", "WITHDRAW"))))
+                .andExpect(okEnvelope());
+
+        for (String path : protectedPaths) {
+            mvc.perform(get(path).with(bearerToken(phone))).andExpect(status().isUnauthorized());
+        }
+        mvc.perform(post("/tag-groups").with(bearerToken(phone))
+                        .with(json(Map.of("name", "탈퇴 후", "hashtags", List.of("로마")))))
+                .andExpect(status().isUnauthorized());
+        assertThat(tagGroups.findByUserIdOrderByPositionAscIdAsc(me.getId())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("회원 행이 없는 id 의 토큰은 탈퇴로 보지 않아 지금처럼 컨트롤러까지 간다")
+    void tokenWithoutMemberRowReachesControllers() throws Exception {
+        String noRow = jwt.createAccessToken(999_999L);
+
+        mvc.perform(get("/sessions").with(bearerToken(noRow))).andExpect(okEnvelope());
+        mvc.perform(get("/tag-groups").with(bearerToken(noRow))).andExpect(okEnvelope());
+        mvc.perform(get("/members/me").with(bearerToken(noRow)))
+                .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, MEMBER_NOT_FOUND));
     }
 
     @Test
