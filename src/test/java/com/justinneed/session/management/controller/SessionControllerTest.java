@@ -1,5 +1,6 @@
 package com.justinneed.session.management.controller;
 
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -9,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.justinneed.auth.jwt.JwtTokenProvider;
 import com.justinneed.session.management.domain.BrowsingSession;
+import com.justinneed.session.management.domain.SessionStatus;
 import com.justinneed.session.management.domain.Source;
 import com.justinneed.session.management.dto.SessionUpdateRequest;
 import com.justinneed.session.management.repository.BrowsingSessionRepository;
@@ -16,6 +18,7 @@ import com.justinneed.session.summary.domain.Summary;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -23,6 +26,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
@@ -73,8 +77,11 @@ class SessionControllerTest {
     void getSessionsReturnsList() throws Exception {
         mockMvc.perform(get("/sessions").header(HttpHeaders.AUTHORIZATION, bearer))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data", hasSize(1)))
-                .andExpect(jsonPath("$.data[0].title").value("Spring 조사"));
+                .andExpect(jsonPath("$.data.sessions", hasSize(1)))
+                .andExpect(jsonPath("$.data.sessions[0].title").value("Spring 조사"))
+                .andExpect(jsonPath("$.data.hasNext").value(false))
+                .andExpect(jsonPath("$.data.totalCount").value(1))
+                .andExpect(jsonPath("$.data.favoriteCount").value(1));
     }
 
     @Test
@@ -83,7 +90,38 @@ class SessionControllerTest {
 
         mockMvc.perform(get("/sessions").header(HttpHeaders.AUTHORIZATION, otherBearer))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data", hasSize(0)));
+                .andExpect(jsonPath("$.data.sessions", hasSize(0)))
+                .andExpect(jsonPath("$.data.totalCount").value(0));
+    }
+
+    @Test
+    @DisplayName("진행 중 세션은 맨 위, 종료 시각 없는 끝난 세션은 맨 뒤 — 이 DB(H2 기본 NULL 정렬)에서도 운영 Postgres 와 같은 순서")
+    void getSessionsOrdersInProgressFirstAndMissingEndedAtLast() throws Exception {
+        BrowsingSession analyzing = new BrowsingSession(USER_ID, "분석 중", LocalDateTime.of(2026, 5, 1, 9, 0));
+        ReflectionTestUtils.setField(analyzing, "status", SessionStatus.ANALYZING);
+        sessionRepository.save(analyzing);
+        BrowsingSession failedWithoutEnd = new BrowsingSession(USER_ID, "실패", LocalDateTime.of(2026, 6, 2, 9, 0));
+        ReflectionTestUtils.setField(failedWithoutEnd, "status", SessionStatus.FAILED);
+        sessionRepository.save(failedWithoutEnd);
+
+        mockMvc.perform(get("/sessions").header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(
+                        analyzing.getId().intValue(), session.getId().intValue(), failedWithoutEnd.getId().intValue())));
+    }
+
+    @Test
+    @DisplayName("GET /sessions/hashtags 는 /sessions/{id} 가 아니라 해시태그 후보로 매칭되고, 대소문자 무시 중복 없이 목록 순서로 준다")
+    void getHashtagsReturnsDistinctTagsInListOrder() throws Exception {
+        BrowsingSession newer = new BrowsingSession(USER_ID, "JPA 심화", LocalDateTime.of(2026, 6, 2, 10, 0));
+        newer.complete(LocalDateTime.of(2026, 6, 2, 11, 0), 2);
+        newer.update(null, null, false, false, List.of("jpa", "Hibernate"));
+        sessionRepository.save(newer);
+
+        mockMvc.perform(get("/sessions/hashtags").header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").value(contains("jpa", "Hibernate", "Spring")));
     }
 
     @Test

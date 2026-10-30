@@ -122,14 +122,15 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 
 | Method | Path | 설명 |
 | --- | --- | --- |
-| GET | `/sessions` | 세션 목록 조회 |
+| GET | `/sessions` | 세션 목록 조회 (무한 스크롤). `page`(기본 0) · `size`(기본 10, 1~50) · `favorite`(기본 false, true 면 즐겨찾기만). `{ sessions, hasNext, totalCount, favoriteCount }` 반환 — `totalCount` · `favoriteCount` 는 필터 · 페이지와 상관없는 내 전체 세션 수 / 즐겨찾기 수. 음수 page · 범위 밖 size 는 400. 정렬: 진행 중(완료 · 실패가 아닌) 세션이 맨 위(시작 시각 최신순), 나머지는 종료 시각 최신순(종료 시각 없으면 뒤) → 시작 시각 최신순 → id 역순 |
+| GET | `/sessions/hashtags` | 그룹 만들기 해시태그 후보. 내 세션 전체(삭제 제외, 모든 상태)의 태그를 목록과 같은 순서로 훑어 처음 나온 순서대로, 대소문자 무시 중복 제거(처음 나온 표기 유지). `data` 는 문자열 배열, 세션이 없으면 `[]` |
 | GET | `/sessions/{id}` | 세션 상세 조회. 요약 본문과 출처를 함께 반환 |
 | PATCH | `/sessions/{id}` | 세션 편집. `title`, `editedMarkdown`, `isPublic`, `isFavorite`, `tags`, `insights` 중 보낸 필드만 수정 |
 | DELETE | `/sessions/{id}` | 세션 삭제. 실제 삭제가 아니라 soft delete 처리 |
 | POST | `/sessions/chunks` | 확장 프로그램이 세션 원본 청크를 보냄. `sessionId`(수집기 세션 id) · `segId` · `n` · `payload`, 마지막 청크는 `final` · `maxN` · `stopReason`. 처음 받으면 201, 이미 받은 청크면 저장하지 않고 200(`duplicate: true`) |
-| GET | `/tag-groups` | 해시태그 그룹 목록 조회. 그룹별 매칭 세션 포함 |
+| GET | `/tag-groups` | 해시태그 그룹 목록 조회. 그룹별 매칭 세션 포함 (세션 순서는 `GET /sessions` 와 같음, 생성 · 수정 · 순서 변경 응답도 동일) |
 | POST | `/tag-groups` | 새 해시태그 그룹 생성. `position` 생략 시 맨 뒤, 지정 시 해당 위치에 끼워 넣음 |
-| PATCH | `/tag-groups/{id}` | 그룹 이름과 해시태그 수정 |
+| PATCH | `/tag-groups/{id}` | 그룹 이름과 해시태그 수정. 보낸 필드만 수정, 이름을 보낼 때 빈 값 · 공백만은 400 |
 | DELETE | `/tag-groups/{id}` | 그룹 삭제 |
 | PATCH | `/tag-groups/order` | 그룹 표시 순서 변경 |
 
@@ -142,7 +143,6 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 - 세션 생성(`POST /sessions`) 및 행동 로그 수집·분석·LLM 요약 파이프라인
 - 마인드맵 뷰
 - 어드민 관련 기능
-- 즐겨찾기 전용 세션 목록 뷰
 
 현재 세션 및 커뮤니티 API는 `Authorization: Bearer <access-token>` 인증을 사용합니다. 사용자 ID는 JWT에서 가져오며, `X-User-Id` 헤더나 기본 사용자 ID를 사용하지 않습니다.
 

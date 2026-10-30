@@ -35,7 +35,7 @@ public class TagGroupService {
 
     public List<TagGroupResponse> getTagGroups(Long userId) {
         List<TagGroup> groups = tagGroupRepository.findByUserIdOrderByPositionAscIdAsc(userId);
-        List<BrowsingSession> sessions = sessionRepository.findByUserIdAndDeletedAtIsNullOrderByEndedAtDescStartedAtDesc(userId);
+        List<BrowsingSession> sessions = sessionRepository.findListByUserId(userId);
 
         return groups.stream()
                 .map(group -> TagGroupResponse.from(group, matchingSessions(group, sessions)))
@@ -55,7 +55,7 @@ public class TagGroupService {
             existing.get(i).updatePosition(i + 1);
         }
         TagGroup group = tagGroupRepository.save(new TagGroup(userId, request.name(), hashtags, position));
-        List<BrowsingSession> sessions = sessionRepository.findByUserIdAndDeletedAtIsNullOrderByEndedAtDescStartedAtDesc(userId);
+        List<BrowsingSession> sessions = sessionRepository.findListByUserId(userId);
         return TagGroupResponse.from(group, matchingSessions(group, sessions));
     }
 
@@ -65,7 +65,7 @@ public class TagGroupService {
         List<String> hashtags = HashtagValidator.normalizeAndValidate(request.hashtags());
         group.update(request.name(), hashtags);
 
-        List<BrowsingSession> sessions = sessionRepository.findByUserIdAndDeletedAtIsNullOrderByEndedAtDescStartedAtDesc(userId);
+        List<BrowsingSession> sessions = sessionRepository.findListByUserId(userId);
         return TagGroupResponse.from(group, matchingSessions(group, sessions));
     }
 
