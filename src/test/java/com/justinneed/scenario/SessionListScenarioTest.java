@@ -6,6 +6,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -14,8 +15,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.justinneed.auth.domain.Member;
 import com.justinneed.session.management.domain.BrowsingSession;
+import com.justinneed.session.management.domain.SessionStatus;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -156,6 +159,75 @@ class SessionListScenarioTest extends ScenarioTestSupport {
 
         mvc.perform(get("/sessions").with(as(me)))
                 .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(shorter, longer))));
+    }
+
+    @Test
+    @DisplayName("진행 중(분석 중) 세션은 더 최근에 끝난 완료 세션보다 위에, 진행 중끼리는 시작 시각 최신순으로 온다")
+    void inProgressSessionsComeFirst() throws Exception {
+        Member me = member("sprout");
+        MockSessions mock = seedMockSessions(me);
+        // 시작 시각이 완료 세션들보다 오래돼도 맨 위
+        BrowsingSession oldest = sessionWithStatus(me, "분석 중 (가장 먼저 시작)", "2026-04-10T09:00:00", null,
+                SessionStatus.ANALYZING, List.of());
+        BrowsingSession newest = sessionWithStatus(me, "분석 중 (가장 최근 시작)", "2026-04-20T09:00:00", null,
+                SessionStatus.ANALYZING, List.of());
+        // 진행 중이면 종료 시각이 있어도 보지 않고 시작 시각으로 줄 세운다
+        BrowsingSession ended = sessionWithStatus(me, "분석 중 (종료 시각 있음)", "2026-04-15T09:00:00",
+                "2026-04-30T09:00:00", SessionStatus.ANALYZING, List.of());
+
+        List<BrowsingSession> expected = new ArrayList<>(List.of(newest, ended, oldest));
+        expected.addAll(mock.newestFirst());
+        mvc.perform(get("/sessions").with(as(me)))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(expected.toArray(BrowsingSession[]::new)))))
+                .andExpect(jsonPath("$.data.sessions[0].status").value("ANALYZING"))
+                .andExpect(jsonPath("$.data.sessions[0].endedAt").value(nullValue()))
+                .andExpect(jsonPath("$.data.sessions[3].status").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.totalCount").value(10));
+        // 페이지가 나뉘어도 같은 순서로 이어진다
+        mvc.perform(get("/sessions").param("page", "1").param("size", "2").with(as(me)))
+                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(oldest, mock.rome()))));
+    }
+
+    @Test
+    @DisplayName("실패 세션은 완료 세션과 섞여 종료 시각 최신순, 종료 시각이 없는 끝난 세션은 맨 뒤 (운영 Postgres 와 같은 NULL 정렬에서도)")
+    void failedSessionsSortByEndedAt() throws Exception {
+        Member me = member("sprout");
+        MockSessions mock = seedMockSessions(me);
+        // 로마(04-26 22:48 종료)와 항공권(04-25 15:21 종료) 사이
+        BrowsingSession failed = sessionWithStatus(me, "분석 실패", "2026-04-25T20:00:00", "2026-04-25T21:00:00",
+                SessionStatus.FAILED, List.of());
+        // 가장 최근에 시작했지만 종료 시각이 없다 → endedAt desc 에서 Postgres 는 NULL 을 맨 앞에 두므로 nulls last 를 명시해야 뒤로 간다
+        BrowsingSession noEndedAt = sessionWithStatus(me, "종료 시각 없는 실패", "2026-04-27T09:00:00", null,
+                SessionStatus.FAILED, List.of());
+
+        mvc.perform(get("/sessions").with(as(me)))
+                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(
+                        mock.rome(), failed, mock.flight(), mock.paris(), mock.rail(), mock.barca(), mock.visa(),
+                        mock.prague(), noEndedAt))))
+                .andExpect(jsonPath("$.data.sessions[1].status").value("FAILED"));
+    }
+
+    @Test
+    @DisplayName("시작 · 종료 시각이 모두 같아도 id 역순으로 순서가 고정돼 페이지 사이에 빠지거나 겹치는 세션이 없다")
+    void identicalTimestampsKeepStableOrder() throws Exception {
+        Member me = member("sprout");
+        LocalDateTime start = LocalDateTime.parse("2026-04-01T10:00:00");
+        List<Long> savedIds = new ArrayList<>();
+        for (int i = 0; i < 15; i++) {
+            savedIds.add(session(me, "같은 시각 " + i, start, start.plusMinutes(30), 1, false, false,
+                    List.of(), List.of(), null).getId());
+        }
+        List<Long> newestIdFirst = savedIds.stream().sorted(Comparator.reverseOrder()).toList();
+
+        mvc.perform(get("/sessions").param("page", "0").param("size", "10").with(as(me)))
+                .andExpect(jsonPath("$.data.sessions[*].id")
+                        .value(contains(ids(newestIdFirst.subList(0, 10).toArray(Long[]::new)))))
+                .andExpect(jsonPath("$.data.hasNext").value(true));
+        mvc.perform(get("/sessions").param("page", "1").param("size", "10").with(as(me)))
+                .andExpect(jsonPath("$.data.sessions[*].id")
+                        .value(contains(ids(newestIdFirst.subList(10, 15).toArray(Long[]::new)))))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
     }
 
     @Test
