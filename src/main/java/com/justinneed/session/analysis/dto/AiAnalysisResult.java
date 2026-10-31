@@ -14,6 +14,7 @@ public record AiAnalysisResult(
         Map<String, Object> essay,
         List<Map<String, Object>> selected,
         Map<String, Object> analysis,
-        List<Map<String, Object>> pages
+        List<Map<String, Object>> pages,
+        List<Map<String, Object>> pageVisits
 ) {
 }

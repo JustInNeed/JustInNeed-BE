@@ -81,7 +81,11 @@ class AnalysisResultServiceTest {
              "analysis": {"summary": {"Reading": {"units": 3, "dwellMs": 9000}},
                           "units": [{"unitKey": "https://blog.naver.com/cat/1#u1", "clusterLabel": "Reading"}]},
              "pages": [{"pageId": "https://docs.spring.io/jpa", "url": "https://docs.spring.io/jpa", "title": "JPA 문서",
-                        "firstVisitedAt": "2026-10-30T01:00:00+00:00", "dwellMs": 200000}]}
+                        "firstVisitedAt": "2026-10-30T01:00:00+00:00", "dwellMs": 200000}],
+             "pageVisits": [{"pageId": "https://docs.spring.io/jpa", "url": "https://docs.spring.io/jpa",
+                             "dwellMs": 200000, "visitCount": 2},
+                            {"pageId": "https://blog.naver.com/cat/1", "url": "https://blog.naver.com/cat/1",
+                             "dwellMs": 5000, "visitCount": 1}]}
             """;
 
     @Autowired
@@ -150,6 +154,8 @@ class AnalysisResultServiceTest {
         assertThat(saved.getAnalysisSummary()).containsKey("Reading");
         assertThat(saved.getPages()).singleElement()
                 .satisfies(page -> assertThat(page).containsEntry("category", "OFFICIAL_DOCS"));
+        assertThat(saved.getPageVisits()).hasSize(2)
+                .first().satisfies(page -> assertThat(page).containsEntry("visitCount", 2).containsEntry("dwellMs", 200000));
         assertThat(saved.getModelSource()).isEqualTo("global");
         assertThat(saved.getScoreMethod()).isEqualTo("C");
 
@@ -179,10 +185,19 @@ class AnalysisResultServiceTest {
     }
 
     @Test
+    void AI_가_방문_글_전체를_주지_않으면_null_로_둔다() {
+        service.save(sessionId, result(RESULT_JSON.replaceFirst("(?s),\\s*\"pageVisits\".*$", "}")));
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(resultRepository.findById(sessionId).orElseThrow().getPageVisits()).isNull();
+    }
+
+    @Test
     void LLM_을_호출하지_않아_마인드맵_줄글이_없으면_FAILED_로_바꾼다() {
         AiAnalysisResult full = result(RESULT_JSON);
         AiAnalysisResult withoutLlm = new AiAnalysisResult(full.modelSource(), full.scoreMethod(), full.state(),
-                null, null, full.selected(), full.analysis(), full.pages());
+                null, null, full.selected(), full.analysis(), full.pages(), full.pageVisits());
 
         assertThatThrownBy(() -> service.save(sessionId, withoutLlm))
                 .isInstanceOf(CustomException.class)
