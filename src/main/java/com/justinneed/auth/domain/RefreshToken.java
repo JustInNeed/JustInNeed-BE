@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
@@ -15,12 +16,13 @@ import java.time.LocalDateTime;
  * 토큰 원문은 저장하지 않고 SHA-256 해시만 보관한다.
  * - 로그인: 행 생성
  * - 재발급: 기존 행 삭제 + 새 행 생성 (회전)
- * - 로그아웃: 행 삭제
+ * - 로그아웃: 같은 묶음(group_id)의 행 전체 삭제
  */
 @Entity
 @Table(
         name = "refresh_tokens",
-        uniqueConstraints = @UniqueConstraint(name = "uk_refresh_token_hash", columnNames = "token_hash")
+        uniqueConstraints = @UniqueConstraint(name = "uk_refresh_token_hash", columnNames = "token_hash"),
+        indexes = @Index(name = "idx_refresh_tokens_group", columnList = "group_id")
 )
 public class RefreshToken extends BaseEntity {
 
@@ -37,6 +39,10 @@ public class RefreshToken extends BaseEntity {
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
 
+    // 함께 로그아웃되는 토큰 묶음 (웹 로그인 1회 + 거기서 연결한 확장). 재발급해도 유지. 도입 전에 발급된 행은 null
+    @Column(name = "group_id", length = 36)
+    private String groupId;
+
     protected RefreshToken() {
     }
 
@@ -44,6 +50,11 @@ public class RefreshToken extends BaseEntity {
         this.memberId = memberId;
         this.tokenHash = tokenHash;
         this.expiresAt = expiresAt;
+    }
+
+    public RefreshToken(Long memberId, String tokenHash, LocalDateTime expiresAt, String groupId) {
+        this(memberId, tokenHash, expiresAt);
+        this.groupId = groupId;
     }
 
     public Long getId() {
@@ -60,5 +71,9 @@ public class RefreshToken extends BaseEntity {
 
     public LocalDateTime getExpiresAt() {
         return expiresAt;
+    }
+
+    public String getGroupId() {
+        return groupId;
     }
 }

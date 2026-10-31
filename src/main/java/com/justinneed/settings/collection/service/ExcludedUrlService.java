@@ -1,5 +1,6 @@
 package com.justinneed.settings.collection.service;
 
+import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
 import com.justinneed.settings.collection.domain.ExcludedUrl;
@@ -14,8 +15,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,39 +24,37 @@ public class ExcludedUrlService {
 
     private static final int MAX_URL_COUNT = 100;
     private static final List<String> DEFAULT_URLS = List.of(
-            "https://www.instagram.com",
-            "https://mail.google.com"
+            "instagram.com",
+            "mail.google.com",
+            "youtube.com/shorts",
+            "twitter.com",
+            "tiktok.com"
     );
 
     private final ExcludedUrlRepository excludedUrlRepository;
+    private final MemberRepository memberRepository;
 
-    public ExcludedUrlService(ExcludedUrlRepository excludedUrlRepository) {
+    public ExcludedUrlService(ExcludedUrlRepository excludedUrlRepository, MemberRepository memberRepository) {
         this.excludedUrlRepository = excludedUrlRepository;
+        this.memberRepository = memberRepository;
     }
 
     @Transactional
-    public ExcludedUrlListResponse getExcludedUrls(
-            Long memberId, boolean grouped, int page, int size
-    ) {
+    public ExcludedUrlListResponse getExcludedUrls(Long memberId) {
         ensureDefaultUrls(memberId);
-        PageRequest pageable = PageRequest.of(page, size);
-        Page<ExcludedUrl> result = grouped
-                ? excludedUrlRepository.findByMemberIdOrderByExcludedDescDomainAscUrlAsc(memberId, pageable)
-                : excludedUrlRepository.findByMemberIdOrderByExcludedDescIdAsc(memberId, pageable);
-
         return new ExcludedUrlListResponse(
                 200,
-                result.getContent().stream().map(ExcludedUrlItem::from).toList(),
-                result.getNumber(),
-                result.getSize(),
-                result.hasNext()
+                excludedUrlRepository.findByMemberIdOrderByExcludedDescDomainAscUrlAsc(memberId).stream()
+                        .map(ExcludedUrlItem::from)
+                        .toList()
         );
     }
 
     @Transactional
     public ExcludedUrlCreateResponse create(Long memberId, String rawUrl) {
-        ensureDefaultUrls(memberId);
         ExcludedUrlParser.ParsedUrl parsed = ExcludedUrlParser.parse(rawUrl);
+        lockMember(memberId);
+        addMissingDefaultUrls(memberId);
         if (excludedUrlRepository.existsByMemberIdAndUrl(memberId, parsed.url())) {
             throw new CustomException(ErrorCode.DUPLICATE_URL);
         }
@@ -83,6 +80,7 @@ public class ExcludedUrlService {
             Long memberId, List<Long> requestedIds, boolean excluded
     ) {
         List<Long> ids = distinctIds(requestedIds);
+        lockMember(memberId);
         List<ExcludedUrl> urls = findOwnedUrls(memberId, ids);
         urls.forEach(url -> url.updateExcluded(excluded));
         return new ExcludedUrlSelectionUpdateResponse(200, urls.size(), excluded, ids);
@@ -91,6 +89,7 @@ public class ExcludedUrlService {
     @Transactional
     public ExcludedUrlDeleteResponse delete(Long memberId, List<Long> requestedIds) {
         List<Long> ids = distinctIds(requestedIds);
+        lockMember(memberId);
         List<ExcludedUrl> urls = findOwnedUrls(memberId, ids);
         List<Long> deletedIds = new ArrayList<>();
         List<Long> uncheckedDefaultIds = new ArrayList<>();
@@ -125,7 +124,21 @@ public class ExcludedUrlService {
         return List.copyOf(ids);
     }
 
+    // 기본 URL 이 다 있으면 잠그지 않고 끝난다. 첫 조회가 동시에 와도 잠근 쪽만 넣는다
     private void ensureDefaultUrls(Long memberId) {
+        if (excludedUrlRepository.countByMemberIdAndUrlIn(memberId, DEFAULT_URLS) == DEFAULT_URLS.size()) {
+            return;
+        }
+        lockMember(memberId);
+        addMissingDefaultUrls(memberId);
+    }
+
+    private void lockMember(Long memberId) {
+        memberRepository.lockActiveById(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+    }
+
+    private void addMissingDefaultUrls(Long memberId) {
         for (String defaultUrl : DEFAULT_URLS) {
             ExcludedUrlParser.ParsedUrl parsed = ExcludedUrlParser.parse(defaultUrl);
             if (!excludedUrlRepository.existsByMemberIdAndUrl(memberId, parsed.url())) {

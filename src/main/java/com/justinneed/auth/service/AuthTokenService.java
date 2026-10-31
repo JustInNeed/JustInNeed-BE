@@ -12,6 +12,7 @@ import com.justinneed.global.exception.ErrorCode;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,13 +40,26 @@ public class AuthTokenService {
         this.memberRepository = memberRepository;
     }
 
-    /** 로그인 시: 토큰 발급 + refresh 화이트리스트 등록 */
+    /** 로그인 시: 새 묶음으로 토큰 발급 + refresh 화이트리스트 등록 */
     @Transactional
     public TokenResponse issue(Long memberId) {
-        String accessToken = jwtTokenProvider.createAccessToken(memberId);
+        return issue(memberId, null);
+    }
+
+    /** 재발급 · 확장 연결 시: 기존 묶음에 토큰 발급. groupId 가 null 이면 새 묶음 */
+    @Transactional
+    public TokenResponse issue(Long memberId, String groupId) {
+        String group = groupId != null ? groupId : UUID.randomUUID().toString();
+        String accessToken = jwtTokenProvider.createAccessToken(memberId, group);
         String refreshToken = jwtTokenProvider.createRefreshToken(memberId);
-        saveRefreshToken(memberId, refreshToken);
+        saveRefreshToken(memberId, refreshToken, group);
         return new TokenResponse(accessToken, refreshToken);
+    }
+
+    /** 아직 로그아웃되지 않은 묶음인지 */
+    @Transactional(readOnly = true)
+    public boolean isActiveGroup(String groupId) {
+        return groupId != null && refreshTokenRepository.existsByGroupId(groupId);
     }
 
     /** 재발급 시: JWT 검증 → 화이트리스트에서 기존 토큰 삭제(회전) → 재발급 */
@@ -57,8 +71,10 @@ public class AuthTokenService {
             throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
 
+        String tokenHash = hash(refreshToken);
+        String groupId = refreshTokenRepository.findGroupIdByHash(tokenHash);
         // 같은 토큰으로 동시에 재발급해도 행을 실제로 지운 요청 하나만 새 토큰을 받는다 (이미 쓴 토큰 · 없는 토큰도 0건)
-        int deleted = refreshTokenRepository.deleteByHash(hash(refreshToken));
+        int deleted = refreshTokenRepository.deleteByHash(tokenHash);
         if (deleted != 1) {
             throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
@@ -67,17 +83,24 @@ public class AuthTokenService {
         if (memberRepository.existsByIdAndWithdrawnAtIsNotNull(memberId)) {
             throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
-        return issue(memberId);
+        return issue(memberId, groupId);
     }
 
-    /** 로그아웃 시: refresh 화이트리스트에서 삭제 + access 즉시 무효화(denylist) */
+    /** 로그아웃 시: 같은 묶음의 refresh 를 화이트리스트에서 삭제 + 보낸 access 즉시 무효화(denylist) */
     @Transactional
     public void logout(String accessToken, String refreshToken) {
         if (accessToken != null && jwtTokenProvider.validate(accessToken)) {
             accessTokenDenylist.deny(accessToken, jwtTokenProvider.getExpiryEpochSecond(accessToken));
         }
         if (refreshToken != null && jwtTokenProvider.validate(refreshToken)) {
-            refreshTokenRepository.deleteByHash(hash(refreshToken)); // 이미 지워졌으면 0건으로 끝난다 (멱등)
+            String tokenHash = hash(refreshToken);
+            String groupId = refreshTokenRepository.findGroupIdByHash(tokenHash);
+            // 이미 지워졌으면 0건으로 끝난다 (멱등)
+            if (groupId != null) {
+                refreshTokenRepository.deleteByGroupId(groupId);
+            } else {
+                refreshTokenRepository.deleteByHash(tokenHash);
+            }
         }
     }
 
@@ -90,11 +113,11 @@ public class AuthTokenService {
         refreshTokenRepository.deleteByMemberId(memberId);
     }
 
-    private void saveRefreshToken(Long memberId, String refreshToken) {
+    private void saveRefreshToken(Long memberId, String refreshToken, String groupId) {
         LocalDateTime expiresAt = Instant.ofEpochSecond(jwtTokenProvider.getExpiryEpochSecond(refreshToken))
                 .atZone(ZoneId.systemDefault())
                 .toLocalDateTime();
-        refreshTokenRepository.save(new RefreshToken(memberId, hash(refreshToken), expiresAt));
+        refreshTokenRepository.save(new RefreshToken(memberId, hash(refreshToken), expiresAt, groupId));
     }
 
     // refresh 토큰 원문 대신 SHA-256 해시를 저장/조회 (DB 유출 시 토큰 노출 방지)

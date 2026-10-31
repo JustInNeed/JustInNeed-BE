@@ -6,6 +6,7 @@ import com.jayway.jsonpath.JsonPath;
 import com.justinneed.auth.domain.Member;
 import com.justinneed.auth.domain.RefreshToken;
 import com.justinneed.auth.domain.SocialProvider;
+import com.justinneed.auth.dto.TokenResponse;
 import com.justinneed.auth.jwt.JwtTokenProvider;
 import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.auth.repository.RefreshTokenRepository;
@@ -102,6 +103,22 @@ class AuthOverHttpTest {
             String newRefreshToken = JsonPath.read(responses.get(0).body(), "$.data.refreshToken");
             assertThat(send(refresh(newRefreshToken)).statusCode()).isEqualTo(200);
             assertThat(send(refresh(refreshToken)).statusCode()).isEqualTo(401);
+        }
+    }
+
+    @Test
+    @DisplayName("같은 묶음의 웹 · 확장 토큰을 동시에 재발급하면 둘 다 200 이고 묶음이 유지된다")
+    void concurrentRefreshOfWebAndExtension() throws Exception {
+        for (int round = 0; round < ROUNDS; round++) {
+            Long memberId = newMember().getId();
+            TokenResponse web = authTokenService.issue(memberId);
+            String groupId = jwt.getGroupId(web.accessToken());
+            TokenResponse extension = authTokenService.issue(memberId, groupId);
+
+            List<HttpResponse<String>> responses = race(refresh(web.refreshToken()), refresh(extension.refreshToken()));
+
+            assertThat(statuses(responses)).containsExactly(200, 200);
+            assertThat(refreshRowsOf(memberId)).hasSize(2).allMatch(row -> groupId.equals(row.getGroupId()));
         }
     }
 

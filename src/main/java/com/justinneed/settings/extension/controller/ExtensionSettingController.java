@@ -6,6 +6,7 @@ import com.justinneed.settings.extension.dto.ExtensionToggleUpdateRequest;
 import com.justinneed.settings.extension.service.ExtensionSettingService;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,6 +20,11 @@ public class ExtensionSettingController {
 
     public ExtensionSettingController(ExtensionSettingService extensionSettingService) {
         this.extensionSettingService = extensionSettingService;
+    }
+
+    @GetMapping
+    public ApiResponse<ExtensionSettingResponse> getSettings(@AuthenticationPrincipal Long memberId) {
+        return ApiResponse.ok(extensionSettingService.getSettings(memberId));
     }
 
     @PatchMapping("/popup-visible")

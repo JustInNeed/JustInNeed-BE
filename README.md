@@ -109,8 +109,9 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 | GET | `/oauth2/authorization/{kakao\|naver}` | 소셜 로그인 진입 (브라우저 리다이렉트) |
 | GET | `/login/oauth2/code/{provider}` | 소셜 로그인 콜백. 성공 시 FE `/oauth/callback?code=..` 로 302 (토큰은 URL 에 싣지 않음), 실패 시 `OAUTH_FAILURE_REDIRECT_URI` 로 302 |
 | POST | `/auth/token` | 콜백으로 받은 일회용 코드 `{code}` 를 `{accessToken, refreshToken, needsNickname}` 으로 교환. 코드는 60초 안에 한 번만 사용 가능, 없거나 만료 · 이미 쓴 코드는 401 |
+| POST | `/auth/extension-code` | 로그인 필요. 확장에 넘길 일회용 코드 `{code, expiresInSeconds}` 발급. 확장이 `POST /auth/token` 으로 바꾸면 웹과 별도의 토큰을 받는다. 묶음 없는 토큰 · 로그아웃된 묶음은 401 |
 | POST | `/auth/refresh` | refresh 토큰으로 access/refresh 재발급 (회전). 이미 쓴 토큰 · 없는 토큰은 401, 같은 토큰으로 동시에 보내면 한 요청만 성공하고 나머지는 401 |
-| POST | `/auth/logout` | refresh 토큰 폐기 + access 토큰 즉시 무효화 (무효화 목록은 DB 저장이라 재시작 후에도 유지) |
+| POST | `/auth/logout` | 같은 묶음(웹 + 연결한 확장)의 refresh 토큰 폐기 + 보낸 access 토큰 즉시 무효화 (무효화 목록은 DB 저장이라 재시작 후에도 유지) |
 | GET | `/members/me` | 내 정보 조회. 탈퇴한 회원의 토큰은 401 |
 | PATCH | `/members/me/nickname` | 닉네임 설정/변경. 영문 시작 3~8자(영문·숫자), 대소문자 무시 중복 불가 (중복이면 409, 같은 닉네임을 동시에 저장해도 한 명만 성공) |
 | GET | `/members/nickname/available?nickname=` | 닉네임 중복 확인. `{nickname, available}` 반환. 형식 규칙은 PATCH 와 같음(위반 시 400), 본인 닉네임은 사용 가능 |
@@ -137,6 +138,17 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 | PATCH | `/tag-groups/order` | 그룹 표시 순서 변경 |
 | GET | `/home` | 홈 대시보드 한 번에 조회. 내 완료 · 미삭제 세션 기준이고 날짜는 시작 시각(KST), 이번 주는 오늘 포함 최근 7일 · 지난주는 그 앞 7일. `{ graph, stats, weekActivity, topTags, todayTimeline, weekSessions, sessions }` 반환 — `graph` 는 세션별 마인드맵을 키워드(공백 · 대소문자 무시)로 합친 그래프(`nodes` · `edges`, 중심 노드 `core` 포함 최대 150개)와 `nodeMeta` · `tagGroups` · `filterTags`, `sessions` 는 시작 시각 최신순 최대 300개. 세션이 없으면 0 · 빈 목록 |
 
+### 설정
+
+| Method | Path | 설명 |
+| --- | --- | --- |
+| GET | `/settings/collection/excluded-urls` | 수집 제외 URL 전체 목록 (페이징 없음). 체크된 항목 먼저, 그 안에서 도메인 · URL 순. 처음 조회 때 기본 URL 5개를 채움 |
+| POST | `/settings/collection/excluded-urls` | URL 추가. 프로토콜 · `www.` 를 뗀 표시형(`tistory.com/feed`)으로 저장, 같은 표시형이면 409. 기본 URL 포함 100개까지 |
+| PATCH | `/settings/collection/excluded-urls/selections` | 체크 변경 `{excludedUrlIds, isExcluded}` |
+| DELETE | `/settings/collection/excluded-urls` | 선택 삭제 `{excludedUrlIds}`. 기본 URL 은 지우지 않고 체크만 해제 |
+| GET | `/settings/extension` | 확장 프로그램 설정 조회. 저장한 적이 없으면 기본값(모두 켜짐) |
+| PATCH | `/settings/extension/{popup-visible\|auto-end-notification\|manual-scrap}` | 토글 저장 `{enabled}`. 자동 종료 알림은 5초 알림만 끄고 자동 종료는 항상 동작 |
+
 ### 분석 / 추천
 
 대상은 내 완료 · 미삭제 세션, 기간은 오늘 포함 최근 7일(세션 시작 시각 KST)입니다. 보여줄 데이터가 없으면 `data` 는 `null` 입니다.
@@ -152,7 +164,7 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 
 판정 기준값은 `AnalyticsRules` 한 곳에 있습니다. `note` 의 `**강조**` 는 FE 가 강조 글씨로 보여줍니다.
 
-인증이 필요한 API(`/sessions/**`, `/tag-groups/**`, `/home`, `/analytics/**`, `/members/**`)는 `Authorization: Bearer {accessToken}` 헤더가 필수입니다. 토큰이 없거나 · 잘못됐거나 · 만료 · 무효화됐거나 · refresh 토큰이거나 · 탈퇴한 회원의 토큰이면 401 과 함께 `{"success":false,"data":null,"message":"로그인이 만료되었습니다. 다시 로그인해 주세요."}` 를 반환합니다 (`/auth/refresh` 실패는 "유효하지 않은 리프레시 토큰입니다."). 사용자 식별은 access 토큰의 memberId 로 합니다.
+인증이 필요한 API(`/sessions/**`, `/tag-groups/**`, `/home`, `/analytics/**`, `/members/**`, `/settings/**`)는 `Authorization: Bearer {accessToken}` 헤더가 필수입니다. 토큰이 없거나 · 잘못됐거나 · 만료 · 무효화됐거나 · refresh 토큰이거나 · 탈퇴한 회원의 토큰이면 401 과 함께 `{"success":false,"data":null,"message":"로그인이 만료되었습니다. 다시 로그인해 주세요."}` 를 반환합니다 (`/auth/refresh` 실패는 "유효하지 않은 리프레시 토큰입니다."). 사용자 식별은 access 토큰의 memberId 로 합니다.
 
 모든 응답은 `{ success, data, message }` 형식입니다. 에러도 같은 형식으로 내려가며 `success=false`, `message`에 사유가 담깁니다.
 

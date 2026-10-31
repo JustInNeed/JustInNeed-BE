@@ -24,7 +24,6 @@ import com.justinneed.settings.collection.repository.ExcludedUrlRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -71,7 +70,7 @@ class SettingsScenarioTest extends ScenarioTestSupport {
     class ExcludedUrls {
 
         @Test
-        @DisplayName("처음 열면 기본 제외 URL 2개(mail.google · instagram)가 체크된 채로 도메인 순으로 온다 (MEM-5-1)")
+        @DisplayName("처음 열면 기본 제외 URL 5개가 체크된 채로 도메인 순으로 온다 (MEM-5-1)")
         void defaultsOnFirstOpen() throws Exception {
             Member me = member("sprout");
 
@@ -79,20 +78,18 @@ class SettingsScenarioTest extends ScenarioTestSupport {
                     .andExpect(okEnvelope())
                     .andExpect(jsonPath("$.message").value("수집 제외 URL 목록을 조회했습니다."))
                     .andExpect(jsonPath("$.data.code").value(200))
-                    .andExpect(jsonPath("$.data.excludedUrls", hasSize(2)))
                     .andExpect(jsonPath("$.data.excludedUrls[*].url").value(contains(
-                            "https://mail.google.com", "https://www.instagram.com")))
+                            "instagram.com", "mail.google.com", "tiktok.com", "twitter.com", "youtube.com/shorts")))
                     .andExpect(jsonPath("$.data.excludedUrls[0].excludedUrlId").isNumber())
-                    .andExpect(jsonPath("$.data.excludedUrls[0].domain").value("mail.google.com"))
-                    .andExpect(jsonPath("$.data.excludedUrls[*].isDefault").value(contains(true, true)))
-                    .andExpect(jsonPath("$.data.excludedUrls[*].isExcluded").value(contains(true, true)))
-                    .andExpect(jsonPath("$.data.page").value(0))
-                    .andExpect(jsonPath("$.data.size").value(20))
-                    .andExpect(jsonPath("$.data.hasNext").value(false));
+                    .andExpect(jsonPath("$.data.excludedUrls[4].domain").value("youtube.com"))
+                    .andExpect(jsonPath("$.data.excludedUrls[*].isDefault")
+                            .value(contains(true, true, true, true, true)))
+                    .andExpect(jsonPath("$.data.excludedUrls[*].isExcluded")
+                            .value(contains(true, true, true, true, true)));
         }
 
         @Test
-        @DisplayName("URL 을 추가하면 201 과 정규화된 URL(소문자 · 끝 슬래시 제거)이 체크된 상태로 온다 (MEM-5-3)")
+        @DisplayName("URL 을 추가하면 201 과 표시형 URL(프로토콜 · 끝 슬래시 제거, 소문자 도메인)이 체크된 상태로 온다 (MEM-5-3)")
         void addedUrlIsNormalized() throws Exception {
             Member me = member("sprout");
 
@@ -102,7 +99,7 @@ class SettingsScenarioTest extends ScenarioTestSupport {
                     .andExpect(jsonPath("$.message").value("수집 제외 URL이 추가되었습니다."))
                     .andExpect(jsonPath("$.data.code").value(201))
                     .andExpect(jsonPath("$.data.excludedUrlId").isNumber())
-                    .andExpect(jsonPath("$.data.url").value("https://tistory.com/feed"))
+                    .andExpect(jsonPath("$.data.url").value("tistory.com/feed"))
                     .andExpect(jsonPath("$.data.domain").value("tistory.com"))
                     .andExpect(jsonPath("$.data.isDefault").value(false))
                     .andExpect(jsonPath("$.data.isExcluded").value(true))
@@ -142,12 +139,12 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         @DisplayName("기본 URL 포함 100개가 차면 더 추가할 수 없다 (400 'URL은 최대 100개까지 등록할 수 있습니다.')")
         void limitIsHundredIncludingDefaults() throws Exception {
             Member me = member("sprout");
-            mvc.perform(get(EXCLUDED_URLS).with(as(me))).andExpect(okEnvelope()); // 기본 URL 2개 생성
+            mvc.perform(get(EXCLUDED_URLS).with(as(me))).andExpect(okEnvelope()); // 기본 URL 5개 생성
             List<ExcludedUrl> filler = new ArrayList<>();
-            for (int i = 0; i < 97; i++) {
-                filler.add(new ExcludedUrl(me.getId(), "https://site" + i + ".com", "site" + i + ".com", false));
+            for (int i = 0; i < 94; i++) {
+                filler.add(new ExcludedUrl(me.getId(), "site" + i + ".com", "site" + i + ".com", false));
             }
-            excludedUrls.saveAllAndFlush(filler); // 기본 2 + 97 = 99개
+            excludedUrls.saveAllAndFlush(filler); // 기본 5 + 94 = 99개
 
             postUrl(me, "https://hundredth.com").andExpect(status().isCreated());
             postUrl(me, "https://over.com")
@@ -160,7 +157,7 @@ class SettingsScenarioTest extends ScenarioTestSupport {
             Member me = member("sprout");
             Long tistory = addUrlId(me, "https://tistory.com/feed");
             addUrlId(me, "https://naver.com/blog");
-            Long mail = urlId(me, "https://mail.google.com");
+            Long mail = urlId(me, "mail.google.com");
 
             mvc.perform(patch(EXCLUDED_URLS + "/selections").with(as(me))
                             .with(json(Map.of("excludedUrlIds", List.of(mail, tistory), "isExcluded", false))))
@@ -172,13 +169,14 @@ class SettingsScenarioTest extends ScenarioTestSupport {
 
             mvc.perform(get(EXCLUDED_URLS).with(as(me)))
                     .andExpect(jsonPath("$.data.excludedUrls[*].url").value(contains(
-                            "https://naver.com/blog", "https://www.instagram.com",
-                            "https://mail.google.com", "https://tistory.com/feed")))
-                    .andExpect(jsonPath("$.data.excludedUrls[*].isExcluded").value(contains(true, true, false, false)));
+                            "instagram.com", "naver.com/blog", "tiktok.com", "twitter.com", "youtube.com/shorts",
+                            "mail.google.com", "tistory.com/feed")))
+                    .andExpect(jsonPath("$.data.excludedUrls[*].isExcluded")
+                            .value(contains(true, true, true, true, true, false, false)));
         }
 
         @Test
-        @DisplayName("도메인 그룹 보기(grouped=true, 기본값): 같은 도메인 URL 이 붙어서 URL 순으로 온다")
+        @DisplayName("같은 도메인 URL 이 붙어서 URL 순으로 온다")
         void groupedByDomain() throws Exception {
             Member me = member("sprout");
             // FE 목 DEFAULT_EXCLUDED 의 사용자 추가 URL
@@ -189,14 +187,9 @@ class SettingsScenarioTest extends ScenarioTestSupport {
 
             mvc.perform(get(EXCLUDED_URLS).with(as(me)))
                     .andExpect(jsonPath("$.data.excludedUrls[*].url").value(contains(
-                            "https://mail.google.com", "https://naver.com/blog",
-                            "https://tistory.com", "https://tistory.com/feed", "https://tistory.com/skin",
-                            "https://www.instagram.com")));
-            mvc.perform(get(EXCLUDED_URLS).param("grouped", "false").with(as(me)))
-                    .andExpect(jsonPath("$.data.excludedUrls[*].url").value(contains(
-                            "https://www.instagram.com", "https://mail.google.com",
-                            "https://tistory.com/feed", "https://tistory.com/skin", "https://tistory.com",
-                            "https://naver.com/blog")));
+                            "instagram.com", "mail.google.com", "naver.com/blog",
+                            "tiktok.com", "tistory.com", "tistory.com/feed", "tistory.com/skin",
+                            "twitter.com", "youtube.com/shorts")));
         }
 
         @Test
@@ -204,7 +197,7 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         void deleteKeepsDefaults() throws Exception {
             Member me = member("sprout");
             Long tistory = addUrlId(me, "https://tistory.com/feed");
-            Long instagram = urlId(me, "https://www.instagram.com");
+            Long instagram = urlId(me, "instagram.com");
 
             mvc.perform(delete(EXCLUDED_URLS).with(as(me))
                             .with(json(Map.of("excludedUrlIds", List.of(instagram, tistory)))))
@@ -215,8 +208,8 @@ class SettingsScenarioTest extends ScenarioTestSupport {
                     .andExpect(jsonPath("$.data.deletedCount").value(1));
 
             mvc.perform(get(EXCLUDED_URLS).with(as(me)))
-                    .andExpect(jsonPath("$.data.excludedUrls[*].url").value(not(hasItem("https://tistory.com/feed"))))
-                    .andExpect(jsonPath("$.data.excludedUrls[?(@.url == 'https://www.instagram.com')].isExcluded")
+                    .andExpect(jsonPath("$.data.excludedUrls[*].url").value(not(hasItem("tistory.com/feed"))))
+                    .andExpect(jsonPath("$.data.excludedUrls[?(@.url == 'instagram.com')].isExcluded")
                             .value(contains(false)));
         }
 
@@ -235,7 +228,7 @@ class SettingsScenarioTest extends ScenarioTestSupport {
                     .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, URL_NOT_FOUND));
 
             mvc.perform(get(EXCLUDED_URLS).with(as(me)))
-                    .andExpect(jsonPath("$.data.excludedUrls[?(@.url == 'https://tistory.com/feed')].isExcluded")
+                    .andExpect(jsonPath("$.data.excludedUrls[?(@.url == 'tistory.com/feed')].isExcluded")
                             .value(contains(true)));
         }
 
@@ -243,7 +236,7 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         @DisplayName("아무것도 고르지 않고 삭제 · 변경하거나 체크 여부를 빠뜨리면 400 안내 문구")
         void emptySelection() throws Exception {
             Member me = member("sprout");
-            Long mail = urlId(me, "https://mail.google.com");
+            Long mail = urlId(me, "mail.google.com");
 
             mvc.perform(delete(EXCLUDED_URLS).with(as(me)).with(json(Map.of("excludedUrlIds", List.of()))))
                     .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "삭제할 URL을 선택해 주세요."));
@@ -255,39 +248,50 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @Disabled("FE 기대와 다름: FE excludedUrl.ts 는 프로토콜 생략(tistory.com/feed)을 허용하지만 BE ExcludedUrlParser 는 400 — "
-                + "FE 가 https:// 를 붙여 보낼지 BE 가 받아 줄지 결정 후 켠다")
-        @DisplayName("프로토콜 없이 입력한 URL(tistory.com/feed)도 받아서 https 로 저장한다")
+        @DisplayName("프로토콜 없이 입력한 URL(tistory.com/feed)도 받아서 표시형으로 저장한다")
         void urlWithoutScheme() throws Exception {
             Member me = member("sprout");
 
             postUrl(me, "tistory.com/feed")
                     .andExpect(status().isCreated())
-                    .andExpect(jsonPath("$.data.url").value("https://tistory.com/feed"))
+                    .andExpect(jsonPath("$.data.url").value("tistory.com/feed"))
                     .andExpect(jsonPath("$.data.domain").value("tistory.com"));
         }
 
-        @Test
-        @Disabled("FE 기대와 다름: FE 는 www. 를 떼고 중복을 판단(instagram.com = www.instagram.com)하지만 BE 는 다른 URL 로 보고 201 — "
-                + "정규화 규칙을 맞춘 뒤 켠다")
-        @DisplayName("www 유무만 다른 URL 은 FE 처럼 중복(409)으로 본다")
-        void wwwIsSameUrl() throws Exception {
+        @ParameterizedTest(name = "\"{0}\"")
+        @ValueSource(strings = {"instagram.com", "https://instagram.com", "http://instagram.com",
+                "https://www.instagram.com/", "HTTP://WWW.Instagram.com:443"})
+        @DisplayName("프로토콜 · www · 끝 슬래시 · 기본 포트만 다른 URL 은 같은 URL 이라 409 다")
+        void sameUrlInOtherForms(String url) throws Exception {
             Member me = member("sprout");
-            mvc.perform(get(EXCLUDED_URLS).with(as(me))).andExpect(okEnvelope()); // 기본 https://www.instagram.com
+            mvc.perform(get(EXCLUDED_URLS).with(as(me))).andExpect(okEnvelope()); // 기본 instagram.com
 
-            postUrl(me, "https://instagram.com").andExpect(errorEnvelope(HttpStatus.CONFLICT, "이미 등록된 URL입니다."));
+            postUrl(me, url).andExpect(errorEnvelope(HttpStatus.CONFLICT, "이미 등록된 URL입니다."));
         }
 
         @Test
-        @Disabled("FE 기대와 다름: FE 목 DEFAULT_EXCLUDED 는 기본 URL 5개(instagram · mail.google · youtube.com/shorts · twitter.com · "
-                + "tiktok.com)인데 BE 기본값은 2개 — 어느 쪽을 따를지 결정 후 켠다")
-        @DisplayName("기본 제외 URL 은 디자인 목처럼 5개다")
-        void defaultsMatchDesign() throws Exception {
+        @DisplayName("저장할 수 없을 만큼 긴 URL 은 500 이 아니라 400 '올바른 URL 형식이 아닙니다.' 다")
+        void tooLongUrl() throws Exception {
             Member me = member("sprout");
 
+            postUrl(me, "https://tistory.com/" + "a".repeat(3000))
+                    .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, INVALID_URL));
+        }
+
+        @Test
+        @DisplayName("기본 제외 URL 은 디자인 목처럼 5개이고 100개가 넘어도 채운다")
+        void defaultsMatchDesign() throws Exception {
+            Member me = member("sprout");
+            List<ExcludedUrl> filler = new ArrayList<>();
+            for (int i = 0; i < 100; i++) {
+                filler.add(new ExcludedUrl(me.getId(), "site" + i + ".com", "site" + i + ".com", false));
+            }
+            excludedUrls.saveAllAndFlush(filler);
+
             mvc.perform(get(EXCLUDED_URLS).with(as(me)))
-                    .andExpect(jsonPath("$.data.excludedUrls[?(@.isDefault == true)].domain").value(containsInAnyOrder(
-                            "www.instagram.com", "mail.google.com", "www.youtube.com", "twitter.com", "www.tiktok.com")));
+                    .andExpect(jsonPath("$.data.excludedUrls[?(@.isDefault == true)].url").value(containsInAnyOrder(
+                            "instagram.com", "mail.google.com", "youtube.com/shorts", "twitter.com", "tiktok.com")))
+                    .andExpect(jsonPath("$.data.excludedUrls", hasSize(105)));
         }
     }
 
@@ -313,14 +317,12 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("토글 값(enabled)을 빠뜨리면 400")
+        @DisplayName("토글 값(enabled)을 빠뜨리면 400 '설정 값을 입력해 주세요.'")
         void missingEnabled() throws Exception {
             Member me = member("sprout");
 
             mvc.perform(patch("/settings/extension/popup-visible").with(as(me)).with(json("{}")))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.success").value(false))
-                    .andExpect(jsonPath("$.message").isString());
+                    .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "설정 값을 입력해 주세요."));
         }
 
         @Test
@@ -339,8 +341,6 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @Disabled("API 미구현: GET /settings/extension 현재 설정값 조회 (D표 '확장 프로그램 설정 조회' 반영 결정, "
-                + "필드명은 PATCH 응답과 같게 제안) — 구현되면 켠다")
         @DisplayName("설정 화면을 열면 확장 프로그램 설정 현재 값(처음엔 모두 켜짐)을 불러온다")
         void currentExtensionSettings() throws Exception {
             Member me = member("sprout");
@@ -349,12 +349,15 @@ class SettingsScenarioTest extends ScenarioTestSupport {
                     .andExpect(okEnvelope())
                     .andExpect(jsonPath("$.data.popupVisible").value(true))
                     .andExpect(jsonPath("$.data.autoEndNotificationEnabled").value(true))
-                    .andExpect(jsonPath("$.data.manualScrapEnabled").value(true));
+                    .andExpect(jsonPath("$.data.manualScrapEnabled").value(true))
+                    .andExpect(jsonPath("$.data.updatedAt").doesNotExist());
             mvc.perform(patch("/settings/extension/popup-visible").with(as(me)).with(json(Map.of("enabled", false))))
                     .andExpect(okEnvelope());
             mvc.perform(get("/settings/extension").with(as(me)))
                     .andExpect(jsonPath("$.data.popupVisible").value(false))
-                    .andExpect(jsonPath("$.data.autoEndNotificationEnabled").value(true));
+                    .andExpect(jsonPath("$.data.autoEndNotificationEnabled").value(true))
+                    .andExpect(jsonPath("$.data.manualScrapEnabled").value(true))
+                    .andExpect(jsonPath("$.data.updatedAt").value(notNullValue()));
         }
     }
 
