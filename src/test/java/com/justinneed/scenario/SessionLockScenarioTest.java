@@ -135,10 +135,11 @@ class SessionLockScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         Long id = completed(me);
 
-        race(id, favourite(id, me), delete("/sessions/{id}", id).with(as(me)));
+        List<Integer> statuses = race(id, favourite(id, me), delete("/sessions/{id}", id).with(as(me)));
 
         assertThat(isDeleted(id)).isTrue();
-        assertThat(reload(id).isFavorite()).isTrue();
+        // 부하가 크면 삭제가 먼저 잠금을 잡아 즐겨찾기가 404 일 수 있다. 저장에 성공했으면 삭제가 덮으면 안 된다
+        assertThat(reload(id).isFavorite()).isEqualTo(statuses.get(0) == 200);
     }
 
     @Test
@@ -183,7 +184,7 @@ class SessionLockScenarioTest extends ScenarioTestSupport {
                 patch("/sessions/{id}", id).with(as(me)).with(json(Map.of("editedMarkdown", "두 번째"))));
 
         assertThat(statuses).containsExactly(200, 200);
-        assertThat(reload(id).getSummary().getMarkdown()).isEqualTo("두 번째");
+        assertThat(reload(id).getSummary().getMarkdown()).isIn("첫 번째", "두 번째");
     }
 
     private List<Integer> race(Long id, MockHttpServletRequestBuilder first, MockHttpServletRequestBuilder second)

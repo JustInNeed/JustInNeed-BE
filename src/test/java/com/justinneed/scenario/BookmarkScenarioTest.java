@@ -387,6 +387,30 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
+    @DisplayName("최근 저장 기반 추천: 기준은 보이는 북마크 최근 20개까지다")
+    void recentBasisUsesTwentyBookmarks() throws Exception {
+        saveMiniMindmap(List.of(nodeId(me, wanderer.member(), WIEN)));
+        Long stored = saveMiniMindmap(List.of(nodeId(me, wanderer.member(), PRAGUE_CASTLE)));
+        BookmarkSnapshot prague = bookmarkRows.findById(stored).orElseThrow().getSnapshot();
+        List<Long> target = bookmarkRows.findById(stored).orElseThrow().getTargetIds();
+        Instant newer = Instant.now().plusSeconds(60);
+        // 비엔나 북마크가 20번째가 되도록 프라하 북마크를 19개로 맞춘다
+        for (int i = 0; i < 18; i++) {
+            bookmarkRows.save(new CommunityBookmark(me.getId(), SaveType.MINI_MINDMAP, TargetType.NODE, "basis-" + i,
+                    wanderer.id(), target, prague, newer.plusSeconds(i)));
+        }
+        bookmarkRows.flush();
+        mvc.perform(get(RECENT_BOOKMARKS).with(as(me)))
+                .andExpect(jsonPath("$.data.basisHashtags").value(hasItem("비엔나")));
+
+        bookmarkRows.saveAndFlush(new CommunityBookmark(me.getId(), SaveType.MINI_MINDMAP, TargetType.NODE, "basis-last",
+                wanderer.id(), target, prague, newer.plusSeconds(100)));
+
+        mvc.perform(get(RECENT_BOOKMARKS).with(as(me)))
+                .andExpect(jsonPath("$.data.basisHashtags").value(not(hasItem("비엔나"))));
+    }
+
+    @Test
     @DisplayName("최근 저장 기반 추천: 숨겨진 북마크가 최근 20개 자리를 차지하지 않는다")
     void hiddenBookmarksDoNotTakeRecentSlots() throws Exception {
         Long stored = saveMiniMindmap(List.of(nodeId(me, wanderer.member(), PRAGUE_CASTLE)));
