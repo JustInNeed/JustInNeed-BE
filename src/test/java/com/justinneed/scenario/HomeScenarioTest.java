@@ -502,6 +502,14 @@ class HomeScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
+    @DisplayName("키워드 병합: 표시 이름의 앞뒤 공백은 지우고 가운데 공백은 그대로 둔다")
+    void labelIsStripped() throws Exception {
+        analyzed(completed("2026-10-31T09:00:00", null), roots("  Spring Boot\n"), null, List.of());
+
+        assertThat(graph().labels()).containsExactly("내 탐색", "Spring Boot");
+    }
+
+    @Test
     @DisplayName("키워드 병합: 빈 키워드 · 공백뿐인 키워드는 건너뛰고 그 노드에 달린 엣지도 사라진다")
     void blankKeywordsAreSkipped() throws Exception {
         analyzed(completed("2026-10-31T09:00:00", null),
@@ -860,8 +868,8 @@ class HomeScenarioTest extends ScenarioTestSupport {
     @DisplayName("오늘 타임라인 사이트: 같은 도메인의 체류시간을 합쳐 긴 순으로 최대 3개, 같으면 이름순")
     void todayTimelineTopThreeSites() throws Exception {
         analyzed(completed("2026-10-31T09:00:00", null), null, null,
-                List.of(page("https://b.example/1", 100), page("https://a.example/1", 300),
-                        page("https://www.b.example/2", 250), page("https://c.example/1", 300),
+                List.of(page("https://b.example/1", 100), page("https://c.example/1", 300),
+                        page("https://www.b.example/2", 250), page("https://a.example/1", 300),
                         page("https://d.example/1", 200)));
 
         home().andExpect(jsonPath("$.data.todayTimeline[0].sites")
