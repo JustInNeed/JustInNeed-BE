@@ -286,6 +286,20 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
+    @DisplayName("AI 요청 중에 지운 세션은 요청이 실패해도 상태를 바꾸지 않는다")
+    void requestFailureLeavesDeletedSession() throws Exception {
+        Long id = session(SessionStatus.READY, true);
+        doAnswer(invocation -> {
+            mvc.perform(delete("/sessions/{id}", id).with(as(me))).andExpect(okEnvelope());
+            throw new ResourceAccessException("connection refused");
+        }).when(aiClient).requestAnalysis(any());
+
+        requests.requestAnalysis(id);
+
+        assertThat(status(id)).isEqualTo(SessionStatus.ANALYZING);
+    }
+
+    @Test
     @DisplayName("즐겨찾기 저장 뒤에 줄 선 재분석도 최신 행을 읽어 즐겨찾기를 덮지 않는다")
     void favouriteThenReanalyze() throws Exception {
         Long id = session(SessionStatus.FAILED, true);

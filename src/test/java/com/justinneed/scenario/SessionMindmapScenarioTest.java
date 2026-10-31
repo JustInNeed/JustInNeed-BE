@@ -157,12 +157,14 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
                    "문자열 엣지", null,
                    {"from": "root:1", "to": "topic:0", "type": "hierarchy", "primary": "yes"},
                    {"from": "root:1", "to": "x", "type": "hierarchy", "primary": true},
+                   {"from": "x", "to": "topic:0", "type": "hierarchy", "primary": true},
                    {"from": 1, "to": "topic:0", "type": "hierarchy"},
                    {"from": "root:1", "type": "hierarchy"},
                    {"from": "root:1", "to": "topic:0", "type": "다른 관계"},
                    {"from": "root:1", "to": "topic:0"}]}
                 """, """
-                [{"pageUrl": "https://a"}, {"unitKey": 1, "pageUrl": "https://a"}, {"unitKey": "topic:0"}]
+                [{"pageUrl": "https://a"}, {"unitKey": 1, "pageUrl": "https://a"}, {"unitKey": "root:1"},
+                 {"unitKey": "topic:0", "pageUrl": "https://a", "pageTitle": "유닛이 아닌 노드", "text": "인용 없음"}]
                 """);
 
         mindmap(mine, me)

@@ -22,6 +22,7 @@ import com.justinneed.community.bookmark.CommunityBookmarkRepository;
 import com.justinneed.community.bookmark.SaveType;
 import com.justinneed.community.bookmark.TargetType;
 import com.justinneed.session.management.domain.BrowsingSession;
+import com.justinneed.session.management.domain.Source;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -242,6 +243,22 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
         mvc.perform(get("/community/me/bookmarks/{id}/original", bookmarkId).with(as(me)))
                 .andExpect(jsonPath("$.data.sourceAvailable").value(true))
                 .andExpect(jsonPath("$.data.highlightedNodeIds").value(contains(ids(castle))));
+    }
+
+    @Test
+    @DisplayName("해시태그가 없는 세션의 노드를 저장한 미니 마인드맵도 원본이 비공개가 되면 빈 카드로 남지 않고 숨겨진다")
+    void taglessMiniMindmapIsHidden() throws Exception {
+        String link = "https://example.com/bare";
+        BrowsingSession bare = session(wanderer.member(), "태그 없는 세션", "2026-04-15T10:00:00", "2026-04-15T11:00:00", 1,
+                false, true, List.of(), List.of(new Source("글", link, "발췌")), "본문");
+        Long bookmarkId = saveMiniMindmap(List.of(nodeId(me, wanderer.member(), link)));
+        mvc.perform(get(MINDMAPS).with(as(me)))
+                .andExpect(jsonPath("$.data.mindmaps[*].bookmarkId").value(contains(ids(bookmarkId))));
+
+        setSessionPublic(bare, false);
+
+        mvc.perform(get(MINDMAPS).with(as(me))).andExpect(jsonPath("$.data.mindmaps", hasSize(0)));
+        expectUnavailableOriginal(bookmarkId);
     }
 
     @Test
