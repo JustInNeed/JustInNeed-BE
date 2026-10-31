@@ -105,25 +105,31 @@ class CardReactionCommitTest {
 
     @Test
     void simultaneousExploringLeavesOneRowAndOneActivityPerTag() throws Exception {
-        Long actor = member();
         Long owner = member();
         Long card = card(owner);
         Long sibling = card(owner);
         String count = "select count(*) from community_mindmap_explorations where actor_id = ? and session_id = ?";
         String activity = "select count(*) from community_activities where actor_id = ? and kind = 'EXPLORE'";
 
-        assertThat(clicks(actor, card, "exploring", "exploring", true)).containsOnly(200);
-        assertThat(rows(count, actor, card)).isEqualTo(1);
-        assertThat(rows(activity, actor)).isEqualTo(2);
-
-        // 켜고 끄기가 섞여도, 같은 태그의 다른 카드를 함께 눌러도 500 이 없고 활동은 태그마다 하나다
-        var mixed = new ArrayList<Callable<Integer>>();
-        for (int i = 0; i < CLICKS; i++) {
-            mixed.add(click(actor, card, "exploring", "exploring", i % 2 == 0));
-            mixed.add(click(actor, sibling, "exploring", "exploring", true));
+        // 처음 누르는 사람마다: 같은 카드 · 같은 태그의 다른 카드를 함께 눌러도 같은 활동 행을 두 번 넣지 않는다
+        for (int round = 0; round < 5; round++) {
+            Long actor = member();
+            var clicks = new ArrayList<Callable<Integer>>();
+            for (int i = 0; i < CLICKS; i++) {
+                clicks.add(click(actor, i % 2 == 0 ? card : sibling, "exploring", "exploring", true));
+            }
+            assertThat(together(clicks)).containsOnly(200);
+            assertThat(rows(count, actor, card)).isEqualTo(1);
+            assertThat(rows(count, actor, sibling)).isEqualTo(1);
+            assertThat(rows(activity, actor)).isEqualTo(2);
         }
+
+        // 켜고 끄기가 섞여도 500 이 없고 활동이 늘지 않는다
+        Long actor = member();
+        var mixed = new ArrayList<Callable<Integer>>();
+        for (int i = 0; i < CLICKS; i++) mixed.add(click(actor, card, "exploring", "exploring", i % 2 == 0));
         assertThat(together(mixed)).containsOnly(200);
-        assertThat(rows(activity, actor)).isEqualTo(2);
+        assertThat(rows(activity, actor)).isIn(0, 2);
     }
 
     @Test
