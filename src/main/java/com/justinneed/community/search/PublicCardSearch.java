@@ -25,9 +25,13 @@ public class PublicCardSearch {
             + " then true else false end)" + FROM + "left join CommunityProfile p on p.userId = c.ownerId"
             + " where m.withdrawnAt is null and (" + TAG_TEXT_HAS.formatted("q") + " or " + NICKNAME_HAS + " or " + TITLE_HAS + ")"
             + " order by c.lastActivityAt desc, c.sessionId desc";
-    private static final String OWNER_HIT = "select distinct c.ownerId" + FROM
-            + "where m.withdrawnAt is null and c.ownerId > :after and (" + TAG_TEXT_HAS.formatted("q") + " or " + NICKNAME_HAS + ")"
-            + " order by c.ownerId";
+    private static final String PROFILE_HIT = "select new " + ProfileHit.class.getName()
+            + "(c.sessionId, c.ownerId, c.hashtags, c.lastActivityAt, case when " + NICKNAME_HAS
+            + " then true else false end, case when " + TITLE_HAS + " then true else false end)" + FROM
+            + "left join CommunityProfile p on p.userId = c.ownerId"
+            + " where m.withdrawnAt is null and c.sessionId > :after and ("
+            + TAG_TEXT_HAS.formatted("q") + " or " + NICKNAME_HAS + " or " + TITLE_HAS + ")"
+            + " order by c.sessionId";
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -38,9 +42,9 @@ public class PublicCardSearch {
                 .setFirstResult(batch * batchSize).setMaxResults(batchSize).getResultList();
     }
 
-    /** q 가 태그 글자 · 닉네임에 든 작성자 id. id 순으로 after 다음부터. */
-    public List<Long> owners(String q, Long after, int limit) {
-        return entityManager.createQuery(OWNER_HIT, Long.class).setParameter("q", q).setParameter("after", after)
+    /** mindmaps 와 같은 카드를 무엇으로 걸렸는지 나눠서 돌려준다. 카드 id 순으로 after 다음부터. */
+    public List<ProfileHit> profileHits(String q, Long after, int limit) {
+        return entityManager.createQuery(PROFILE_HIT, ProfileHit.class).setParameter("q", q).setParameter("after", after)
                 .setMaxResults(limit).getResultList();
     }
 
@@ -65,6 +69,11 @@ public class PublicCardSearch {
 
     /** matchedText: 닉네임이나 공개된 제목에 걸렸다. false 면 태그로만 걸린 후보다. */
     public record MindmapHit(Long sessionId, Long ownerId, List<String> hashtags, Boolean matchedText) {
+    }
+
+    /** matchedNickname: 작성자 닉네임에 걸렸다. matchedTitle: 공개된 제목에 걸렸다. */
+    public record ProfileHit(Long sessionId, Long ownerId, List<String> hashtags, LocalDateTime lastActivityAt,
+            Boolean matchedNickname, Boolean matchedTitle) {
     }
 
     public record TaggedCard(Long sessionId, Long ownerId, List<String> hashtags, LocalDateTime lastActivityAt) {

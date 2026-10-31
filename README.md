@@ -210,7 +210,7 @@ API, 데이터 모델, 공개 범위 처리, 테스트 및 PR 병합 순서는 [
 | GET | `/community/recommendations/mindmaps/interests` | 관심 해시태그 기반 추천 `{basisHashtags, mindmaps: [카드]}`. `limit` 기본 3, 1~100. 내 카드는 빠진다. 기준 태그는 중복을 뺀 앞 10개까지다. 카드의 공개 태그와 온전히(대소문자 무시) 겹치는 수가 많은 순 → 최근 활동순 → id 큰 순 |
 | GET | `/community/recommendations/mindmaps/recent-bookmarks` | 최근 저장 기반 추천. 응답 · 순위는 위와 같고, 기준은 보이는 북마크 최근 20개의 태그다. 이미 저장한 카드도 나온다 |
 | GET | `/community/search/mindmaps` | `q`, `page`, `size` → `{mindmaps: [카드], hasNext}`. 해시태그 · 작성자 닉네임, 내용까지 공개한 작성자는 제목도 찾는다. 최근 활동순 → id 큰 순. 내 카드도 나온다 |
-| GET | `/community/search/profiles` | `q`, `page`, `size` → `{profiles: [{userId, nickname, hashtags, mindmapCount}], hasNext}`. 공개 카드가 있는 회원 중 해시태그 · 닉네임이 맞는 사람, id 순. `hashtags` 는 공개 태그 많은 순 5개. 나도 나온다 |
+| GET | `/community/search/profiles` | `q`, `page`, `size` → `{profiles: [{userId, nickname, hashtags, mindmapCount}], hasNext}`. 공개 카드가 있는 회원 중 해시태그 · 닉네임이 맞는 사람. 걸린 카드 많은 순 → 그 카드의 최근 활동순 → id 순. 걸린 카드는 카드 검색이 태그 · 제목으로 돌려주는 카드이고, 닉네임으로만 맞으면 0장이라 뒤로 가서 공개 카드의 최근 활동순으로 선다. `hashtags` 는 공개 태그 많은 순 5개. 나도 나온다 |
 | GET | `/community/search/hashtags` | `q`, `limit` → `{hashtags: [{tag, count}]}`. 검색어가 든 공개 태그와 그 태그를 단 카드 수. `limit` 기본 5, 1~20. 많은 순 → 이름 순 |
 
 `q` 는 앞 `#` · 앞뒤 공백을 떼고 대소문자 무시 포함 검색합니다. 비공개 해시태그로는 찾을 수 없고, 비면 400 입니다. `page` 기본 0, `size` 기본 10 · 1~100 입니다.

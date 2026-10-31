@@ -15,6 +15,7 @@ import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.domain.Source;
 import com.justinneed.session.summary.domain.Summary;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -56,6 +57,11 @@ class CommunitySearchTest extends CommunityTestSupport {
 
     private Long member(String providerId, String nickname) {
         return members.saveAndFlush(new Member(SocialProvider.KAKAO, providerId, nickname, null)).getId();
+    }
+
+    private void profileOrder(String q, Long... ids) throws Exception {
+        search(PROFILES, q, "size", "100").andExpect(jsonPath("$.data.profiles[*].userId")
+                .value(contains(Arrays.stream(ids).map(Long::intValue).toArray(Integer[]::new))));
     }
 
     @ParameterizedTest
@@ -221,7 +227,7 @@ class CommunitySearchTest extends CommunityTestSupport {
     }
 
     @Test
-    void profilesPageInMemberOrderAndIncludeMe() throws Exception {
+    void profilesPageAndIncludeMe() throws Exception {
         card(ownerId, "a", 0, "태그");
         card(ownerId, "b", 1, "태그");
         card(viewerId, "c", 2, "태그");
@@ -231,6 +237,206 @@ class CommunitySearchTest extends CommunityTestSupport {
                 .andExpect(jsonPath("$.data.hasNext").value(true));
         search(PROFILES, "태그", "size", "1", "page", "1")
                 .andExpect(jsonPath("$.data.profiles[*].userId").value(contains(viewerId.intValue())))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
+    }
+
+    @Test
+    void profilesWithMoreMatchingCardsComeFirstEvenIfOlder() throws Exception {
+        card(ownerId, "a", 100, "태그");
+        card(viewerId, "b", 0, "태그");
+        card(viewerId, "c", 1, "태그");
+
+        profileOrder("태그", viewerId, ownerId);
+    }
+
+    @Test
+    void sameCardCountComesByMostRecentMatchingCard() throws Exception {
+        card(ownerId, "a", 0, "태그");
+        card(ownerId, "b", 5, "태그");
+        card(viewerId, "c", 1, "태그");
+        card(viewerId, "d", 9, "태그");
+
+        profileOrder("태그", viewerId, ownerId);
+    }
+
+    @Test
+    void sameCountAndRecencyComeByIdAscending() throws Exception {
+        // 카드는 id 큰 회원이 먼저 만든다. 읽은 순서가 아니라 id 로 갈려야 한다
+        card(viewerId, "a", 0, "태그");
+        card(ownerId, "b", 0, "태그");
+
+        profileOrder("태그", ownerId, viewerId);
+    }
+
+    @Test
+    void recencyOnlyLooksAtMatchingCards() throws Exception {
+        card(ownerId, "a", 0, "태그");
+        card(ownerId, "b", 100, "다른글");
+        card(viewerId, "c", 5, "태그");
+
+        profileOrder("태그", viewerId, ownerId);
+    }
+
+    @Test
+    void nicknameMatchDoesNotMakeEveryCardMatch() throws Exception {
+        Long nickname = member("nick", "여행가");
+        card(nickname, "a", 0, "여행");
+        card(nickname, "b", 100, "다른글");
+        card(nickname, "c", 101, "다른글");
+        Long tagged = member("tagged", "민수");
+        card(tagged, "d", 5, "여행");
+
+        // 닉네임 회원의 카드 3장 중 걸린 건 1장, 그 카드의 활동은 민수보다 오래됐다
+        profileOrder("여행", tagged, nickname);
+    }
+
+    @Test
+    void nicknameOnlyMatchesComeAfterCardMatchesByTheirRecentActivity() throws Exception {
+        Long older = member("older", "여행가A");
+        card(older, "a", 50, "다른글");
+        Long newer = member("newer", "여행가B");
+        card(newer, "b", 40, "다른글");
+        card(newer, "c", 100, "다른글");
+        Long tied = member("tied", "여행가C");
+        card(tied, "d", 100, "다른글");
+        Long tagged = member("tagged", "민수");
+        card(tagged, "e", 0, "여행");
+
+        profileOrder("여행", tagged, newer, tied, older);
+    }
+
+    @Test
+    void contentTitlesCountAsMatchingCardsButUrlOnlyTitlesDoNot() throws Exception {
+        Long urlOnly = member("url-only", "가");
+        card(urlOnly, "여행 일기", 90, "다른글");
+        card(urlOnly, "b", 100, "여행");
+        Long content = member("content", "나");
+        visibility(content, NodeVisibility.CONTENT);
+        card(content, "여행 일기", 1, "다른글");
+        card(content, "d", 0, "여행");
+        Long single = member("single", "다");
+        card(single, "e", 50, "여행");
+
+        // 내용 공개 회원은 제목으로 걸린 카드까지 2장. URL만 공개한 회원의 제목은 세지 않는다
+        profileOrder("여행", content, urlOnly, single);
+    }
+
+    @Test
+    void contentTitleOnNicknameMatchIsAMatchingCard() throws Exception {
+        Long recent = member("recent", "여행자");
+        card(recent, "b", 100, "다른글");
+        Long nickname = member("nick", "여행가");
+        visibility(nickname, NodeVisibility.CONTENT);
+        card(nickname, "여행 일기", 0, "다른글");
+
+        profileOrder("여행", nickname, recent);
+    }
+
+    @Test
+    void urlOnlyTitleOnNicknameMatchIsNotAMatchingCard() throws Exception {
+        Long recent = member("recent", "여행자");
+        card(recent, "b", 100, "다른글");
+        Long nickname = member("nick", "여행가");
+        card(nickname, "여행 일기", 0, "다른글");
+
+        // 둘 다 닉네임으로만 걸려 0장이다. 공개하지 않은 제목은 순서로도 드러나면 안 된다
+        profileOrder("여행", recent, nickname);
+    }
+
+    @Test
+    void titleOnlyMatchesStayOutAndTakeNoPageSlot() throws Exception {
+        Long titled = member("titled", "가");
+        visibility(titled, NodeVisibility.CONTENT);
+        card(titled, "여행 일기", 100, "다른글");
+        card(titled, "여행 일기2", 101, "다른글");
+        Long tagged = member("tagged", "나");
+        card(tagged, "b", 0, "여행");
+
+        search(PROFILES, "여행", "size", "1")
+                .andExpect(jsonPath("$.data.profiles[*].userId").value(contains(tagged.intValue())))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
+    }
+
+    @Test
+    void hiddenTagsNeitherCountNorRefreshRecency() throws Exception {
+        visibility(ownerId, NodeVisibility.URL_ONLY, "숨김여행");
+        card(ownerId, "a", 0, "여행");
+        card(ownerId, "b", 100, "숨김여행");
+        card(ownerId, "c", 101, "숨김여행");
+        card(viewerId, "d", 5, "여행");
+
+        profileOrder("여행", viewerId, ownerId);
+    }
+
+    @Test
+    void aCardWithManyMatchingTagsCountsOnce() throws Exception {
+        visibility(ownerId, NodeVisibility.CONTENT);
+        card(ownerId, "여행", 0, "여행", "여행사진", "국내여행");
+        card(viewerId, "b", 5, "여행");
+
+        profileOrder("여행", viewerId, ownerId);
+    }
+
+    @Test
+    void matchingCardsAreTheOnesMindmapSearchReturns() throws Exception {
+        visibility(ownerId, NodeVisibility.CONTENT, "숨김여행");
+        card(ownerId, "a", 0, "여행");
+        card(ownerId, "여행 일기", 1, "다른글");
+        card(ownerId, "c", 2, "숨김여행");
+        card(ownerId, "d", 3, "다른글");
+        card(viewerId, "여행 일기", 4, "다른글");
+        card(viewerId, "f", 5, "여행");
+        Long third = member("third", "가");
+        card(third, "g", 0, "여행");
+        card(third, "h", 1, "여행");
+        card(third, "i", 2, "여행");
+
+        // 카드 검색 결과 2 + 1 + 3 장이 그대로 프로필 순서가 된다
+        search(MINDMAPS, "여행", "size", "100").andExpect(jsonPath("$.data.mindmaps", hasSize(6)));
+        profileOrder("여행", third, ownerId, viewerId);
+    }
+
+    @Test
+    void orderCoversCardsBeyondTheFirstReadBatch() throws Exception {
+        // 200장씩 읽어 카드 수를 세면 첫 묶음에서는 100 대 100, 활동은 ownerId 가 앞선다
+        for (int i = 0; i < 100; i++) {
+            card(viewerId, "v" + i, i, "태그");
+            card(ownerId, "o" + i, 1000 + i, "태그");
+        }
+        card(viewerId, "last", 0, "태그");
+
+        profileOrder("태그", viewerId, ownerId);
+    }
+
+    @Test
+    void profilePagesFollowTheRankingAndHasNextIsAccurate() throws Exception {
+        Long nickname = member("nick", "여행가");
+        card(nickname, "a", 0, "다른글");
+        Long hidden = member("hidden", "가");
+        visibility(hidden, NodeVisibility.URL_ONLY, "여행");
+        card(hidden, "b", 100, "여행");
+        Long one = member("one", "나");
+        card(one, "c", 50, "여행");
+        Long two = member("two", "다");
+        card(two, "d", 1, "여행");
+        card(two, "e", 2, "여행");
+        Long three = member("three", "라");
+        card(three, "f", 1, "여행");
+        card(three, "g", 2, "여행");
+        card(three, "h", 3, "여행");
+
+        search(PROFILES, "여행", "size", "2")
+                .andExpect(jsonPath("$.data.profiles[*].userId").value(contains(three.intValue(), two.intValue())))
+                .andExpect(jsonPath("$.data.hasNext").value(true));
+        search(PROFILES, "여행", "size", "2", "page", "1")
+                .andExpect(jsonPath("$.data.profiles[*].userId").value(contains(one.intValue(), nickname.intValue())))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
+        search(PROFILES, "여행", "size", "2", "page", "2")
+                .andExpect(jsonPath("$.data.profiles", hasSize(0)))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
+        search(PROFILES, "여행", "size", "3")
+                .andExpect(jsonPath("$.data.hasNext").value(true));
+        search(PROFILES, "여행", "size", "4")
                 .andExpect(jsonPath("$.data.hasNext").value(false));
     }
 

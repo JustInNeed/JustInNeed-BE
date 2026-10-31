@@ -69,36 +69,42 @@ public class CommunitySearchService {
         return new Mindmaps(reader.cards(found.items(), viewer), found.hasNext());
     }
 
-    /** 카드가 있는 회원, id 순. */
+    /** 카드가 있는 회원. 걸린 카드 많은 순 → 그 카드의 최근 활동순 → id 순 (ProfileRanking). */
     public Profiles profiles(String q, int page, int size) {
         String key = keyword(q);
-        var found = new Window<ProfileItem>(BookmarkQueryService.paging(page, size).getOffset(), size);
+        var found = new Window<Long>(BookmarkQueryService.paging(page, size).getOffset(), size);
+        var ranking = new ProfileRanking();
         long after = 0;
-        while (!found.isFull()) {
-            var ids = search.owners(key, after, BATCH_SIZE);
-            if (ids.isEmpty()) {
+        while (true) {
+            var hits = search.profileHits(key, after, BATCH_SIZE);
+            var owners = owners(hits.stream().map(PublicCardSearch.ProfileHit::ownerId).toList());
+            hits.forEach(hit -> ranking.add(hit.ownerId(), hit.lastActivityAt(), hit.matchedNickname(),
+                    hasTag(visible(owners, hit.ownerId(), hit.hashtags()), key), hit.matchedTitle()));
+            if (hits.size() < BATCH_SIZE) {
                 break;
             }
-            Map<Long, String> nicknames = new HashMap<>();
-            for (Member member : members.findActiveByIdIn(ids)) {
-                nicknames.put(member.getId(), member.getNickname());
-            }
-            var rows = cards.findByOwnerIdInOrderBySessionIdDesc(ids).stream()
-                    .collect(Collectors.groupingBy(CommunityCardRow::getOwnerId));
-            var owners = owners(ids);
-            for (Long id : ids) {
-                var ownerCards = rows.getOrDefault(id, List.of()).stream()
-                        .map(row -> visible(owners, id, row.getHashtags())).toList();
-                String nickname = nicknames.get(id);
-                boolean matched = nickname != null && CommunityTags.key(nickname).contains(key)
-                        || ownerCards.stream().anyMatch(tags -> hasTag(tags, key));
-                if (matched && !ownerCards.isEmpty()) {
-                    found.offer(new ProfileItem(id, nickname, topTags(ownerCards), ownerCards.size()));
-                }
-            }
-            after = ids.get(ids.size() - 1);
+            after = hits.get(hits.size() - 1).sessionId();
         }
-        return new Profiles(found.items(), found.hasNext());
+        ranking.ownerIds().forEach(found::offer);
+        return new Profiles(profileItems(found.items()), found.hasNext());
+    }
+
+    private List<ProfileItem> profileItems(List<Long> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, String> nicknames = new HashMap<>();
+        for (Member member : members.findActiveByIdIn(ids)) {
+            nicknames.put(member.getId(), member.getNickname());
+        }
+        var rows = cards.findByOwnerIdInOrderBySessionIdDesc(ids).stream()
+                .collect(Collectors.groupingBy(CommunityCardRow::getOwnerId));
+        var owners = owners(ids);
+        return ids.stream().map(id -> {
+            var ownerCards = rows.getOrDefault(id, List.of()).stream()
+                    .map(row -> visible(owners, id, row.getHashtags())).toList();
+            return new ProfileItem(id, nicknames.get(id), topTags(ownerCards), ownerCards.size());
+        }).toList();
     }
 
     /** 검색어가 든 태그와 그 태그를 단 공개 카드 수. 많은 순 → 이름 순. */
