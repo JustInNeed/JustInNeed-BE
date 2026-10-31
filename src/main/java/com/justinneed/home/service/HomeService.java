@@ -105,6 +105,12 @@ public class HomeService {
         );
     }
 
+    /** 홈 stats.totalNodes 와 같은 값. */
+    public int totalNodes(Long userId) {
+        LocalDate today = LocalDate.ofInstant(clock.instant(), KST);
+        return HomeGraphBuilder.build(homeSessionRepository.findCompletedByUserId(userId), today).totalNodes();
+    }
+
     private static List<HomeSessionRow> oldestFirstBetween(List<HomeSessionRow> newestFirst, LocalDate from,
             LocalDate to) {
         List<HomeSessionRow> sessions = newestFirst.stream()

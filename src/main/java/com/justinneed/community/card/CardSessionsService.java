@@ -26,10 +26,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 public class CardSessionsService {
-    private static final int MAX_SESSIONS = 3;
+    public static final int MAX_SESSIONS = 3;
     private static final Sort NEWEST_CARD_FIRST =
             Sort.by(Sort.Order.desc("lastActivityAt"), Sort.Order.desc("sessionId"));
-    private static final Comparator<BrowsingSession> NEWEST_SESSION_FIRST = Comparator
+    public static final Comparator<BrowsingSession> NEWEST_SESSION_FIRST = Comparator
             .comparing(CardSessionsService::lastActivityAt, Comparator.reverseOrder())
             .thenComparing(BrowsingSession::getId, Comparator.reverseOrder());
 
@@ -79,7 +79,7 @@ public class CardSessionsService {
     }
 
     // community_cards.last_activity_at 과 같은 값
-    private static LocalDateTime lastActivityAt(BrowsingSession session) {
+    public static LocalDateTime lastActivityAt(BrowsingSession session) {
         return session.getEndedAt() != null ? session.getEndedAt() : session.getStartedAt();
     }
 

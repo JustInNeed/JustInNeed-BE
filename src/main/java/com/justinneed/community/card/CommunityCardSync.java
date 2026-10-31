@@ -87,6 +87,11 @@ public class CommunityCardSync {
                 && !members.findById(session.getUserId()).map(Member::isWithdrawn).orElse(true);
     }
 
+    /** 카드의 relatedUrls: 세션의 http(s) URL 을 중복 없이 앞에서 10개. */
+    public static List<RelatedUrl> relatedUrls(BrowsingSession session) {
+        return relatedUrls(uniqueUrls(session));
+    }
+
     private static Map<String, Source> uniqueUrls(BrowsingSession session) {
         Map<String, Source> urls = new LinkedHashMap<>();
         for (Source source : session.getSources()) {
