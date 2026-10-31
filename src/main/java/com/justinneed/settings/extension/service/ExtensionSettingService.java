@@ -22,6 +22,14 @@ public class ExtensionSettingService {
         this.memberRepository = memberRepository;
     }
 
+    // 아직 저장한 적이 없으면 행을 만들지 않고 기본값(모두 켜짐)을 준다
+    @Transactional(readOnly = true)
+    public ExtensionSettingResponse getSettings(Long memberId) {
+        ExtensionSetting setting = extensionSettingRepository.findByMemberId(memberId)
+                .orElseGet(() -> new ExtensionSetting(memberId));
+        return ExtensionSettingResponse.of(memberId, setting);
+    }
+
     public ExtensionSettingResponse updatePopupVisible(Long memberId, boolean enabled) {
         ExtensionSetting setting = getOrCreate(memberId);
         setting.updatePopupVisible(enabled);

@@ -24,7 +24,6 @@ import com.justinneed.settings.collection.repository.ExcludedUrlRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -318,14 +317,12 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("토글 값(enabled)을 빠뜨리면 400")
+        @DisplayName("토글 값(enabled)을 빠뜨리면 400 '설정 값을 입력해 주세요.'")
         void missingEnabled() throws Exception {
             Member me = member("sprout");
 
             mvc.perform(patch("/settings/extension/popup-visible").with(as(me)).with(json("{}")))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.success").value(false))
-                    .andExpect(jsonPath("$.message").isString());
+                    .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "설정 값을 입력해 주세요."));
         }
 
         @Test
@@ -344,8 +341,6 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @Disabled("API 미구현: GET /settings/extension 현재 설정값 조회 (D표 '확장 프로그램 설정 조회' 반영 결정, "
-                + "필드명은 PATCH 응답과 같게 제안) — 구현되면 켠다")
         @DisplayName("설정 화면을 열면 확장 프로그램 설정 현재 값(처음엔 모두 켜짐)을 불러온다")
         void currentExtensionSettings() throws Exception {
             Member me = member("sprout");
@@ -354,12 +349,15 @@ class SettingsScenarioTest extends ScenarioTestSupport {
                     .andExpect(okEnvelope())
                     .andExpect(jsonPath("$.data.popupVisible").value(true))
                     .andExpect(jsonPath("$.data.autoEndNotificationEnabled").value(true))
-                    .andExpect(jsonPath("$.data.manualScrapEnabled").value(true));
+                    .andExpect(jsonPath("$.data.manualScrapEnabled").value(true))
+                    .andExpect(jsonPath("$.data.updatedAt").doesNotExist());
             mvc.perform(patch("/settings/extension/popup-visible").with(as(me)).with(json(Map.of("enabled", false))))
                     .andExpect(okEnvelope());
             mvc.perform(get("/settings/extension").with(as(me)))
                     .andExpect(jsonPath("$.data.popupVisible").value(false))
-                    .andExpect(jsonPath("$.data.autoEndNotificationEnabled").value(true));
+                    .andExpect(jsonPath("$.data.autoEndNotificationEnabled").value(true))
+                    .andExpect(jsonPath("$.data.manualScrapEnabled").value(true))
+                    .andExpect(jsonPath("$.data.updatedAt").value(notNullValue()));
         }
     }
 
