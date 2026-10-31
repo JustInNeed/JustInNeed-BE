@@ -21,6 +21,8 @@ public interface CommunityFollowRepository extends Repository<CommunityFollow, L
     @Query("delete from CommunityFollow f where f.actorId = :actorId and f.targetId = :targetId")
     int deletePair(@Param("actorId") Long actorId, @Param("targetId") Long targetId);
 
+    boolean existsByActorIdAndTargetId(Long actorId, Long targetId);
+
     @Query("select f.targetId from CommunityFollow f where f.actorId = :actorId and f.targetId in :targetIds")
     List<Long> findFollowedTargets(@Param("actorId") Long actorId, @Param("targetIds") Collection<Long> targetIds);
 }

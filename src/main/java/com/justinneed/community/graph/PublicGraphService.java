@@ -5,11 +5,13 @@ import com.justinneed.community.api.CommunityErrors;
 import com.justinneed.community.api.HttpUrl;
 import com.justinneed.community.api.SelectionKey;
 import com.justinneed.community.bookmark.*;
+import com.justinneed.community.card.CommunityCardReader;
 import com.justinneed.community.card.SessionMindmaps;
 import com.justinneed.community.catalog.*;
 import com.justinneed.community.domain.CommunityProfile;
 import com.justinneed.community.domain.NodeVisibility;
 import com.justinneed.community.dto.SharedSessionView;
+import com.justinneed.community.follow.CommunityFollowRepository;
 import com.justinneed.community.pin.SharedSessionService;
 import com.justinneed.community.reaction.ProfileLikeRepository;
 import com.justinneed.community.service.CommunityProfiles;
@@ -36,12 +38,16 @@ public class PublicGraphService {
     private final ProfileLikeRepository likes;
     private final SharedSessionService pins;
     private final BookmarkQueryService bookmarks;
+    private final CommunityCardReader cards;
+    private final CommunityFollowRepository follows;
 
     public PublicGraphService(CommunityProfiles profiles, CommunitySharing sharing, CommunityTags tags,
             CommunityNodeRepository nodes, SessionMindmaps mindmaps, MemberRepository members,
-            ProfileLikeRepository likes, SharedSessionService pins, BookmarkQueryService bookmarks) {
+            ProfileLikeRepository likes, SharedSessionService pins, BookmarkQueryService bookmarks,
+            CommunityCardReader cards, CommunityFollowRepository follows) {
         this.profiles = profiles; this.sharing = sharing; this.tags = tags; this.nodes = nodes;
         this.mindmaps = mindmaps; this.members = members; this.likes = likes; this.pins = pins; this.bookmarks = bookmarks;
+        this.cards = cards; this.follows = follows;
     }
 
     /** 작성자 공개 범위를 따른다: 내용까지는 AI 마인드맵(hierarchy), URL만은 태그 → URL. */
@@ -96,8 +102,13 @@ public class PublicGraphService {
                 .sorted(Comparator.comparingLong(TopTag::nodeCount).reversed()
                         .thenComparing(t -> CommunityTags.key(t.name())).thenComparing(TopTag::hashtagId))
                 .limit(5).toList();
-        return new Graph(200, ownerId, ownerId, owner.getNickname(), "커뮤니티 마인드맵",
+        return new Graph(200, ownerId, ownerId, owner.getNickname(), graphTitle(owner.getNickname()),
                 List.copyOf(visibleTags.values()), List.copyOf(leaves), List.copyOf(edges), ranked);
+    }
+
+    // 작성자 한 사람의 전체 그래프라 카드 제목이 없다
+    private static String graphTitle(String nickname) {
+        return nickname == null ? "전체 마인드맵" : nickname + "님의 전체 마인드맵";
     }
 
     // 세션의 태그 → URL 잎. 노드 행은 쓰기 때 만들어 두고, 없는 노드는 건너뛴다
@@ -143,9 +154,12 @@ public class PublicGraphService {
     public Profile profile(Long ownerId, Long viewerId) {
         var graph = graph(ownerId, null);
         var profile = profiles.read(ownerId);
-        return new Profile(200, ownerId, graph.nickname(), graph.nodes().size(), graph.topHashtags(),
+        var totals = cards.totals(profile, viewerId);
+        return new Profile(200, ownerId, graph.nickname(), profile.getBio(), profile.getVisibility(),
+                totals.nodeCount(), graph.topHashtags(),
                 profile.getInterests().stream().filter(t -> !sharing.isHidden(profile, t)).limit(10).toList(),
                 likes.countByProfileId(ownerId), likes.existsByActorIdAndProfileId(viewerId, ownerId),
+                follows.existsByActorIdAndTargetId(viewerId, ownerId), totals.exploringCount(),
                 pins.list(ownerId, -1L));
     }
 
@@ -173,8 +187,8 @@ public class PublicGraphService {
     public record Graph(int code, Long mindmapId, Long ownerId, String nickname, String title,
             List<BookmarkSnapshot.Tag> hashtags, List<BookmarkSnapshot.Node> nodes,
             List<BookmarkSnapshot.Edge> edges, List<TopTag> topHashtags) { }
-    public record Profile(int code, Long userId, String nickname, long totalNodeCount,
-            List<TopTag> topHashtags, List<String> interests, long likeCount, boolean likedByMe,
-            List<SharedSessionView> pinnedSessions) { }
+    public record Profile(int code, Long userId, String nickname, String bio, NodeVisibility visibility,
+            long totalNodeCount, List<TopTag> topHashtags, List<String> interests, long likeCount, boolean likedByMe,
+            boolean following, long exploringCount, List<SharedSessionView> pinnedSessions) { }
     public record Original(int code, boolean sourceAvailable, Graph mindmap, List<Long> highlightedNodeIds) { }
 }

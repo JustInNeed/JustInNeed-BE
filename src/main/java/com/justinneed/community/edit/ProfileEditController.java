@@ -1,9 +1,11 @@
 package com.justinneed.community.edit;
 
+import com.justinneed.community.domain.CommunityProfile;
 import com.justinneed.community.pin.SharedSessionController;
 import com.justinneed.global.common.ApiResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +16,11 @@ public class ProfileEditController {
     private final ProfileEditService service;
     public ProfileEditController(ProfileEditService service) { this.service = service; }
 
+    @PatchMapping("/me/profile")
+    public ApiResponse<ProfileEditService.BioView> bio(@AuthenticationPrincipal Long userId,
+            @Valid @RequestBody BioRequest request) {
+        return ApiResponse.ok(service.bio(userId, request.bio()));
+    }
     @PatchMapping("/me/hashtags/{hashtagId}/visibility")
     public ApiResponse<ProfileEditService.TagView> visibility(@AuthenticationPrincipal Long userId,
             @PathVariable Long hashtagId, @Valid @RequestBody PublicRequest request) {
@@ -38,5 +45,7 @@ public class ProfileEditController {
     public ApiResponse<ProfileEditService.SessionView> session(@AuthenticationPrincipal Long viewerId, @PathVariable Long sessionId) {
         return ApiResponse.ok(service.session(viewerId, sessionId));
     }
+    public record BioRequest(@NotNull(message = "소개를 입력해 주세요.")
+            @Size(max = CommunityProfile.BIO_MAX_LENGTH, message = "소개는 120자까지 입력할 수 있습니다.") String bio) { }
     public record PublicRequest(@NotNull(message = "공개 여부를 입력해 주세요.") Boolean isPublic) { }
 }

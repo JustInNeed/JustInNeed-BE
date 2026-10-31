@@ -77,15 +77,31 @@ public class CommunityCardReader {
         return cards(List.of(sessionId), viewerId).stream().findFirst();
     }
 
+    /** 작성자 카드 전체의 합계. 카드마다 응답하는 nodeCount · exploringCount 를 더한 값이다. */
+    public OwnerTotals totals(CommunityProfile owner, Long viewerId) {
+        boolean content = owner.getVisibility() == NodeVisibility.CONTENT;
+        List<CommunityCardRow> rows = cards.findByOwnerIdInOrderBySessionIdDesc(List.of(owner.getUserId()));
+        long exploringCount = counts.counts(rows.stream().map(CommunityCardRow::getSessionId).toList(), viewerId)
+                .values().stream().mapToLong(CardCounts.Count::exploringCount).sum();
+        return new OwnerTotals(rows.stream().mapToLong(row -> nodeCount(row, content)).sum(), exploringCount);
+    }
+
+    private static long nodeCount(CommunityCardRow row, boolean content) {
+        return content ? row.getAiNodeCount() : row.getUrlCount();
+    }
+
     private CommunityCard card(CommunityCardRow row, String nickname, CommunityProfile owner, CardCounts.Count count) {
         boolean content = owner.getVisibility() == NodeVisibility.CONTENT;
         return new CommunityCard(row.getSessionId(), new Owner(row.getOwnerId(), nickname),
                 content ? row.getTitle() : null,
                 content ? row.getSnippet() : null,
                 sharing.visibleTags(owner, row.getHashtags()),
-                content ? row.getAiNodeCount() : row.getUrlCount(),
+                nodeCount(row, content),
                 count.likeCount(), count.likedByMe(), count.bookmarkCount(), count.bookmarkId(),
                 count.exploringCount(), count.exploringByMe(), row.getLastActivityAt(),
                 row.getUrls().stream().map(url -> new RelatedUrl(content ? url.title() : null, url.url())).toList());
+    }
+
+    public record OwnerTotals(long nodeCount, long exploringCount) {
     }
 }

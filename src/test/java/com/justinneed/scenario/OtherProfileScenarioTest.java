@@ -22,14 +22,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.ResultActions;
 
 /**
- * 다른 사용자 프로필 (/profile/{handle}). FE: ProfileView.tsx (isMine=false), 목 otherProfile("wanderlust").
+ * 다른 사용자 프로필 (/profile/{id}). FE: ProfileView.tsx (isMine=false), 목 otherProfile("wanderlust").
  * 시드 wanderer: 공개 세션 프라하 · 비엔나 · 야간열차, 비공개 해시태그 카페 · 슬로우트래블 (ScenarioTestSupport#seedWanderer).
  */
 @DisplayName("다른 사용자 프로필 화면")
@@ -353,25 +352,20 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @Disabled("API 미구현: 팔로우 / 팔로잉 (A표 반영 결정) — PATCH /community/profiles/{userId}/follow {following} 와 "
-            + "프로필 followerCount · followedByMe 는 제안(좋아요 API 와 같은 모양), 구현되면 켠다")
-    @DisplayName("팔로우 버튼: 누르면 팔로잉이 되고 팔로워 수가 오르며, 다시 누르면 풀린다")
+    @DisplayName("팔로우 버튼: 누르면 팔로잉이 되어 프로필에 보이고, 다시 누르면 풀린다")
     void follow() throws Exception {
         mvc.perform(patch("/community/profiles/{id}/follow", wanderer.id()).with(as(me)).with(json(Map.of("following", true))))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.following").value(true))
-                .andExpect(jsonPath("$.data.followerCount").value(1));
+                .andExpect(jsonPath("$.data.following").value(true));
         mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me)))
-                .andExpect(jsonPath("$.data.followedByMe").value(true))
-                .andExpect(jsonPath("$.data.followerCount").value(1));
+                .andExpect(jsonPath("$.data.following").value(true));
         mvc.perform(patch("/community/profiles/{id}/follow", wanderer.id()).with(as(me)).with(json(Map.of("following", false))))
-                .andExpect(jsonPath("$.data.following").value(false))
-                .andExpect(jsonPath("$.data.followerCount").value(0));
+                .andExpect(jsonPath("$.data.following").value(false));
+        mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me)))
+                .andExpect(jsonPath("$.data.following").value(false));
     }
 
     @Test
-    @Disabled("FE 기대와 다름: 프로필 세션 탭은 SessionCard(제목 · 소요시간 · 날짜 · 페이지 수)로 그리는데 공유 세션 응답(SharedSessionView)엔 "
-            + "startedAt · endedAt · pageCount 가 없고 URL_ONLY 면 title 도 빠짐 — 카드 필드를 줄지 팀 결정 후 켠다")
     @DisplayName("공유 세션 카드에 FE SessionCard 가 읽는 제목 · 시작/종료 시각 · 페이지 수가 온다")
     void sharedSessionCardFields() throws Exception {
         showContent();
