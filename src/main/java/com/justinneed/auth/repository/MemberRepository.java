@@ -2,9 +2,13 @@ package com.justinneed.auth.repository;
 
 import com.justinneed.auth.domain.Member;
 import com.justinneed.auth.domain.SocialProvider;
+import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface MemberRepository extends JpaRepository<Member, Long> {
 
@@ -12,6 +16,12 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     Optional<Member> findBySocialProviderAndProviderId(SocialProvider socialProvider, String providerId);
 
     Optional<Member> findByIdAndWithdrawnAtIsNull(Long id);
+
+    // 회원 단위로 요청을 줄 세울 때 쓴다 (설정의 동시 저장)
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select m from Member m where m.id = :id and m.withdrawnAt is null")
+    Optional<Member> lockActiveById(@Param("id") Long id);
+
 
     boolean existsByIdAndWithdrawnAtIsNull(Long id);
 

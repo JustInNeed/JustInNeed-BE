@@ -2,6 +2,9 @@ package com.justinneed.settings.extension.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.justinneed.auth.domain.Member;
+import com.justinneed.auth.domain.SocialProvider;
+import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.settings.extension.dto.ExtensionSettingResponse;
 import com.justinneed.settings.extension.repository.ExtensionSettingRepository;
 import org.junit.jupiter.api.Test;
@@ -19,11 +22,16 @@ class ExtensionSettingServiceTest {
     @Autowired
     private ExtensionSettingRepository extensionSettingRepository;
 
+    @Autowired
+    private MemberRepository memberRepository;
+
     @Test
     void updatesOnlyRequestedSettingAndKeepsOneRowPerMember() {
-        ExtensionSettingResponse popup = extensionSettingService.updatePopupVisible(1L, false);
-        ExtensionSettingResponse notification = extensionSettingService.updateAutoEndNotification(1L, false);
-        ExtensionSettingResponse manualScrap = extensionSettingService.updateManualScrap(1L, false);
+        Long memberId = memberRepository.save(new Member(SocialProvider.KAKAO, "extension", "toggler", null)).getId();
+
+        ExtensionSettingResponse popup = extensionSettingService.updatePopupVisible(memberId, false);
+        ExtensionSettingResponse notification = extensionSettingService.updateAutoEndNotification(memberId, false);
+        ExtensionSettingResponse manualScrap = extensionSettingService.updateManualScrap(memberId, false);
 
         assertThat(popup.popupVisible()).isFalse();
         assertThat(popup.autoEndNotificationEnabled()).isNull();
