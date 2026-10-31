@@ -201,6 +201,32 @@ API, 데이터 모델, 공개 범위 처리, 테스트 및 PR 병합 순서는 [
 | PATCH | `/community/mindmaps/{mindmapId}/exploring` | 나도 탐색중 `{exploring}` → `{exploringCount, exploringByMe}`. 새로 켜면 공개 해시태그마다 활동을 남깁니다 |
 | PATCH | `/community/mindmaps/{mindmapId}/bookmark` | 북마크 `{bookmarked}` → `{bookmarkCount, bookmarkId}`. 켜면 카드의 노드를 미니 마인드맵으로 저장(이미 있으면 그 id), 끄면 삭제. 노드가 없는 카드는 400 |
 
+### 북마크
+
+미니 마인드맵은 원본의 지금 상태를 보여줍니다. 저장한 스냅샷은 그대로 남기고 읽을 때 맞추므로, 작성자가 다시 공개하거나 공개 범위를 되돌리면 저장했던 내용이 돌아옵니다. 모든 대상이 비공개 · 삭제 · 탈퇴로 숨겨지면 목록에서 빠지고, 해제는 계속 됩니다. 페이지는 보이는 북마크만 셉니다. `page` 기본 0, `size` 기본 10 · 1~100 입니다.
+
+| Method | Path | 설명 |
+| --- | --- | --- |
+| POST | `/community/bookmarks` | 저장 `{targetType, targetIds, saveType, sourceMindmapId?, name?}` → 201 `{code, bookmarkId, targetIds, saveType, name}`. 같은 선택은 같은 행이고 저장 시각 · 스냅샷은 그대로다. `name` 을 보내면 그 이름으로 바꾸고, 비우면 있던 이름을 둔다 |
+| DELETE | `/community/bookmarks/{bookmarkId}` | 해제. 카드 북마크도 지울 수 있다. 남의 북마크 · 없는 북마크는 404 |
+| GET | `/community/me/bookmarks/mindmaps` | 미니 마인드맵 `{mindmaps: [항목], hasNext}` |
+| GET | `/community/me/bookmarks/hashtag-bundles` | 해시태그 묶음 `{code, bundles: [{bookmarkId, name, hashtags, savedAt, saveType, targetType, targetIds, sourceMindmapId}], hasNext}`. `hashtags` 는 이름 목록이고 저장한 태그에서 지금 비공개 · 없는 태그만 뺀다 |
+| GET | `/community/me/bookmarks/{bookmarkId}/original` | 원래 마인드맵 `{code, sourceAvailable, mindmap, highlightedNodeIds}`. 작성자 전체 그래프와 강조할 노드. 숨겨진 북마크 · 탈퇴한 작성자 · 빈 그래프는 `sourceAvailable` false 이고 `mindmap` null. 해시태그 묶음은 400 |
+
+`name` 은 해시태그 묶음에만 쓴다. 앞뒤 공백을 지우고 30자까지, 비었거나 공백뿐이면 null, 넘으면 400, 제어 문자가 있으면 400, 미니 마인드맵에 보내면 400 이다.
+
+미니 마인드맵 항목 `{bookmarkId, sessionId, sourceMindmapId, owner: {userId, nickname}, title, snippet, hashtags: [{hashtagId, name}], nodes, edges, nodeCount, likeCount, savedAt, saveType, targetType, targetIds, cardBookmark}`:
+
+- `sessionId` 는 카드 북마크면 그 세션, 아니면 저장한 노드가 모두 한 세션일 때 그 세션, 나머지는 null. `sourceMindmapId` 는 작성자 id 다.
+- 세션 하나: `title` · `snippet` · `hashtags` · `nodeCount` · `likeCount` 는 지금 카드 값이다. URL 만 공개면 `title` · `snippet` 이 null 이고 FE 가 태그를 보여준다.
+- 세션 여러 개: `title` · `snippet` 은 null, `hashtags` 는 공개 세션들의 지금 태그를 합친 것, `nodeCount` 는 보이는 노드 수, `likeCount` 는 공개 세션 좋아요 합이다. 세션 하나가 숨겨지면 그 세션의 노드 · 태그만 빠진다.
+- 작성자가 지금 URL 만 공개면 노드는 라벨 = URL · 내용 null 로만 보인다. URL 이 없는 AI 노드(뿌리 · 주제)는 빠지고 세션마다 같은 URL 은 하나만 남으며, 연결선은 태그 → 노드뿐이다.
+- `edges` 는 저장한 노드끼리의 연결에 지금 태그 → 뿌리 노드를 더한 것이다.
+
+원래 마인드맵의 강조는 저장한 노드 id 가 그래프에 있으면 그 노드다. 공개 범위 변경이나 재분석으로 어떤 세션의 id 가 하나도 맞지 않으면 그 세션의 그래프 노드 전부를 강조한다. `highlightedNodeIds` 는 언제나 `mindmap.nodes` 의 id 다.
+
+되돌리기는 다시 저장이라 새 행이 생겨 목록 맨 위로 온다. `cardBookmark` 가 true 면 `PATCH /community/mindmaps/{sessionId}/bookmark`, false 면 목록의 `targetType` · `targetIds` · `saveType` · `sourceMindmapId` · `name` 그대로 `POST /community/bookmarks` 로 보낸다. `targetIds` 는 지금 저장할 수 있는 대상만 온다. POST 로 저장한 미니 마인드맵은 세션이 하나여도 카드 숫자에 들어가지 않는다.
+
 ### 추천 / 검색
 
 카드 응답은 공개 세션 1개 = 1장이고, `mindmapId` 는 세션 id 입니다. URL 만 공개한 작성자의 카드는 `title` · `snippet` · `relatedUrls[].title` 이 `null` 입니다.
