@@ -371,7 +371,6 @@ class ProfileScenarioTest extends ScenarioTestSupport {
     void myHashtagsHaveCounts() throws Exception {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
-        pin(me, mock.rome()).andExpect(status().isCreated());
         mvc.perform(patch("/community/me/hashtags/{id}/visibility", hashtagId(me, "먹거리")).with(as(me))
                 .with(json(Map.of("isPublic", false)))).andExpect(okEnvelope());
 

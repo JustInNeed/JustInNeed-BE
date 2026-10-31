@@ -340,12 +340,12 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
         save(me, body("소개", "URL_ONLY", List.of(), List.of(), List.of(c.getId(), a.getId(), b.getId())))
                 .andExpect(okEnvelope());
         mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(viewer)))
-                .andExpect(jsonPath("$.data[*].id").value(contains(ids(c, a, b))));
+                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(c, a, b))));
 
         save(me, body("소개", "URL_ONLY", List.of(), List.of(), List.of(b.getId(), c.getId(), a.getId())))
                 .andExpect(okEnvelope());
         mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(viewer)))
-                .andExpect(jsonPath("$.data[*].id").value(contains(ids(b, c, a))));
+                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(b, c, a))));
     }
 
     @Test
