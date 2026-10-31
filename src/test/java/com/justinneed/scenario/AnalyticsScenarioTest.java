@@ -251,6 +251,16 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
+        @DisplayName("pageVisits 가 빈 목록인 세션도 없는 세션처럼 평균 · 판정에서 뺀다")
+        void emptyPageVisits() throws Exception {
+            analyzed(completed("2026-10-31T09:00:00", null, 4), summary(0, 0, 0, 2), List.of(), List.of());
+
+            card("exploration")
+                    .andExpect(jsonPath("$.data.avgDwellSec").value(0))
+                    .andExpect(jsonPath("$.data.type").value(nullValue()));
+        }
+
+        @Test
         @DisplayName("pageVisits 가 없는 세션뿐이면 통계만 오고 판정은 비어 있다")
         void cannotJudge() throws Exception {
             analyzed(completed("2026-10-31T09:00:00", "2026-10-31T09:30:00", 4), summary(0, 0, 0, 2), null, List.of());
@@ -547,6 +557,18 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
 
             card("time-patterns").andExpect(jsonPath("$.data.note.analysis").value(
                     "웹 탐색은 주로 **오후 3시 ~ 오후 6시**에 진행됩니다. 이 시간대에 가장 많은 정보 탐색과 읽기가 이루어지고 있어요."));
+        }
+
+        @Test
+        @DisplayName("체류가 가장 많은 구간이 정확히 30% 여도 '주로' 문구다")
+        void peakAtThreshold() throws Exception {
+            units(unit("Scanning", 30_000, "2026-10-30T15:10:00+00:00"),
+                    unit("Scanning", 25_000, "2026-10-31T00:10:00+00:00"),
+                    unit("Scanning", 25_000, "2026-10-30T03:10:00+00:00"),
+                    unit("Scanning", 20_000, "2026-10-30T11:10:00+00:00"));
+
+            card("time-patterns").andExpect(jsonPath("$.data.note.analysis").value(
+                    "웹 탐색은 주로 **오전 0시 ~ 오전 3시**에 진행됩니다. 이 시간대에 가장 많은 정보 탐색과 읽기가 이루어지고 있어요."));
         }
 
         @Test

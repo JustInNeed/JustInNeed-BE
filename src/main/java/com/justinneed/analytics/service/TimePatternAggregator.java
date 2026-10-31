@@ -47,10 +47,10 @@ final class TimePatternAggregator {
 
     private void add(Map<String, Object> unit) {
         LocalDateTime seenAt = RawLinkVisits.toKst(unit.get("firstSeenAt"));
-        long dwell = AnalyticsJson.nonNegative(unit.get("dwellMs"));
-        if (seenAt == null || dwell == 0) {
+        if (seenAt == null) {
             return;
         }
+        long dwell = AnalyticsJson.nonNegative(unit.get("dwellMs"));
         int day = seenAt.getDayOfWeek().getValue() - 1;
         int slot = seenAt.getHour() / SLOT_HOURS;
         dwellMs[day][slot] += dwell;
