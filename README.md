@@ -109,8 +109,9 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 | GET | `/oauth2/authorization/{kakao\|naver}` | 소셜 로그인 진입 (브라우저 리다이렉트) |
 | GET | `/login/oauth2/code/{provider}` | 소셜 로그인 콜백. 성공 시 FE `/oauth/callback?code=..` 로 302 (토큰은 URL 에 싣지 않음), 실패 시 `OAUTH_FAILURE_REDIRECT_URI` 로 302 |
 | POST | `/auth/token` | 콜백으로 받은 일회용 코드 `{code}` 를 `{accessToken, refreshToken, needsNickname}` 으로 교환. 코드는 60초 안에 한 번만 사용 가능, 없거나 만료 · 이미 쓴 코드는 401 |
+| POST | `/auth/extension-code` | 로그인 필요. 확장에 넘길 일회용 코드 `{code, expiresInSeconds}` 발급. 확장이 `POST /auth/token` 으로 바꾸면 웹과 별도의 토큰을 받는다. 묶음 없는 토큰 · 로그아웃된 묶음은 401 |
 | POST | `/auth/refresh` | refresh 토큰으로 access/refresh 재발급 (회전). 이미 쓴 토큰 · 없는 토큰은 401, 같은 토큰으로 동시에 보내면 한 요청만 성공하고 나머지는 401 |
-| POST | `/auth/logout` | refresh 토큰 폐기 + access 토큰 즉시 무효화 (무효화 목록은 DB 저장이라 재시작 후에도 유지) |
+| POST | `/auth/logout` | 같은 묶음(웹 + 연결한 확장)의 refresh 토큰 폐기 + 보낸 access 토큰 즉시 무효화 (무효화 목록은 DB 저장이라 재시작 후에도 유지) |
 | GET | `/members/me` | 내 정보 조회. 탈퇴한 회원의 토큰은 401 |
 | PATCH | `/members/me/nickname` | 닉네임 설정/변경. 영문 시작 3~8자(영문·숫자), 대소문자 무시 중복 불가 (중복이면 409, 같은 닉네임을 동시에 저장해도 한 명만 성공) |
 | GET | `/members/nickname/available?nickname=` | 닉네임 중복 확인. `{nickname, available}` 반환. 형식 규칙은 PATCH 와 같음(위반 시 400), 본인 닉네임은 사용 가능 |

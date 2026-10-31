@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 public class JwtTokenProvider {
 
     private static final String CLAIM_TYPE = "type";
+    private static final String CLAIM_GROUP = "grp";
     private static final String TYPE_ACCESS = "access";
     private static final String TYPE_REFRESH = "refresh";
 
@@ -34,20 +35,26 @@ public class JwtTokenProvider {
     }
 
     public String createAccessToken(Long memberId) {
-        return create(memberId, TYPE_ACCESS, accessValiditySeconds);
+        return createAccessToken(memberId, null);
+    }
+
+    // groupId: 함께 로그아웃되는 토큰 묶음 (RefreshToken.groupId). 확장 연결 코드를 발급할 때 현재 묶음을 찾는 데 쓴다
+    public String createAccessToken(Long memberId, String groupId) {
+        return create(memberId, TYPE_ACCESS, accessValiditySeconds, groupId);
     }
 
     public String createRefreshToken(Long memberId) {
-        return create(memberId, TYPE_REFRESH, refreshValiditySeconds);
+        return create(memberId, TYPE_REFRESH, refreshValiditySeconds, null);
     }
 
-    private String create(Long memberId, String type, long validitySeconds) {
+    private String create(Long memberId, String type, long validitySeconds, String groupId) {
         Instant now = Instant.now();
         return Jwts.builder()
                 // iat 가 초 단위라 jti 가 없으면 같은 초에 만든 토큰이 글자까지 똑같아진다
                 .id(UUID.randomUUID().toString())
                 .subject(String.valueOf(memberId))
                 .claim(CLAIM_TYPE, type)
+                .claim(CLAIM_GROUP, groupId)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plusSeconds(validitySeconds)))
                 .signWith(key)
@@ -73,6 +80,11 @@ public class JwtTokenProvider {
 
     public Long getMemberId(String token) {
         return Long.valueOf(parse(token).getSubject());
+    }
+
+    /** 묶음이 없으면 null (묶음 도입 전에 발급된 토큰) */
+    public String getGroupId(String token) {
+        return parse(token).get(CLAIM_GROUP, String.class);
     }
 
     public long getExpiryEpochSecond(String token) {

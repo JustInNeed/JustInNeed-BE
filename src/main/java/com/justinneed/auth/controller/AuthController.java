@@ -1,5 +1,6 @@
 package com.justinneed.auth.controller;
 
+import com.justinneed.auth.dto.ExtensionCodeResponse;
 import com.justinneed.auth.dto.LoginTokenResponse;
 import com.justinneed.auth.dto.LogoutRequest;
 import com.justinneed.auth.dto.TokenExchangeRequest;
@@ -8,6 +9,7 @@ import com.justinneed.auth.dto.TokenResponse;
 import com.justinneed.auth.service.AuthTokenService;
 import com.justinneed.auth.service.LoginCodeService;
 import com.justinneed.global.common.ApiResponse;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -39,6 +41,15 @@ public class AuthController {
     @PostMapping("/refresh")
     public ApiResponse<TokenResponse> refresh(@RequestBody TokenRefreshRequest request) {
         return ApiResponse.ok(authTokenService.reissue(request.refreshToken()));
+    }
+
+    // 로그인한 웹이 확장에 넘길 일회용 코드 발급. access 토큰 필수 (SecurityConfig)
+    @PostMapping("/extension-code")
+    public ApiResponse<ExtensionCodeResponse> extensionCode(
+            @AuthenticationPrincipal Long memberId,
+            @RequestHeader("Authorization") String authorization
+    ) {
+        return ApiResponse.ok(loginCodeService.issueForExtension(memberId, resolveBearer(authorization)));
     }
 
     // 로그아웃: refresh 화이트리스트에서 삭제 + access 즉시 무효화. (멱등 — 토큰이 없거나 만료여도 200)

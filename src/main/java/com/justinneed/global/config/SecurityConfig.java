@@ -58,6 +58,8 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .authorizeHttpRequests(auth -> auth
+                        // /auth/** 중 로그인이 필요한 유일한 경로
+                        .requestMatchers("/auth/extension-code").authenticated()
                         // 공개 엔드포인트
                         .requestMatchers("/", "/error",
                                 "/auth/**", "/oauth2/**", "/login/**",

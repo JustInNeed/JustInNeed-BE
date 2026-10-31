@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 /**
  * 소셜 로그인 성공 후 FE 에 토큰 대신 넘기는 일회용 로그인 코드. (LoginCodeService 가 발급 · 교환)
  * 코드 원문은 저장하지 않고 SHA-256 해시만 보관한다.
- * - 로그인 성공: 행 생성 (60초 유효)
+ * - 로그인 성공 · 확장 연결 요청: 행 생성 (60초 유효)
  * - POST /auth/token 교환: 행 삭제 (한 번만 사용)
  * - 교환되지 않고 만료된 행은 LoginCodeCleanupScheduler 가 정리
  */
@@ -31,6 +31,10 @@ public class LoginCode {
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
 
+    // 확장 연결 코드면 웹 로그인의 토큰 묶음. 소셜 로그인 코드는 교환할 때 새 묶음을 만드므로 null
+    @Column(name = "group_id", length = 36)
+    private String groupId;
+
     protected LoginCode() {
     }
 
@@ -39,6 +43,11 @@ public class LoginCode {
         this.memberId = memberId;
         this.needsNickname = needsNickname;
         this.expiresAt = expiresAt;
+    }
+
+    public LoginCode(String codeHash, Long memberId, boolean needsNickname, LocalDateTime expiresAt, String groupId) {
+        this(codeHash, memberId, needsNickname, expiresAt);
+        this.groupId = groupId;
     }
 
     public String getCodeHash() {
@@ -55,5 +64,9 @@ public class LoginCode {
 
     public LocalDateTime getExpiresAt() {
         return expiresAt;
+    }
+
+    public String getGroupId() {
+        return groupId;
     }
 }
