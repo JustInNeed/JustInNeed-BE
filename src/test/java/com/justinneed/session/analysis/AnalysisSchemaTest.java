@@ -103,7 +103,7 @@ class AnalysisSchemaTest {
         assertThat(found.getUnitFeatures()).singleElement().extracting(f -> f.get("cursor_speed_z")).isEqualTo(0.31);
         assertThat(found.getModelSource()).isEqualTo("global");
         assertThat(found.getCreatedAt()).isNotNull();
-        assertThat(resultRepository.findByUserId(USER_ID)).hasSize(1);
+        assertThat(resultRepository.findActiveByUserId(USER_ID)).hasSize(1);
         assertThat(resultRepository.countByUserId(USER_ID)).isEqualTo(1);
     }
 
@@ -192,13 +192,13 @@ class AnalysisSchemaTest {
         Summary summary = new Summary(session, "");
         Map<String, Object> essay = Map.of("source", "llm", "title", "고양이 돌보기",
                 "sections", List.of(Map.of("heading", "음수량", "body", "하루 약 50ml.", "unitKeys", List.of("u1"))));
-        summary.replaceEssay(essay, "# 고양이 돌보기\n\n## 음수량\n\n하루 약 50ml.");
+        summary.replaceEssay(essay, "## 음수량\n\n하루 약 50ml.");
         flushAndClear();
 
-        BrowsingSession found = sessionRepository.findWithSummaryByIdAndUserIdAndDeletedAtIsNull(session.getId(), USER_ID)
+        BrowsingSession found = sessionRepository.findWithSummaryByIdAndDeletedAtIsNull(session.getId())
                 .orElseThrow();
         assertThat(found.getSummary().getEssay()).isEqualTo(essay);
-        assertThat(found.getSummary().getMarkdown()).startsWith("# 고양이 돌보기");
+        assertThat(found.getSummary().getMarkdown()).startsWith("## 음수량");
     }
 
     private void flushAndClear() {

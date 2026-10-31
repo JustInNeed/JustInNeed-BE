@@ -20,7 +20,7 @@ class UnpinTest extends CommunityTestSupport {
                         .header("Authorization", auth(ownerId))).andExpect(status().isOk());
         assertThat(removed.isPublicSession()).isFalse();
         assertThat(removed.getSummary().getMarkdown()).isEqualTo("private markdown");
-        assertThat(sessions.findByIdAndUserIdAndDeletedAtIsNull(removed.getId(), ownerId)).isPresent();
+        assertThat(sessions.findById(removed.getId()).orElseThrow().isDeleted()).isFalse();
         assertThat(profiles.findById(ownerId).orElseThrow().getPinnedSessionIds())
                 .containsExactly(first.getId(), last.getId());
         mvc.perform(get("/community/profiles/{id}/nodes", ownerId).header("Authorization", auth(viewerId)))

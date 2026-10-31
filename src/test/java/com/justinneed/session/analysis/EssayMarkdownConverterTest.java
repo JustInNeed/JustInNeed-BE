@@ -12,15 +12,13 @@ import org.junit.jupiter.api.Test;
 class EssayMarkdownConverterTest {
 
     @Test
-    void convertsTitleAndSectionsToMarkdown() {
+    void convertsSectionsToMarkdownWithoutTitle() {
         AiEssay essay = new AiEssay("대제목", List.of(
                 new AiEssaySection("소제목1", "본문1", List.of("u1")),
                 new AiEssaySection("소제목2", "본문2", List.of("u2"))
         ), "llm");
 
         assertThat(EssayMarkdownConverter.toMarkdown(essay)).isEqualTo("""
-                # 대제목
-
                 ## 소제목1
 
                 본문1
@@ -37,8 +35,6 @@ class EssayMarkdownConverterTest {
         ), "llm");
 
         assertThat(EssayMarkdownConverter.toMarkdown(essay)).isEqualTo("""
-                # 대제목
-
                 ## 소제목 이어짐
 
                 첫 문단
@@ -66,6 +62,8 @@ class EssayMarkdownConverterTest {
         assertThat(EssayMarkdownConverter.toMarkdown(null)).isEmpty();
         assertThat(EssayMarkdownConverter.toMarkdown(new AiEssay(null, null, null))).isEmpty();
         assertThat(EssayMarkdownConverter.toMarkdown(new AiEssay("", List.of(), "llm"))).isEmpty();
+        // 소제목 · 본문이 없으면 대제목만 있어도 본문은 비어 있다
+        assertThat(EssayMarkdownConverter.toMarkdown(new AiEssay("대제목", List.of(), "llm"))).isEmpty();
     }
 
     @Test
@@ -88,13 +86,21 @@ class EssayMarkdownConverterTest {
 
     @Test
     void doesNotSplitSurrogatePairWhenTruncating() {
-        // 이모지(서로게이트 쌍)가 100번째 글자에 걸려도 반쪽 문자가 남지 않는다.
+        // 이모지(서로게이트 쌍)가 100번째 글자에 걸리면 쌍째로 빠지고 반쪽 문자가 남지 않는다.
         String title = "가".repeat(99) + "😀" + "끝";
 
         String truncated = EssayMarkdownConverter.toSessionTitle(new AiEssay(title, null, null));
 
-        assertThat(truncated).isEqualTo("가".repeat(99) + "😀");
-        assertThat(truncated.codePointCount(0, truncated.length())).isEqualTo(100);
+        assertThat(truncated).isEqualTo("가".repeat(99));
+    }
+
+    @Test
+    void truncatesByUtf16LengthLikeTheTitleValidator() {
+        // 이모지는 UTF-16 2자라 100자 제한에 50개까지 들어간다.
+        String truncated = EssayMarkdownConverter.toSessionTitle(new AiEssay("😀".repeat(60), null, null));
+
+        assertThat(truncated).isEqualTo("😀".repeat(50));
+        assertThat(truncated).hasSize(EssayMarkdownConverter.MAX_TITLE_LENGTH);
     }
 
     @Test
@@ -109,6 +115,6 @@ class EssayMarkdownConverterTest {
         assertThat(essay.title()).isEqualTo("대제목");
         assertThat(essay.source()).isEqualTo("llm");
         assertThat(essay.sections()).containsExactly(new AiEssaySection("소제목", "본문", List.of("u1", "u2")));
-        assertThat(EssayMarkdownConverter.toMarkdown(essay)).isEqualTo("# 대제목\n\n## 소제목\n\n본문");
+        assertThat(EssayMarkdownConverter.toMarkdown(essay)).isEqualTo("## 소제목\n\n본문");
     }
 }

@@ -1,5 +1,6 @@
 package com.justinneed.scenario;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasItem;
@@ -15,6 +16,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.justinneed.auth.domain.Member;
+import com.justinneed.community.bookmark.BookmarkSnapshot;
+import com.justinneed.community.bookmark.CommunityBookmark;
+import com.justinneed.community.bookmark.CommunityBookmarkRepository;
+import com.justinneed.community.bookmark.SaveType;
+import com.justinneed.community.bookmark.TargetType;
+import com.justinneed.session.management.domain.BrowsingSession;
+import com.justinneed.session.management.domain.Source;
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +32,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 북마크 화면 (/bookmarks): 마인드맵 · 세션 · 해시태그 묶음 탭.
@@ -38,7 +49,12 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
     private static final String NIGHTJET = "https://www.nightjet.com/en";
     private static final String WIEN = "https://www.wien.info/en";
     private static final String BELVEDERE = "https://www.belvedere.at/en";
+    private static final String CAFE = "https://www.cafecentral.wien/en/";
+    private static final String RECENT_BOOKMARKS = "/community/recommendations/mindmaps/recent-bookmarks";
     private static final String ISO_INSTANT = "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z";
+
+    @Autowired
+    private CommunityBookmarkRepository bookmarkRows;
 
     private Member me;
     private Wanderer wanderer;
@@ -68,6 +84,25 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
 
     private List<Long> pragueNodes() throws Exception {
         return List.of(nodeId(me, wanderer.member(), PRAGUE_CASTLE), nodeId(me, wanderer.member(), PRAGUE_EU));
+    }
+
+    private Long saveNodeBundle(List<Long> nodeIds) throws Exception {
+        return readLong(mvc.perform(post("/community/bookmarks").with(as(me)).with(json(Map.of(
+                        "targetType", "NODE", "targetIds", nodeIds, "saveType", "HASHTAG_BUNDLE"))))
+                .andExpect(status().isCreated()), "$.data.bookmarkId");
+    }
+
+    private void setSessionPublic(BrowsingSession session, boolean isPublic) throws Exception {
+        mvc.perform(patch("/sessions/{id}", session.getId()).with(as(wanderer.member()))
+                .with(json(Map.of("isPublic", isPublic)))).andExpect(okEnvelope());
+    }
+
+    private void expectUnavailableOriginal(Long bookmarkId) throws Exception {
+        mvc.perform(get("/community/me/bookmarks/{id}/original", bookmarkId).with(as(me)))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.sourceAvailable").value(false))
+                .andExpect(jsonPath("$.data.mindmap").value(nullValue()))
+                .andExpect(jsonPath("$.data.highlightedNodeIds", hasSize(0)));
     }
 
     private void setWandererHashtagPublic(String hashtag, boolean isPublic) throws Exception {
@@ -140,19 +175,259 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("작성자가 원본 세션을 비공개로 돌리면 원래 마인드맵의 강조는 빠지지만 내가 저장한 스냅샷은 그대로다")
-    void snapshotSurvivesSourceGoingPrivate() throws Exception {
+    @DisplayName("작성자가 원본 세션을 비공개로 돌리면 저장한 사람에게도 북마크가 안 보이고 원래 마인드맵 보기도 막힌다 (행 · 스냅샷은 그대로)")
+    void sourceGoingPrivateHidesBookmark() throws Exception {
         Long bookmarkId = saveMiniMindmap(pragueNodes());
+        BookmarkSnapshot saved = bookmarkRows.findById(bookmarkId).orElseThrow().getSnapshot();
 
-        mvc.perform(patch("/sessions/{id}", wanderer.prague().getId()).with(as(wanderer.member()))
-                .with(json(Map.of("isPublic", false)))).andExpect(okEnvelope());
+        setSessionPublic(wanderer.prague(), false);
 
+        mvc.perform(get(MINDMAPS).with(as(me)))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.mindmaps", hasSize(0)))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
+        expectUnavailableOriginal(bookmarkId);
+        assertThat(bookmarkRows.findById(bookmarkId).orElseThrow().getSnapshot()).isEqualTo(saved);
+    }
+
+    @Test
+    @DisplayName("원본 세션을 다시 공개하면 북마크가 저장했던 그대로 돌아오고 원래 마인드맵 강조도 돌아온다")
+    void sourceMadePublicAgainShowsBookmark() throws Exception {
+        List<Long> saved = pragueNodes();
+        Long bookmarkId = saveMiniMindmap(saved);
+        setSessionPublic(wanderer.prague(), false);
+
+        setSessionPublic(wanderer.prague(), true);
+
+        mvc.perform(get(MINDMAPS).with(as(me)))
+                .andExpect(jsonPath("$.data.mindmaps[*].bookmarkId").value(contains(ids(bookmarkId))))
+                .andExpect(jsonPath("$.data.mindmaps[0].nodes[*].sourceUrl").value(containsInAnyOrder(PRAGUE_CASTLE, PRAGUE_EU)))
+                .andExpect(jsonPath("$.data.mindmaps[0].edges", hasSize(6)));
         mvc.perform(get("/community/me/bookmarks/{id}/original", bookmarkId).with(as(me)))
                 .andExpect(jsonPath("$.data.sourceAvailable").value(true))
-                .andExpect(jsonPath("$.data.highlightedNodeIds", hasSize(0)))
-                .andExpect(jsonPath("$.data.mindmap.nodes[*].sourceUrl").value(not(hasItem(PRAGUE_CASTLE))));
+                .andExpect(jsonPath("$.data.highlightedNodeIds").value(containsInAnyOrder(ids(saved.toArray(Long[]::new)))));
+    }
+
+    @Test
+    @DisplayName("원본 세션을 지우면 북마크가 안 보이고, 숨겨진 북마크도 저장한 사람이 해제할 수 있다")
+    void sourceDeletedHidesBookmark() throws Exception {
+        Long bookmarkId = saveMiniMindmap(pragueNodes());
+
+        mvc.perform(delete("/sessions/{id}", wanderer.prague().getId()).with(as(wanderer.member()))).andExpect(okEnvelope());
+
         mvc.perform(get(MINDMAPS).with(as(me)))
-                .andExpect(jsonPath("$.data.mindmaps[0].nodes[*].sourceUrl").value(containsInAnyOrder(PRAGUE_CASTLE, PRAGUE_EU)));
+                .andExpect(jsonPath("$.data.mindmaps", hasSize(0)))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
+        expectUnavailableOriginal(bookmarkId);
+        assertThat(bookmarkRows.findById(bookmarkId)).isPresent();
+
+        mvc.perform(delete("/community/bookmarks/{id}", bookmarkId).with(as(me))).andExpect(okEnvelope());
+        assertThat(bookmarkRows.findById(bookmarkId)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("세션 두 개에서 저장한 미니 마인드맵은 비공개가 된 세션의 노드 · 연결선 · 그 세션에만 있던 태그만 빠진다")
+    void partlyHiddenMiniMindmap() throws Exception {
+        Long castle = nodeId(me, wanderer.member(), PRAGUE_CASTLE);
+        Long wien = nodeId(me, wanderer.member(), WIEN);
+        Long bookmarkId = saveMiniMindmap(List.of(castle, wien));
+
+        setSessionPublic(wanderer.vienna(), false);
+
+        mvc.perform(get(MINDMAPS).with(as(me)))
+                .andExpect(jsonPath("$.data.mindmaps[*].bookmarkId").value(contains(ids(bookmarkId))))
+                .andExpect(jsonPath("$.data.mindmaps[0].nodes[*].sourceUrl").value(contains(PRAGUE_CASTLE)))
+                .andExpect(jsonPath("$.data.mindmaps[0].hashtags[*].name").value(containsInAnyOrder("프라하", "카를교", "체코")))
+                .andExpect(jsonPath("$.data.mindmaps[0].edges", hasSize(3)))
+                .andExpect(jsonPath("$.data.mindmaps[0].edges[*].to").value(not(hasItem("node:" + wien))));
+        mvc.perform(get("/community/me/bookmarks/{id}/original", bookmarkId).with(as(me)))
+                .andExpect(jsonPath("$.data.sourceAvailable").value(true))
+                .andExpect(jsonPath("$.data.highlightedNodeIds").value(contains(ids(castle))));
+    }
+
+    @Test
+    @DisplayName("해시태그가 없는 세션의 노드를 저장한 미니 마인드맵도 원본이 비공개가 되면 빈 카드로 남지 않고 숨겨진다")
+    void taglessMiniMindmapIsHidden() throws Exception {
+        String link = "https://example.com/bare";
+        BrowsingSession bare = session(wanderer.member(), "태그 없는 세션", "2026-04-15T10:00:00", "2026-04-15T11:00:00", 1,
+                false, true, List.of(), List.of(new Source("글", link, "발췌")), "본문");
+        Long bookmarkId = saveMiniMindmap(List.of(nodeId(me, wanderer.member(), link)));
+        mvc.perform(get(MINDMAPS).with(as(me)))
+                .andExpect(jsonPath("$.data.mindmaps[*].bookmarkId").value(contains(ids(bookmarkId))));
+
+        setSessionPublic(bare, false);
+
+        mvc.perform(get(MINDMAPS).with(as(me))).andExpect(jsonPath("$.data.mindmaps", hasSize(0)));
+        expectUnavailableOriginal(bookmarkId);
+    }
+
+    @Test
+    @DisplayName("태그가 섞인 세션은 태그 하나만 비공개가 돼도 세션 상세처럼 원본이 안 보이는 것으로 보고 북마크를 숨긴다")
+    void mixedTagSessionFollowsVisibilityRule() throws Exception {
+        setWandererHashtagPublic("카페", true);
+        Long bookmarkId = saveMiniMindmap(List.of(nodeId(me, wanderer.member(), CAFE)));
+
+        setWandererHashtagPublic("카페", false);
+
+        mvc.perform(get(MINDMAPS).with(as(me))).andExpect(jsonPath("$.data.mindmaps", hasSize(0)));
+        expectUnavailableOriginal(bookmarkId);
+    }
+
+    @Test
+    @DisplayName("작성자가 탈퇴하면 원본 세션이 안 보이는 것이라 노드 북마크도 숨긴다")
+    void withdrawnOwnerHidesBookmark() throws Exception {
+        Long mini = saveMiniMindmap(pragueNodes());
+        Long bundle = saveNodeBundle(pragueNodes());
+
+        wanderer.member().withdraw(null, LocalDateTime.of(2026, 10, 30, 9, 0));
+        members.saveAndFlush(wanderer.member());
+
+        mvc.perform(get(MINDMAPS).with(as(me))).andExpect(jsonPath("$.data.mindmaps", hasSize(0)));
+        mvc.perform(get(BUNDLES).with(as(me))).andExpect(jsonPath("$.data.bundles", hasSize(0)));
+        expectUnavailableOriginal(mini);
+        assertThat(bookmarkRows.findById(bundle)).isPresent();
+    }
+
+    @Test
+    @DisplayName("숨겨진 북마크는 페이지를 차지하지 않는다: 페이지가 짧거나 비지 않고 hasNext 도 보이는 북마크 기준이다")
+    void hiddenBookmarksDoNotShortenPages() throws Exception {
+        Long wien = saveMiniMindmap(List.of(nodeId(me, wanderer.member(), WIEN)));
+        saveMiniMindmap(List.of(nodeId(me, wanderer.member(), PRAGUE_CASTLE)));
+        Long belvedere = saveMiniMindmap(List.of(nodeId(me, wanderer.member(), BELVEDERE)));
+        saveMiniMindmap(List.of(nodeId(me, wanderer.member(), PRAGUE_EU)));
+        Long nightjet = saveMiniMindmap(List.of(nodeId(me, wanderer.member(), NIGHTJET)));
+
+        setSessionPublic(wanderer.prague(), false);
+
+        mvc.perform(get(MINDMAPS).param("size", "2").with(as(me)))
+                .andExpect(jsonPath("$.data.mindmaps[*].bookmarkId").value(contains(ids(nightjet, belvedere))))
+                .andExpect(jsonPath("$.data.hasNext").value(true));
+        mvc.perform(get(MINDMAPS).param("page", "1").param("size", "2").with(as(me)))
+                .andExpect(jsonPath("$.data.mindmaps[*].bookmarkId").value(contains(ids(wien))))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
+        mvc.perform(get(MINDMAPS).param("page", "2").param("size", "2").with(as(me)))
+                .andExpect(jsonPath("$.data.mindmaps", hasSize(0)))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
+        // 마지막 보이는 북마크 뒤에 숨겨진 북마크만 남아도 다음 페이지가 있다고 하지 않는다
+        mvc.perform(get(MINDMAPS).param("size", "3").with(as(me)))
+                .andExpect(jsonPath("$.data.mindmaps", hasSize(3)))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
+    }
+
+    @Test
+    @DisplayName("북마크 스캔 묶음(100개)을 넘어가도 보이는 북마크로 페이지를 채운다")
+    void pagingCrossesScanBatches() throws Exception {
+        Long stored = saveMiniMindmap(List.of(nodeId(me, wanderer.member(), PRAGUE_CASTLE)));
+        Long visible = saveMiniMindmap(List.of(nodeId(me, wanderer.member(), WIEN)));
+        BookmarkSnapshot hidden = bookmarkRows.findById(stored).orElseThrow().getSnapshot();
+        List<Long> target = bookmarkRows.findById(stored).orElseThrow().getTargetIds();
+        Instant newer = bookmarkRows.findById(visible).orElseThrow().getSavedAt().plusSeconds(1);
+        for (int i = 0; i < 120; i++) {
+            bookmarkRows.save(new CommunityBookmark(me.getId(), SaveType.MINI_MINDMAP, TargetType.NODE, "scan-" + i,
+                    wanderer.id(), target, hidden, newer.plusSeconds(i)));
+        }
+        bookmarkRows.flush();
+
+        setSessionPublic(wanderer.prague(), false);
+
+        mvc.perform(get(MINDMAPS).param("size", "1").with(as(me)))
+                .andExpect(jsonPath("$.data.mindmaps[*].bookmarkId").value(contains(ids(visible))))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
+    }
+
+    @Test
+    @DisplayName("노드로 저장한 해시태그 묶음은 노드의 원본 세션을 따른다: 비공개 · 삭제면 안 보이고 다시 공개하면 돌아온다")
+    void nodeBundleFollowsSourceSession() throws Exception {
+        Long bundle = saveNodeBundle(pragueNodes());
+
+        setSessionPublic(wanderer.prague(), false);
+        mvc.perform(get(BUNDLES).with(as(me)))
+                .andExpect(jsonPath("$.data.bundles", hasSize(0)))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
+
+        setSessionPublic(wanderer.prague(), true);
+        mvc.perform(get(BUNDLES).with(as(me)))
+                .andExpect(jsonPath("$.data.bundles[*].bookmarkId").value(contains(ids(bundle))));
+
+        mvc.perform(delete("/sessions/{id}", wanderer.prague().getId()).with(as(wanderer.member()))).andExpect(okEnvelope());
+        mvc.perform(get(BUNDLES).with(as(me))).andExpect(jsonPath("$.data.bundles", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("해시태그로 저장한 묶음은 세션과 이어져 있지 않아 세션 공개 여부와 상관없이 해시태그 공개 규칙만 따른다")
+    void hashtagBundleHasNoSourceSession() throws Exception {
+        Long bundle = saveBundle("프라하");
+
+        setSessionPublic(wanderer.prague(), false);
+        setSessionPublic(wanderer.nightjet(), false);
+
+        mvc.perform(get(BUNDLES).with(as(me)))
+                .andExpect(jsonPath("$.data.bundles[*].bookmarkId").value(contains(ids(bundle))));
+
+        setWandererHashtagPublic("프라하", false);
+
+        mvc.perform(get(BUNDLES).with(as(me))).andExpect(jsonPath("$.data.bundles", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("최근 저장 기반 추천: 숨겨진 북마크의 해시태그는 기준에서 빠지고, 원본을 다시 공개하면 돌아온다")
+    void recentBasisFollowsSourceSession() throws Exception {
+        saveMiniMindmap(pragueNodes());
+        mvc.perform(get(RECENT_BOOKMARKS).with(as(me)))
+                .andExpect(jsonPath("$.data.basisHashtags").value(containsInAnyOrder("프라하", "카를교", "체코")));
+
+        setSessionPublic(wanderer.prague(), false);
+        mvc.perform(get(RECENT_BOOKMARKS).with(as(me)))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.basisHashtags", hasSize(0)));
+
+        setSessionPublic(wanderer.prague(), true);
+        mvc.perform(get(RECENT_BOOKMARKS).with(as(me)))
+                .andExpect(jsonPath("$.data.basisHashtags").value(containsInAnyOrder("프라하", "카를교", "체코")));
+    }
+
+    @Test
+    @DisplayName("최근 저장 기반 추천: 기준은 보이는 북마크 최근 20개까지다")
+    void recentBasisUsesTwentyBookmarks() throws Exception {
+        saveMiniMindmap(List.of(nodeId(me, wanderer.member(), WIEN)));
+        Long stored = saveMiniMindmap(List.of(nodeId(me, wanderer.member(), PRAGUE_CASTLE)));
+        BookmarkSnapshot prague = bookmarkRows.findById(stored).orElseThrow().getSnapshot();
+        List<Long> target = bookmarkRows.findById(stored).orElseThrow().getTargetIds();
+        Instant newer = Instant.now().plusSeconds(60);
+        // 비엔나 북마크가 20번째가 되도록 프라하 북마크를 19개로 맞춘다
+        for (int i = 0; i < 18; i++) {
+            bookmarkRows.save(new CommunityBookmark(me.getId(), SaveType.MINI_MINDMAP, TargetType.NODE, "basis-" + i,
+                    wanderer.id(), target, prague, newer.plusSeconds(i)));
+        }
+        bookmarkRows.flush();
+        mvc.perform(get(RECENT_BOOKMARKS).with(as(me)))
+                .andExpect(jsonPath("$.data.basisHashtags").value(hasItem("비엔나")));
+
+        bookmarkRows.saveAndFlush(new CommunityBookmark(me.getId(), SaveType.MINI_MINDMAP, TargetType.NODE, "basis-last",
+                wanderer.id(), target, prague, newer.plusSeconds(100)));
+
+        mvc.perform(get(RECENT_BOOKMARKS).with(as(me)))
+                .andExpect(jsonPath("$.data.basisHashtags").value(not(hasItem("비엔나"))));
+    }
+
+    @Test
+    @DisplayName("최근 저장 기반 추천: 숨겨진 북마크가 최근 20개 자리를 차지하지 않는다")
+    void hiddenBookmarksDoNotTakeRecentSlots() throws Exception {
+        Long stored = saveMiniMindmap(List.of(nodeId(me, wanderer.member(), PRAGUE_CASTLE)));
+        saveMiniMindmap(List.of(nodeId(me, wanderer.member(), WIEN)));
+        BookmarkSnapshot hidden = bookmarkRows.findById(stored).orElseThrow().getSnapshot();
+        List<Long> target = bookmarkRows.findById(stored).orElseThrow().getTargetIds();
+        Instant newer = Instant.now().plusSeconds(60);
+        for (int i = 0; i < 20; i++) {
+            bookmarkRows.save(new CommunityBookmark(me.getId(), SaveType.MINI_MINDMAP, TargetType.NODE, "recent-" + i,
+                    wanderer.id(), target, hidden, newer.plusSeconds(i)));
+        }
+        bookmarkRows.flush();
+
+        setSessionPublic(wanderer.prague(), false);
+
+        mvc.perform(get(RECENT_BOOKMARKS).with(as(me)))
+                .andExpect(jsonPath("$.data.basisHashtags").value(contains("비엔나")));
     }
 
     @Test

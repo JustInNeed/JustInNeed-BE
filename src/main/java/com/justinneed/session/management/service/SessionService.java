@@ -1,11 +1,19 @@
 package com.justinneed.session.management.service;
 
+import com.justinneed.community.domain.CommunityProfile;
+import com.justinneed.community.domain.NodeVisibility;
+import com.justinneed.community.service.CommunityProfiles;
+import com.justinneed.community.service.CommunitySharing;
 import com.justinneed.global.common.HashtagValidator;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
+import com.justinneed.session.analysis.SessionMindmapBuilder;
+import com.justinneed.session.analysis.repository.SessionResultRepository;
 import com.justinneed.session.management.domain.BrowsingSession;
+import com.justinneed.session.management.domain.SessionStatus;
 import com.justinneed.session.management.dto.SessionDetailResponse;
 import com.justinneed.session.management.dto.SessionListResponse;
+import com.justinneed.session.management.dto.SessionMindmapResponse;
 import com.justinneed.session.management.dto.SessionPageResponse;
 import com.justinneed.session.management.dto.SessionUpdateRequest;
 import com.justinneed.session.management.repository.BrowsingSessionRepository;
@@ -17,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 @Transactional(readOnly = true)
@@ -26,9 +35,18 @@ public class SessionService {
     private static final int MAX_PAGE_SIZE = 50;
 
     private final BrowsingSessionRepository sessionRepository;
+    private final SessionResultRepository resultRepository;
+    private final CommunitySharing sharing;
+    private final CommunityProfiles profiles;
+    private final ObjectMapper objectMapper;
 
-    public SessionService(BrowsingSessionRepository sessionRepository) {
+    public SessionService(BrowsingSessionRepository sessionRepository, SessionResultRepository resultRepository,
+            CommunitySharing sharing, CommunityProfiles profiles, ObjectMapper objectMapper) {
         this.sessionRepository = sessionRepository;
+        this.resultRepository = resultRepository;
+        this.sharing = sharing;
+        this.profiles = profiles;
+        this.objectMapper = objectMapper;
     }
 
     public SessionPageResponse getSessions(Long userId, int page, int size, boolean favoriteOnly) {
@@ -56,16 +74,43 @@ public class SessionService {
         return List.copyOf(hashtagByKey.values());
     }
 
+    // 없거나 삭제 404, 소유자는 전체, 다른 사용자는 공개 세션만 읽기 전용, 그 밖에는 403
     public SessionDetailResponse getSession(Long userId, Long sessionId) {
-        BrowsingSession session = sessionRepository.findWithSummaryByIdAndUserIdAndDeletedAtIsNull(sessionId, userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
-        return SessionDetailResponse.from(session);
+        BrowsingSession session = findSession(sessionId);
+        if (session.getUserId().equals(userId)) {
+            return SessionDetailResponse.from(session);
+        }
+        CommunityProfile owner = publicOwner(session);
+        List<String> tags = session.getTags().stream().filter(tag -> !sharing.isHidden(owner, tag)).toList();
+        return SessionDetailResponse.forViewer(session, tags, owner.getVisibility() == NodeVisibility.CONTENT);
+    }
+
+    // 접근 규칙은 세션 상세와 같다. 키워드 · 인용은 내용이라 URL 만 공개한 작성자의 마인드맵은 다른 사용자에게 비워서 준다
+    public SessionMindmapResponse getMindmap(Long userId, Long sessionId) {
+        BrowsingSession session = findSession(sessionId);
+        if (!session.getUserId().equals(userId) && publicOwner(session).getVisibility() != NodeVisibility.CONTENT) {
+            return SessionMindmapResponse.EMPTY;
+        }
+        if (session.getStatus() != SessionStatus.COMPLETED) {
+            return SessionMindmapResponse.EMPTY;
+        }
+        return resultRepository.findMindmapSource(sessionId)
+                .map(source -> SessionMindmapBuilder.build(
+                        parseJson(source.mindmap()), parseJson(source.selectedUnits()), session.getSources()))
+                .orElse(SessionMindmapResponse.EMPTY);
+    }
+
+    private Object parseJson(String json) {
+        return json == null ? null : objectMapper.readValue(json, Object.class);
     }
 
     @Transactional
     public SessionDetailResponse updateSession(Long userId, Long sessionId, SessionUpdateRequest request) {
-        BrowsingSession session = sessionRepository.findWithSummaryByIdAndUserIdAndDeletedAtIsNull(sessionId, userId)
+        BrowsingSession session = sessionRepository.lockOwned(sessionId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        if (request.changesContent() && session.getStatus() != SessionStatus.COMPLETED) {
+            throw new CustomException(ErrorCode.SESSION_NOT_COMPLETED);
+        }
 
         validateTitle(request.title());
         List<String> tags = HashtagValidator.normalizeAndValidate(request.tags());
@@ -75,9 +120,22 @@ public class SessionService {
 
     @Transactional
     public void deleteSession(Long userId, Long sessionId) {
-        BrowsingSession session = sessionRepository.findByIdAndUserIdAndDeletedAtIsNull(sessionId, userId)
+        BrowsingSession session = sessionRepository.lockOwned(sessionId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         session.delete();
+    }
+
+    private BrowsingSession findSession(Long sessionId) {
+        return sessionRepository.findWithSummaryByIdAndDeletedAtIsNull(sessionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+    }
+
+    // 다른 사용자가 볼 수 있는 세션이면 작성자 프로필, 아니면 403
+    private CommunityProfile publicOwner(BrowsingSession session) {
+        if (!sharing.publicSessionIds(List.of(session.getId())).contains(session.getId())) {
+            throw new CustomException(ErrorCode.SESSION_FORBIDDEN);
+        }
+        return profiles.read(session.getUserId());
     }
 
     private Pageable pageRequest(int page, int size) {

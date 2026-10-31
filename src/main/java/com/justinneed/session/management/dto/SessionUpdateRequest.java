@@ -1,14 +1,20 @@
 package com.justinneed.session.management.dto;
 
+import com.justinneed.session.analysis.EssayMarkdownConverter;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record SessionUpdateRequest(
-        @Size(max = 100, message = "제목은 최대 100자까지 입력할 수 있습니다.")
+        @Size(max = EssayMarkdownConverter.MAX_TITLE_LENGTH, message = "제목은 최대 100자까지 입력할 수 있습니다.")
         String title,
         String editedMarkdown,
         Boolean isPublic,
         Boolean isFavorite,
         List<String> tags
 ) {
+
+    // 즐겨찾기 말고 세션 내용을 바꾸는 필드가 있는지. 분석이 끝나기 전에는 AI 결과에 덮이므로 받지 않는다
+    public boolean changesContent() {
+        return title != null || editedMarkdown != null || isPublic != null || tags != null;
+    }
 }

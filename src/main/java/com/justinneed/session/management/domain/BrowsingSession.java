@@ -138,6 +138,10 @@ public class BrowsingSession extends BaseEntity {
         this.deletedAt = LocalDateTime.now();
     }
 
+    public boolean isDeleted() {
+        return deletedAt != null;
+    }
+
     public boolean hasAnyTag(List<String> hashtags) {
         List<String> loweredHashtags = hashtags.stream()
                 .map(String::toLowerCase)

@@ -9,13 +9,12 @@ import java.util.List;
  * AI essay → 요약 마크다운(summary.markdown) / 세션 제목 변환.
  *
  * <pre>
- * # 대제목
- *
  * ## 소제목
  *
  * 본문
  * </pre>
  *
+ * 대제목은 본문에 넣지 않는다. 제목은 사용자가 고칠 수 있어 FE 가 복사 · 내보내기 때 지금 제목을 붙인다.
  * 세션 제목은 essay 대제목을 그대로 쓰고, sessions.title 컬럼 길이(100자)를 넘으면 자른다.
  */
 public final class EssayMarkdownConverter {
@@ -27,18 +26,13 @@ public final class EssayMarkdownConverter {
     private EssayMarkdownConverter() {
     }
 
-    // 비어 있는 제목/소제목/본문은 건너뛴다. essay 가 null 이거나 내용이 없으면 빈 문자열.
+    // 비어 있는 소제목/본문은 건너뛴다. essay 가 null 이거나 내용이 없으면 빈 문자열.
     public static String toMarkdown(AiEssay essay) {
         if (essay == null) {
             return "";
         }
 
         List<String> blocks = new ArrayList<>();
-        String title = toHeadingText(essay.title());
-        if (!title.isEmpty()) {
-            blocks.add("# " + title);
-        }
-
         if (essay.sections() != null) {
             for (AiEssaySection section : essay.sections()) {
                 if (section == null) {
@@ -80,12 +74,13 @@ public final class EssayMarkdownConverter {
         return text.replace("\r\n", "\n").trim();
     }
 
-    // 서로게이트 쌍(이모지 등)이 반으로 잘리지 않도록 코드포인트 기준으로 자른다.
+    // 제목 검증(SessionUpdateRequest @Size)과 같은 UTF-16 길이로 잘라, 만든 제목을 그대로 다시 저장할 수 있게 한다.
+    // 서로게이트 쌍(이모지 등)이 끝에 걸리면 쌍째로 뺀다.
     private static String truncate(String text, int maxLength) {
-        if (text.codePointCount(0, text.length()) <= maxLength) {
+        if (text.length() <= maxLength) {
             return text;
         }
-        int end = text.offsetByCodePoints(0, maxLength);
+        int end = Character.isHighSurrogate(text.charAt(maxLength - 1)) ? maxLength - 1 : maxLength;
         return text.substring(0, end).trim();
     }
 }

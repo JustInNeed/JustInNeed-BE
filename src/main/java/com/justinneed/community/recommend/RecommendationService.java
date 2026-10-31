@@ -1,7 +1,7 @@
 package com.justinneed.community.recommend;
 
 import com.justinneed.community.api.CommunityErrors;
-import com.justinneed.community.bookmark.CommunityBookmarkRepository;
+import com.justinneed.community.bookmark.BookmarkQueryService;
 import com.justinneed.community.catalog.CommunityTags;
 import com.justinneed.community.search.PublicDirectory;
 import com.justinneed.community.service.CommunityProfiles;
@@ -11,23 +11,17 @@ import org.springframework.stereotype.Service;
 @Service
 public class RecommendationService {
     private final CommunityProfiles profiles;
-    private final CommunityBookmarkRepository bookmarks;
+    private final BookmarkQueryService bookmarks;
     private final PublicDirectory directory;
-    private final CommunityTags tags;
-    public RecommendationService(CommunityProfiles profiles, CommunityBookmarkRepository bookmarks, PublicDirectory directory,
-            CommunityTags tags) {
-        this.profiles = profiles; this.bookmarks = bookmarks; this.directory = directory; this.tags = tags;
+    public RecommendationService(CommunityProfiles profiles, BookmarkQueryService bookmarks, PublicDirectory directory) {
+        this.profiles = profiles; this.bookmarks = bookmarks; this.directory = directory;
     }
     public Recommendations interests(Long actor, int limit) {
         return recommend(actor, profiles.read(actor).getInterests(), limit);
     }
     public Recommendations recent(Long actor, int limit) {
         profiles.read(actor);
-        var saved = bookmarks.findTop20ByUserIdOrderBySavedAtDescIdDesc(actor).stream()
-                .flatMap(b -> b.getSnapshot().hashtags().stream()).toList();
-        var visible = tags.publicIds(saved.stream().map(t -> t.hashtagId()).toList());
-        var basis = saved.stream().filter(t -> visible.contains(t.hashtagId())).map(t -> t.name()).toList();
-        return recommend(actor, basis, limit);
+        return recommend(actor, bookmarks.recentHashtags(actor), limit);
     }
     private Recommendations recommend(Long actor, List<String> basis, int limit) {
         checkLimit(limit);
