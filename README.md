@@ -134,7 +134,18 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 | DELETE | `/tag-groups/{id}` | 그룹 삭제 |
 | PATCH | `/tag-groups/order` | 그룹 표시 순서 변경 |
 
-인증이 필요한 API(`/sessions/**`, `/tag-groups/**`, `/members/**`)는 `Authorization: Bearer {accessToken}` 헤더가 필수입니다. 토큰이 없거나 · 잘못됐거나 · 만료 · 무효화됐거나 · refresh 토큰이거나 · 탈퇴한 회원의 토큰이면 401 과 함께 `{"success":false,"data":null,"message":"로그인이 만료되었습니다. 다시 로그인해 주세요."}` 를 반환합니다 (`/auth/refresh` 실패는 "유효하지 않은 리프레시 토큰입니다."). 사용자 식별은 access 토큰의 memberId 로 합니다.
+### 설정
+
+| Method | Path | 설명 |
+| --- | --- | --- |
+| GET | `/settings/collection/excluded-urls` | 수집 제외 URL 전체 목록 (페이징 없음). 체크된 항목 먼저, 그 안에서 도메인 · URL 순. 처음 조회 때 기본 URL 5개를 채움 |
+| POST | `/settings/collection/excluded-urls` | URL 추가. 프로토콜 · `www.` 를 뗀 표시형(`tistory.com/feed`)으로 저장, 같은 표시형이면 409. 기본 URL 포함 100개까지 |
+| PATCH | `/settings/collection/excluded-urls/selections` | 체크 변경 `{excludedUrlIds, isExcluded}` |
+| DELETE | `/settings/collection/excluded-urls` | 선택 삭제 `{excludedUrlIds}`. 기본 URL 은 지우지 않고 체크만 해제 |
+| GET | `/settings/extension` | 확장 프로그램 설정 조회. 저장한 적이 없으면 기본값(모두 켜짐) |
+| PATCH | `/settings/extension/{popup-visible\|auto-end-notification\|manual-scrap}` | 토글 저장 `{enabled}`. 자동 종료 알림은 5초 알림만 끄고 자동 종료는 항상 동작 |
+
+인증이 필요한 API(`/sessions/**`, `/tag-groups/**`, `/members/**`, `/settings/**`)는 `Authorization: Bearer {accessToken}` 헤더가 필수입니다. 토큰이 없거나 · 잘못됐거나 · 만료 · 무효화됐거나 · refresh 토큰이거나 · 탈퇴한 회원의 토큰이면 401 과 함께 `{"success":false,"data":null,"message":"로그인이 만료되었습니다. 다시 로그인해 주세요."}` 를 반환합니다 (`/auth/refresh` 실패는 "유효하지 않은 리프레시 토큰입니다."). 사용자 식별은 access 토큰의 memberId 로 합니다.
 
 모든 응답은 `{ success, data, message }` 형식입니다. 에러도 같은 형식으로 내려가며 `success=false`, `message`에 사유가 담깁니다.
 
