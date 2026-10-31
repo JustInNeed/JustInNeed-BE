@@ -53,8 +53,8 @@ class InteractionTest extends CommunityTestSupport {
         var s = session(ownerId, true, "Java", "Spring");
         var graph = graphs.graph(ownerId, null);
         var node = graph.nodes().get(0).nodeId();
-        var saved = commands.save(viewerId, TargetType.NODE, List.of(node), SaveType.MINI_MINDMAP, ownerId);
-        assertThat(commands.save(viewerId, TargetType.NODE, List.of(node), SaveType.MINI_MINDMAP, ownerId).bookmarkId())
+        var saved = commands.save(viewerId, TargetType.NODE, List.of(node), SaveType.MINI_MINDMAP, ownerId, null);
+        assertThat(commands.save(viewerId, TargetType.NODE, List.of(node), SaveType.MINI_MINDMAP, ownerId, null).bookmarkId())
                 .isEqualTo(saved.bookmarkId());
         var snapshot = bookmarks.findById(saved.bookmarkId()).orElseThrow().getSnapshot();
         assertThat(snapshot.edges()).hasSize(2);

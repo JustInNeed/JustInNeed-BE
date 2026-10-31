@@ -42,7 +42,7 @@ class RecommendationTest extends CommunityTestSupport {
         assertThat(result.mindmaps().get(0).relatedUrls()).extracting(url -> url.url()).containsExactly("https://example.com");
         assertThat(recommendations.recent(viewerId, 3).mindmaps()).isEmpty();
         var tag = graphs.graph(ownerId, null).hashtags().get(0).hashtagId();
-        bookmarks.save(viewerId, TargetType.HASHTAG, List.of(tag), SaveType.HASHTAG_BUNDLE, null);
+        bookmarks.save(viewerId, TargetType.HASHTAG, List.of(tag), SaveType.HASHTAG_BUNDLE, null, null);
         assertThat(recommendations.recent(viewerId, 3).mindmaps()).hasSize(1);
         assertThat(recommendations.recent(ownerId, 3).basisHashtags()).isEmpty();
         publicSession.update(null, null, false, null, null);

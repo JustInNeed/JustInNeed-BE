@@ -26,7 +26,12 @@ public class BookmarkCommandService {
         this.bookmarks = bookmarks; this.targets = targets; this.locks = locks;
         this.activity = activity; this.clock = clock;
     }
-    public Saved save(Long actor, TargetType type, List<Long> ids, SaveType saveType, Long source) {
+    /**
+     * 같은 선택을 다시 저장하면 selection_key 로 같은 행을 돌려주고 저장 시각 · 스냅샷은 그대로 둔다.
+     * 이름을 보냈으면 그 이름으로 바꾸고, 비웠으면 있던 이름을 지우지 않는다.
+     */
+    public Saved save(Long actor, TargetType type, List<Long> ids, SaveType saveType, Long source, String rawName) {
+        var name = bundleName(rawName, saveType);
         if (ids == null || ids.isEmpty() || ids.size() > 100 || new HashSet<>(ids).size() != ids.size()) {
             throw new CustomException(ErrorCode.INVALID_BOOKMARK_SELECTION);
         }
@@ -44,7 +49,10 @@ public class BookmarkCommandService {
         ids.forEach(id -> resolved.put(id, targets.resolve(type, id)));
         var key = SelectionKey.of(type + "|" + saveType + "|" + source + "|" + ids.stream().sorted().toList());
         var existing = bookmarks.findByUserIdAndSelectionKey(actor, key);
-        if (existing.isPresent()) return view(existing.get());
+        if (existing.isPresent()) {
+            if (name != null) existing.get().rename(name);
+            return view(existing.get());
+        }
         var tags = new LinkedHashSet<BookmarkSnapshot.Tag>();
         var nodes = new LinkedHashSet<BookmarkSnapshot.Node>();
         var edges = new LinkedHashSet<BookmarkSnapshot.Edge>();
@@ -53,7 +61,9 @@ public class BookmarkCommandService {
         var snapshot = new BookmarkSnapshot(DEFAULT_TITLE, List.copyOf(tags),
                 saveType == SaveType.MINI_MINDMAP ? List.copyOf(nodes) : List.of(),
                 saveType == SaveType.MINI_MINDMAP ? List.copyOf(edges) : List.of());
-        var saved = bookmarks.save(new CommunityBookmark(actor, saveType, type, key, source, ids, snapshot, clock.instant()));
+        var bookmark = new CommunityBookmark(actor, saveType, type, key, source, ids, snapshot, clock.instant());
+        bookmark.rename(name);
+        var saved = bookmarks.save(bookmark);
         resolved.forEach((id, t) -> activity.record(actor, type, id, ActivityKind.BOOKMARK, t.tags()));
         return view(saved);
     }
@@ -83,6 +93,17 @@ public class BookmarkCommandService {
         locks.acquire(actor, List.of());
         bookmarks.delete(bookmarks.findByIdAndUserId(id, actor).orElseThrow(CommunityErrors::missing));
     }
-    private Saved view(CommunityBookmark b) { return new Saved(201, b.getId(), b.getTargetIds(), b.getSaveType()); }
-    public record Saved(int code, Long bookmarkId, List<Long> targetIds, SaveType saveType) { }
+    // 앞뒤 공백을 지운 묶음 이름. 비었으면 null
+    private static String bundleName(String raw, SaveType saveType) {
+        if (raw == null || raw.isBlank()) return null;
+        var name = raw.strip();
+        if (saveType != SaveType.HASHTAG_BUNDLE) throw new CustomException(ErrorCode.BOOKMARK_NAME_NOT_ALLOWED);
+        if (name.length() > CommunityBookmark.NAME_MAX_LENGTH) throw new CustomException(ErrorCode.BOOKMARK_NAME_TOO_LONG);
+        if (name.codePoints().anyMatch(Character::isISOControl)) throw new CustomException(ErrorCode.BOOKMARK_NAME_INVALID);
+        return name;
+    }
+    private Saved view(CommunityBookmark b) {
+        return new Saved(201, b.getId(), b.getTargetIds(), b.getSaveType(), b.getName());
+    }
+    public record Saved(int code, Long bookmarkId, List<Long> targetIds, SaveType saveType, String name) { }
 }

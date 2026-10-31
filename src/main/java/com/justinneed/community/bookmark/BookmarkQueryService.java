@@ -133,7 +133,7 @@ public class BookmarkQueryService {
         if (!sources.isEmpty() && sources.stream().noneMatch(visible.nodeIds()::contains)) return null;
         var names = b.getSnapshot().hashtags().stream().filter(t -> visible.hashtagIds().contains(t.hashtagId()))
                 .map(BookmarkSnapshot.Tag::name).toList();
-        return names.isEmpty() ? null : new Bundle(b.getId(), names, b.getSavedAt(), b.getSaveType(), b.getTargetType(),
+        return names.isEmpty() ? null : new Bundle(b.getId(), b.getName(), names, b.getSavedAt(), b.getSaveType(), b.getTargetType(),
                 savableTargets(b, visible), b.getSourceMindmapId());
     }
     private Mindmap mindmap(CommunityBookmark b, Visible visible) {
@@ -243,7 +243,7 @@ public class BookmarkQueryService {
             Map<Long, CommunityCard> cards, Map<Long, Map<String, CommunityHashtag>> tagIndex,
             Map<Long, String> nicknames, Set<Long> contentOwners) { }
     private record VisiblePage<T>(List<T> items, boolean hasNext) { }
-    public record Bundle(Long bookmarkId, List<String> hashtags, Instant savedAt, SaveType saveType,
+    public record Bundle(Long bookmarkId, String name, List<String> hashtags, Instant savedAt, SaveType saveType,
             TargetType targetType, List<Long> targetIds, Long sourceMindmapId) { }
     public record Bundles(int code, List<Bundle> bundles, boolean hasNext) { }
     public record Hashtag(Long hashtagId, String name) { }

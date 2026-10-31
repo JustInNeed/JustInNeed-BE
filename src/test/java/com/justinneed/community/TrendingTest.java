@@ -157,7 +157,7 @@ class TrendingTest extends CommunityTestSupport {
     @Test
     void myOwnActionsCount() {
         interactions.exploring(ownerId, TargetType.HASHTAG, tag, true);
-        bookmarks.save(ownerId, TargetType.HASHTAG, List.of(tag), SaveType.HASHTAG_BUNDLE, null);
+        bookmarks.save(ownerId, TargetType.HASHTAG, List.of(tag), SaveType.HASHTAG_BUNDLE, null, null);
 
         assertThat(row("today", "Java")).isEqualTo(new Row(1, 2, 2));
     }
@@ -168,7 +168,7 @@ class TrendingTest extends CommunityTestSupport {
         interactions.exploring(actor, TargetType.NODE, node, true);
         interactions.exploring(actor, TargetType.NODE, node, false);
         interactions.exploring(actor, TargetType.NODE, node, true);
-        var saved = bookmarks.save(actor, TargetType.HASHTAG, List.of(tag), SaveType.HASHTAG_BUNDLE, null);
+        var saved = bookmarks.save(actor, TargetType.HASHTAG, List.of(tag), SaveType.HASHTAG_BUNDLE, null, null);
         bookmarks.delete(actor, saved.bookmarkId());
 
         assertThat(row("today", "Java")).isEqualTo(new Row(1, 2, 2));

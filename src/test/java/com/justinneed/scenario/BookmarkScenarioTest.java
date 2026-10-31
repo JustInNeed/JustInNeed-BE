@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -583,8 +582,6 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @Disabled("API 미구현: 해시태그 묶음 이름 — FE 카드 제목은 묶음 이름(예: '동유럽 자료')인데 저장 · 목록 응답에 name 이 없음 "
-            + "(저장 시 name 을 받는 방식은 제안), 구현되면 켠다")
     @DisplayName("해시태그 묶음을 이름을 붙여 저장하면 목록 카드에 그 이름이 온다")
     void bundleHasName() throws Exception {
         mvc.perform(post("/community/bookmarks").with(as(me)).with(json(Map.of(
