@@ -154,7 +154,7 @@ class CommunityErrorMessageTest extends CommunityTestSupport {
     void originalOfBundleIsKorean() throws Exception {
         session(ownerId, true, "Java");
         var tag = graphs.graph(ownerId, null).hashtags().get(0).hashtagId();
-        var saved = bookmarks.save(viewerId, TargetType.HASHTAG, List.of(tag), SaveType.HASHTAG_BUNDLE, null);
+        var saved = bookmarks.save(viewerId, TargetType.HASHTAG, List.of(tag), SaveType.HASHTAG_BUNDLE, null, null);
         expectKorean400(send(get("/community/me/bookmarks/{id}/original", saved.bookmarkId())));
     }
 

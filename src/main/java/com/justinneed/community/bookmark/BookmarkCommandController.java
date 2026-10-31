@@ -17,7 +17,8 @@ public class BookmarkCommandController {
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<BookmarkCommandService.Saved> save(@AuthenticationPrincipal Long actor,
             @Valid @RequestBody SaveRequest body) {
-        return ApiResponse.ok(service.save(actor, body.targetType(), body.targetIds(), body.saveType(), body.sourceMindmapId()));
+        return ApiResponse.ok(service.save(actor, body.targetType(), body.targetIds(), body.saveType(),
+                body.sourceMindmapId(), body.name()));
     }
     @DeleteMapping("/{bookmarkId}")
     public ApiResponse<Void> delete(@AuthenticationPrincipal Long actor, @PathVariable @Positive Long bookmarkId) {
@@ -28,5 +29,6 @@ public class BookmarkCommandController {
             @NotEmpty(message = "저장할 대상을 선택해 주세요.") @Size(max = 100, message = "저장할 대상은 최대 100개까지 선택할 수 있습니다.")
             List<@NotNull(message = "대상이 올바르지 않습니다.") @Positive(message = "대상이 올바르지 않습니다.") Long> targetIds,
             @NotNull(message = "저장 방식을 입력해 주세요.") SaveType saveType,
-            @Positive(message = "원본 마인드맵이 올바르지 않습니다.") Long sourceMindmapId) { }
+            @Positive(message = "원본 마인드맵이 올바르지 않습니다.") Long sourceMindmapId,
+            String name) { }
 }

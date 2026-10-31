@@ -30,8 +30,9 @@ class BookmarkQueryTest extends CommunityTestSupport {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.bundles.length()").value(1))
                 .andExpect(jsonPath("$.data.hasNext").value(true));
         mvc.perform(get("/community/me/bookmarks/mindmaps").header("Authorization", auth(ownerId)))
-                .andExpect(jsonPath("$.data.mindmaps[0].nodes[0].label").value("Saved node"))
-                .andExpect(jsonPath("$.data.mindmaps[0].edges[0].to").value("node:" + node));
+                .andExpect(jsonPath("$.data.mindmaps[0].nodes[0].label").value("https://example.com"))
+                .andExpect(jsonPath("$.data.mindmaps[0].edges[0].to").value("node:" + node))
+                .andExpect(jsonPath("$.data.mindmaps[0].hashtags[0].name").value("Java"));
         mvc.perform(get("/community/me/bookmarks/mindmaps").header("Authorization", auth(viewerId)))
                 .andExpect(jsonPath("$.data.mindmaps.length()").value(0));
         mvc.perform(get("/community/me/bookmarks/mindmaps")).andExpect(status().isUnauthorized());

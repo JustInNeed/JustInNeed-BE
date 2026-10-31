@@ -29,13 +29,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * 북마크 화면 (/bookmarks): 마인드맵 · 세션 · 해시태그 묶음 탭.
+ * 북마크 화면 (/bookmarks): 마인드맵 · 해시태그 묶음 탭. 세션 탭은 없앴다 (마인드맵 탭이 곧 세션별 저장이다).
  * FE: src/features/community/BookmarksView.tsx, 목 BOOKMARKED_MINDMAPS(savedNodeIds 강조) · BOOKMARK_TAG_BUNDLES.
  * 북마크 저장은 다른 사용자 프로필 화면에서 한다 (OtherProfileScenarioTest).
  */
@@ -558,20 +557,31 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @Disabled("FE 기대와 다름: 미니 마인드맵 카드는 제목(post.title)과 'by 작성자'를 보여주는데 스냅샷 title 은 고정 영문 "
-            + "'Saved community mindmap' 이고 작성자 닉네임이 없음 — 필드명 ownerNickname 은 제안, 결정 후 켠다")
-    @DisplayName("미니 마인드맵 카드에 원래 마인드맵 제목과 작성자 닉네임이 온다")
+    @DisplayName("미니 마인드맵 카드에 작성자와 원본 카드의 제목 · 요약이 온다. URL만이면 제목 자리는 null 이고 FE 가 태그를 보여준다")
     void miniMindmapCardHasOwnerAndTitle() throws Exception {
         saveMiniMindmap(pragueNodes());
 
         mvc.perform(get(MINDMAPS).with(as(me)))
-                .andExpect(jsonPath("$.data.mindmaps[0].ownerNickname").value("wanderer"))
-                .andExpect(jsonPath("$.data.mindmaps[0].title").value(not("Saved community mindmap")));
+                .andExpect(jsonPath("$.data.mindmaps[0].sessionId").value(wanderer.prague().getId()))
+                .andExpect(jsonPath("$.data.mindmaps[0].owner.userId").value(wanderer.id()))
+                .andExpect(jsonPath("$.data.mindmaps[0].owner.nickname").value("wanderer"))
+                .andExpect(jsonPath("$.data.mindmaps[0].title").value(nullValue()))
+                .andExpect(jsonPath("$.data.mindmaps[0].snippet").value(nullValue()))
+                .andExpect(jsonPath("$.data.mindmaps[0].hashtags[*].name").value(contains("프라하", "카를교", "체코")))
+                .andExpect(jsonPath("$.data.mindmaps[0].nodeCount").value(2))
+                .andExpect(jsonPath("$.data.mindmaps[0].likeCount").value(0))
+                .andExpect(jsonPath("$.data.mindmaps[0].saveType").value("MINI_MINDMAP"))
+                .andExpect(jsonPath("$.data.mindmaps[0].targetType").value("NODE"));
+
+        mvc.perform(patch("/community/me/visibility").with(as(wanderer.member()))
+                .with(json(Map.of("visibility", "CONTENT")))).andExpect(okEnvelope());
+
+        mvc.perform(get(MINDMAPS).with(as(me)))
+                .andExpect(jsonPath("$.data.mindmaps[0].title").value("프라하 1박 일정 짜기"))
+                .andExpect(jsonPath("$.data.mindmaps[0].snippet").value("카를교 → 프라하 성 순서로 걷는다."));
     }
 
     @Test
-    @Disabled("API 미구현: 해시태그 묶음 이름 — FE 카드 제목은 묶음 이름(예: '동유럽 자료')인데 저장 · 목록 응답에 name 이 없음 "
-            + "(저장 시 name 을 받는 방식은 제안), 구현되면 켠다")
     @DisplayName("해시태그 묶음을 이름을 붙여 저장하면 목록 카드에 그 이름이 온다")
     void bundleHasName() throws Exception {
         mvc.perform(post("/community/bookmarks").with(as(me)).with(json(Map.of(
@@ -584,18 +594,17 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @Disabled("API 미구현: 저장한 세션 탭 (A표 '세션 북마크' — 보류였다가 반영 확인 중) — POST /community/bookmarks 의 targetType SESSION 과 "
-            + "GET /community/me/bookmarks/sessions 는 제안, 구현되면 켠다")
-    @DisplayName("세션 탭: 다른 사람 공유 세션을 저장하면 저장한 세션 목록에 카드 정보와 함께 온다")
-    void savedSessions() throws Exception {
-        mvc.perform(post("/community/bookmarks").with(as(me)).with(json(Map.of(
-                        "targetType", "SESSION", "targetIds", List.of(wanderer.prague().getId()), "saveType", "SESSION"))))
-                .andExpect(status().isCreated());
+    @DisplayName("내용까지로 바꾸기 전에 저장한 URL 노드가 AI 그래프에 없으면 원래 마인드맵은 URL 그래프로 그 노드를 강조한다")
+    void originalFallsBackToUrlGraph() throws Exception {
+        List<Long> saved = pragueNodes();
+        Long bookmarkId = saveMiniMindmap(saved);
 
-        mvc.perform(get("/community/me/bookmarks/sessions").with(as(me)))
-                .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.sessions[0].sessionId").value(wanderer.prague().getId()))
-                .andExpect(jsonPath("$.data.sessions[0].nickname").value("wanderer"))
-                .andExpect(jsonPath("$.data.sessions[0].hashtags").value(contains("프라하", "카를교", "체코")));
+        mvc.perform(patch("/community/me/visibility").with(as(wanderer.member()))
+                .with(json(Map.of("visibility", "CONTENT")))).andExpect(okEnvelope());
+
+        mvc.perform(get("/community/me/bookmarks/{id}/original", bookmarkId).with(as(me)))
+                .andExpect(jsonPath("$.data.sourceAvailable").value(true))
+                .andExpect(jsonPath("$.data.mindmap.nodes[*].nodeId").value(hasItem(saved.get(0).intValue())))
+                .andExpect(jsonPath("$.data.highlightedNodeIds").value(containsInAnyOrder(ids(saved.toArray(Long[]::new)))));
     }
 }

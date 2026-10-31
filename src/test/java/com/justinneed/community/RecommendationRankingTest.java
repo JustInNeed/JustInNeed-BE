@@ -180,7 +180,7 @@ class RecommendationRankingTest extends CommunityTestSupport {
     void recentBookmarksDoNotExcludeTheCardIJustSaved() throws Exception {
         var saved = card(ownerId, 0, "여행");
         var tag = hashtags.findByOwnerIdOrderByIdAsc(ownerId).get(0).getId();
-        bookmarks.save(viewerId, TargetType.HASHTAG, List.of(tag), SaveType.HASHTAG_BUNDLE, null);
+        bookmarks.save(viewerId, TargetType.HASHTAG, List.of(tag), SaveType.HASHTAG_BUNDLE, null, null);
 
         recommend(RECENT)
                 .andExpect(jsonPath("$.data.basisHashtags").value(contains("여행")))

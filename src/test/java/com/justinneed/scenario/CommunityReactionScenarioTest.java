@@ -290,7 +290,7 @@ class CommunityReactionScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.mindmaps").value(hasSize(1)))
                 .andExpect(jsonPath("$.data.mindmaps[0].bookmarkId").value(id.intValue()))
                 .andExpect(jsonPath("$.data.mindmaps[0].sourceMindmapId").value(wanderer.id().intValue()))
-                .andExpect(jsonPath("$.data.mindmaps[0].title").value("저장한 마인드맵"))
+                .andExpect(jsonPath("$.data.mindmaps[0].title").value(nullValue()))
                 .andExpect(jsonPath("$.data.mindmaps[0].hashtags[*].name").value(contains("프라하", "카를교", "체코")))
                 .andExpect(jsonPath("$.data.mindmaps[0].nodes[*].label").value(contains(
                         "https://www.hrad.cz/en/prague-castle-for-visitors", "https://www.prague.eu/en")))

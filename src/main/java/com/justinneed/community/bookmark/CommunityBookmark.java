@@ -12,6 +12,8 @@ import org.hibernate.type.SqlTypes;
         indexes = {@Index(columnList = "user_id,save_type,saved_at"),
                 @Index(name = "idx_community_bookmarks_card_session", columnList = "card_session_id")})
 public class CommunityBookmark {
+    public static final int NAME_MAX_LENGTH = 30;
+
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @Column(name = "user_id", nullable = false)
@@ -26,6 +28,9 @@ public class CommunityBookmark {
     // 카드 북마크의 세션. 노드를 골라 저장한 북마크는 null 이고 카드 숫자에 들어가지 않는다
     @Column(name = "card_session_id")
     private Long cardSessionId;
+    // 해시태그 묶음의 이름. 묶음이 아니거나 이름을 비워 저장하면 null 이다
+    @Column(length = NAME_MAX_LENGTH)
+    private String name;
     @JdbcTypeCode(SqlTypes.JSON) @Column(nullable = false)
     private List<Long> targetIds;
     @JdbcTypeCode(SqlTypes.JSON) @Column(nullable = false)
@@ -48,11 +53,14 @@ public class CommunityBookmark {
         bookmark.cardSessionId = sessionId;
         return bookmark;
     }
+    public void rename(String name) { this.name = name; }
     public Long getId() { return id; }
     public Long getUserId() { return userId; }
     public SaveType getSaveType() { return saveType; }
     public TargetType getTargetType() { return targetType; }
+    public String getName() { return name; }
     public Long getSourceMindmapId() { return sourceMindmapId; }
+    public Long getCardSessionId() { return cardSessionId; }
     public List<Long> getTargetIds() { return List.copyOf(targetIds); }
     public BookmarkSnapshot getSnapshot() { return snapshot; }
     public Instant getSavedAt() { return savedAt; }

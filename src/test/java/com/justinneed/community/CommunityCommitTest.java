@@ -51,7 +51,7 @@ class CommunityCommitTest {
                 if (!start.await(5, TimeUnit.SECONDS)) throw new IllegalStateException("Start timeout");
                 interactions.like(actor, owner, true);
                 interactions.exploring(actor, TargetType.NODE, node, true);
-                return bookmarks.save(actor, TargetType.NODE, List.of(node), SaveType.MINI_MINDMAP, owner).bookmarkId();
+                return bookmarks.save(actor, TargetType.NODE, List.of(node), SaveType.MINI_MINDMAP, owner, null).bookmarkId();
             };
             var first = pool.submit(save);
             var second = pool.submit(save);
@@ -98,11 +98,11 @@ class CommunityCommitTest {
         try {
             var a = pool.submit(() -> {
                 start.await();
-                return bookmarks.save(left, TargetType.NODE, List.of(rightNode), SaveType.MINI_MINDMAP, right);
+                return bookmarks.save(left, TargetType.NODE, List.of(rightNode), SaveType.MINI_MINDMAP, right, null);
             });
             var b = pool.submit(() -> {
                 start.await();
-                return bookmarks.save(right, TargetType.NODE, List.of(leftNode), SaveType.MINI_MINDMAP, left);
+                return bookmarks.save(right, TargetType.NODE, List.of(leftNode), SaveType.MINI_MINDMAP, left, null);
             });
             start.countDown();
             assertThat(a.get(20, TimeUnit.SECONDS).bookmarkId()).isNotNull();
