@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -34,13 +33,10 @@ public class CollectionSettingsController {
 
     @GetMapping
     public ApiResponse<ExcludedUrlListResponse> getExcludedUrls(
-            @AuthenticationPrincipal Long memberId,
-            @RequestParam(defaultValue = "true") boolean grouped,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @AuthenticationPrincipal Long memberId
     ) {
         return new ApiResponse<>(true,
-                excludedUrlService.getExcludedUrls(memberId, grouped, page, size),
+                excludedUrlService.getExcludedUrls(memberId),
                 "수집 제외 URL 목록을 조회했습니다.");
     }
 

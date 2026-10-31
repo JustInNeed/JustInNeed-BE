@@ -14,8 +14,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,8 +23,11 @@ public class ExcludedUrlService {
 
     private static final int MAX_URL_COUNT = 100;
     private static final List<String> DEFAULT_URLS = List.of(
-            "https://www.instagram.com",
-            "https://mail.google.com"
+            "instagram.com",
+            "mail.google.com",
+            "youtube.com/shorts",
+            "twitter.com",
+            "tiktok.com"
     );
 
     private final ExcludedUrlRepository excludedUrlRepository;
@@ -36,21 +37,13 @@ public class ExcludedUrlService {
     }
 
     @Transactional
-    public ExcludedUrlListResponse getExcludedUrls(
-            Long memberId, boolean grouped, int page, int size
-    ) {
+    public ExcludedUrlListResponse getExcludedUrls(Long memberId) {
         ensureDefaultUrls(memberId);
-        PageRequest pageable = PageRequest.of(page, size);
-        Page<ExcludedUrl> result = grouped
-                ? excludedUrlRepository.findByMemberIdOrderByExcludedDescDomainAscUrlAsc(memberId, pageable)
-                : excludedUrlRepository.findByMemberIdOrderByExcludedDescIdAsc(memberId, pageable);
-
         return new ExcludedUrlListResponse(
                 200,
-                result.getContent().stream().map(ExcludedUrlItem::from).toList(),
-                result.getNumber(),
-                result.getSize(),
-                result.hasNext()
+                excludedUrlRepository.findByMemberIdOrderByExcludedDescDomainAscUrlAsc(memberId).stream()
+                        .map(ExcludedUrlItem::from)
+                        .toList()
         );
     }
 
