@@ -91,7 +91,8 @@ public class SessionService {
     // 접근 규칙은 세션 상세와 같다. 키워드 · 인용은 내용이라 URL 만 공개한 작성자의 마인드맵은 다른 사용자에게 비워서 준다
     public SessionMindmapResponse getMindmap(Long userId, Long sessionId) {
         BrowsingSession session = findSession(sessionId);
-        if (!session.getUserId().equals(userId) && publicOwner(session).getVisibility() != NodeVisibility.CONTENT) {
+        boolean mine = session.getUserId().equals(userId);
+        if (!mine && publicOwner(session).getVisibility() != NodeVisibility.CONTENT) {
             return SessionMindmapResponse.EMPTY;
         }
         if (session.getStatus() != SessionStatus.COMPLETED) {
@@ -100,6 +101,7 @@ public class SessionService {
         return resultRepository.findMindmapSource(sessionId)
                 .map(source -> SessionMindmapBuilder.build(
                         parseJson(source.mindmap()), parseJson(source.selectedUnits()), session.getSources()))
+                .map(mindmap -> mine ? mindmap : mindmap.withWebCitationsOnly())
                 .orElse(SessionMindmapResponse.EMPTY);
     }
 

@@ -92,6 +92,23 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
+    @DisplayName("다른 사용자의 인용에는 http(s) 링크만 온다: 화면이 href 로 그대로 쓴다. 소유자에게는 그대로다")
+    void viewerSeesOnlyWebCitations() throws Exception {
+        BrowsingSession open = session(me, "공개 세션", "2026-10-04T18:00:00", "2026-10-04T19:00:00", 1, false, true,
+                List.of("로마"), List.of(new Source("글 제목", LINK, "대표 발췌", VISITED_AT)), "## 본문");
+        saveResult(open, MINDMAP, SELECTED.replace("\"pageUrl\": \"https://x.example.com/y\"", "\"pageUrl\": \"javascript:alert(1)\""));
+        CommunityProfile profile = new CommunityProfile(me.getId());
+        profile.changeVisibility(NodeVisibility.CONTENT);
+        communityProfiles.saveAndFlush(profile);
+
+        mindmap(open, member("visitor"))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.nodes[2].keyword").value("입장권"))
+                .andExpect(jsonPath("$.data.nodes[2].citation").value(nullValue()));
+        mindmap(open, me).andExpect(jsonPath("$.data.nodes[2].citation.url").value("javascript:alert(1)"));
+    }
+
+    @Test
     @DisplayName("노드와 엣지를 화면에 필요한 값만 내려주고, 컷오프 유닛 노드에는 원문 인용이 붙는다")
     void nodesEdgesAndCitation() throws Exception {
         saveResult(mine, MINDMAP, SELECTED);
