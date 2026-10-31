@@ -47,7 +47,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <pre>
  * 이번 주 = 오늘 포함 최근 7일, 지난주 = 그 앞 7일
  * 세션 길이 = 종료 시각 - 시작 시각. 종료 시각이 없으면 세션 수에만 들어간다
- * Deep Reading 비율 = Deep Reading 체류시간 ÷ 전체 체류시간 (Idle 포함)
+ * Deep Reading 비율 = Deep Reading 유닛 수 ÷ 전체 유닛 수 (Idle 포함)
  * </pre>
  *
  * 세션 통계는 세션 행만으로 계산하므로 분석 결과가 없거나 AI JSON 이 어긋난 세션도 통계에는 들어간다.
@@ -122,10 +122,10 @@ public class HomeService {
                 .mapToLong(HomeService::lengthSeconds)
                 .average()
                 .orElse(0);
-        ReadingDwell thisWeekDwell = ReadingDwell.of(thisWeek);
-        ReadingDwell lastWeekDwell = ReadingDwell.of(lastWeek);
-        int deepReadingDelta = thisWeekDwell.hasData() && lastWeekDwell.hasData()
-                ? thisWeekDwell.deepPct() - lastWeekDwell.deepPct()
+        ReadingUnits thisWeekUnits = ReadingUnits.of(thisWeek);
+        ReadingUnits lastWeekUnits = ReadingUnits.of(lastWeek);
+        int deepReadingDelta = thisWeekUnits.hasData() && lastWeekUnits.hasData()
+                ? thisWeekUnits.deepPct() - lastWeekUnits.deepPct()
                 : 0;
 
         return new Stats(
@@ -135,7 +135,7 @@ public class HomeService {
                 thisWeek.size(),
                 thisWeek.size() - lastWeek.size(),
                 (int) Math.round(averageSeconds / SECONDS_PER_MINUTE),
-                thisWeekDwell.deepPct(),
+                thisWeekUnits.deepPct(),
                 deepReadingDelta
         );
     }
@@ -215,7 +215,7 @@ public class HomeService {
         for (Object item : session.pages()) {
             if (item instanceof Map<?, ?> page) {
                 domainOf(page.get("url"))
-                        .ifPresent(domain -> visits.add(new PageVisit(domain, millis(page.get("dwellMs")))));
+                        .ifPresent(domain -> visits.add(new PageVisit(domain, nonNegative(page.get("dwellMs")))));
             }
         }
         return visits;
@@ -232,8 +232,8 @@ public class HomeService {
         return SiteCategory.extractHost(origin.group());
     }
 
-    // AI JSON 의 체류시간. Integer · Long · Double 어느 쪽으로든 올 수 있고, 숫자가 아니거나 음수면 0
-    private static long millis(Object value) {
+    // AI JSON 의 체류시간 · 유닛 수. Integer · Long · Double 어느 쪽으로든 올 수 있고, 숫자가 아니거나 음수면 0
+    private static long nonNegative(Object value) {
         return value instanceof Number number ? Math.max(0, number.longValue()) : 0;
     }
 
@@ -300,35 +300,35 @@ public class HomeService {
     private record PageVisit(String domain, long dwellMs) {
     }
 
-    // analysis_summary 의 읽기 상태별 체류시간 합. 전체가 0 이면 데이터가 없는 것으로 본다
-    private record ReadingDwell(long deepMs, long totalMs) {
+    // analysis_summary 의 읽기 상태별 유닛 수 합. 전체가 0 이면 데이터가 없는 것으로 본다
+    private record ReadingUnits(long deepUnits, long totalUnits) {
 
-        private static ReadingDwell of(List<HomeSessionRow> sessions) {
-            long deepMs = 0;
-            long totalMs = 0;
+        private static ReadingUnits of(List<HomeSessionRow> sessions) {
+            long deepUnits = 0;
+            long totalUnits = 0;
             for (HomeSessionRow session : sessions) {
-                deepMs += dwellMs(session, DEEP_READING);
+                deepUnits += units(session, DEEP_READING);
                 for (String label : READING_LABELS) {
-                    totalMs += dwellMs(session, label);
+                    totalUnits += units(session, label);
                 }
             }
-            return new ReadingDwell(deepMs, totalMs);
+            return new ReadingUnits(deepUnits, totalUnits);
         }
 
-        private static long dwellMs(HomeSessionRow session, String label) {
+        private static long units(HomeSessionRow session, String label) {
             if (session.analysisSummary() == null
                     || !(session.analysisSummary().get(label) instanceof Map<?, ?> summary)) {
                 return 0;
             }
-            return millis(summary.get("dwellMs"));
+            return nonNegative(summary.get("units"));
         }
 
         private boolean hasData() {
-            return totalMs > 0;
+            return totalUnits > 0;
         }
 
         private int deepPct() {
-            return hasData() ? (int) Math.round(deepMs * 100.0 / totalMs) : 0;
+            return hasData() ? (int) Math.round(deepUnits * 100.0 / totalUnits) : 0;
         }
     }
 

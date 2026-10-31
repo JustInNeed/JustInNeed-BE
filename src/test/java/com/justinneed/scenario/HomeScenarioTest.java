@@ -84,7 +84,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
                                 node("https://a#p1", "unit", "N+1 문제"), node("https://a#p2", "unit", "페치 조인")),
                         List.of(hierarchy("root:1", "topic:0"), hierarchy("topic:0", "https://a#p1"),
                                 hierarchy("topic:0", "https://a#p2"), related("https://a#p1", "https://a#p2"))),
-                dwell(120_000, 180_000, 300_000, 600_000),
+                readingUnits(12, 18, 30, 60),
                 List.of(page("https://docs.spring.io/spring-data/jpa/reference/", 600_000),
                         page("https://www.baeldung.com/jpa-entities", 300_000),
                         page("https://stackoverflow.com/questions/1", 240_000)));
@@ -93,10 +93,10 @@ class HomeScenarioTest extends ScenarioTestSupport {
                 mindmap(List.of(node("root:1", "root", "스프링데이터"), node("topic:0", "topic", "페치 전략"),
                                 node("https://b#p1", "unit", "페치조인")),
                         List.of(hierarchy("root:1", "topic:0"), hierarchy("topic:0", "https://b#p1"))),
-                dwell(0, 100_000, 100_000, 300_000),
+                readingUnits(0, 10, 10, 30),
                 List.of(page("https://velog.io/@dev/fetch-join", 200_000)));
         BrowsingSession lastWeek = completed("2026-10-21T10:00:00", "2026-10-21T10:20:00", "JPA", "파리");
-        analyzed(lastWeek, chain("파리 여행", "항공권", "직항"), dwell(0, 0, 300_000, 100_000), List.of());
+        analyzed(lastWeek, chain("파리 여행", "항공권", "직항"), readingUnits(0, 0, 30, 10), List.of());
         BrowsingSession noResult = completed("2026-09-21T10:00:00", "2026-09-21T10:30:00", "파리");
         TagGroup group = tagGroups.saveAndFlush(new TagGroup(me.getId(), "백엔드", List.of("JPA", "스프링"), 0));
 
@@ -247,18 +247,18 @@ class HomeScenarioTest extends ScenarioTestSupport {
     @DisplayName("다른 회원 · 삭제 · 진행 중 · 실패 세션은 어떤 항목에도 들어가지 않는다")
     void onlyMyCompletedSessions() throws Exception {
         BrowsingSession mine = completed("2026-10-31T09:00:00", "2026-10-31T09:30:00", "내태그");
-        analyzed(mine, chain("내 루트", "내 주제", "내 유닛"), dwell(0, 0, 0, 100),
+        analyzed(mine, chain("내 루트", "내 주제", "내 유닛"), readingUnits(0, 0, 0, 100),
                 List.of(page("https://mine.example/", 1_000)));
 
         Member other = member("wanderer");
         BrowsingSession others = session(other, "남의 세션", at("2026-10-31T09:00:00"), at("2026-10-31T09:30:00"), 1,
                 false, false, List.of("남의태그"), List.of(), null);
-        analyzed(others, chain("남의 루트", "남의 주제", "남의 유닛"), dwell(0, 0, 100, 0),
+        analyzed(others, chain("남의 루트", "남의 주제", "남의 유닛"), readingUnits(0, 0, 100, 0),
                 List.of(page("https://other.example/", 1_000)));
         tagGroups.saveAndFlush(new TagGroup(other.getId(), "남의 그룹", List.of("남의태그"), 0));
 
         BrowsingSession deleted = completed("2026-10-31T08:00:00", "2026-10-31T08:30:00", "삭제태그");
-        analyzed(deleted, chain("삭제 루트", "삭제 주제", "삭제 유닛"), dwell(0, 0, 100, 0),
+        analyzed(deleted, chain("삭제 루트", "삭제 주제", "삭제 유닛"), readingUnits(0, 0, 100, 0),
                 List.of(page("https://deleted.example/", 1_000)));
         deleted.delete();
         sessions.saveAndFlush(deleted);
@@ -267,7 +267,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
                 SessionStatus.FAILED)) {
             BrowsingSession notDone = sessionWithStatus(me, status.name(), "2026-10-31T07:00:00",
                     "2026-10-31T07:30:00", status, List.of("미완료태그"));
-            analyzed(notDone, chain(status + " 루트", status + " 주제", status + " 유닛"), dwell(0, 0, 100, 0),
+            analyzed(notDone, chain(status + " 루트", status + " 주제", status + " 유닛"), readingUnits(0, 0, 100, 0),
                     List.of(page("https://not-done.example/", 1_000)));
         }
 
@@ -428,11 +428,11 @@ class HomeScenarioTest extends ScenarioTestSupport {
     // ---------- Deep Reading ----------
 
     @Test
-    @DisplayName("Deep Reading: 체류시간 기준이고 Idle 도 분모에 들어가며, 증감은 지난주 대비 %p")
+    @DisplayName("Deep Reading: 유닛 수 기준이고 Idle 도 분모에 들어가며, 증감은 지난주 대비 %p")
     void deepReadingCountsIdleAndDelta() throws Exception {
-        analyzed(completed("2026-10-31T09:00:00", null), null, dwell(700, 100, 100, 100), List.of());
-        analyzed(completed("2026-10-30T09:00:00", null), null, dwell(0, 0, 500, 500), List.of());
-        analyzed(completed("2026-10-21T09:00:00", null), null, dwell(100, 100, 100, 100), List.of());
+        analyzed(completed("2026-10-31T09:00:00", null), null, readingUnits(700, 100, 100, 100), List.of());
+        analyzed(completed("2026-10-30T09:00:00", null), null, readingUnits(0, 0, 500, 500), List.of());
+        analyzed(completed("2026-10-21T09:00:00", null), null, readingUnits(100, 100, 100, 100), List.of());
 
         home()
                 .andExpect(jsonPath("$.data.stats.deepReadingPct").value(30))
@@ -440,10 +440,21 @@ class HomeScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("Deep Reading: 체류시간이 Integer · Long · Double 어떤 숫자로 와도 합산한다")
+    @DisplayName("Deep Reading: 체류시간이 아무리 길어도 비율은 유닛 수로만 정해진다")
+    void deepReadingIgnoresDwell() throws Exception {
+        Map<String, Object> summary = Map.of(
+                "Idle", Map.of("units", 9, "dwellMs", 0),
+                "Deep Reading", Map.of("units", 1, "dwellMs", 3_600_000));
+        analyzed(completed("2026-10-31T09:00:00", null), null, summary, List.of());
+
+        home().andExpect(jsonPath("$.data.stats.deepReadingPct").value(10));
+    }
+
+    @Test
+    @DisplayName("Deep Reading: 유닛 수가 Integer · Long · Double 어떤 숫자로 와도 합산한다")
     void deepReadingAcceptsAnyNumber() throws Exception {
         analyzed(completed("2026-10-31T09:00:00", null), null,
-                dwell(1_000_000_000.0, 1_000_000_000, 3_000_000_000L, 5_000_000_000L), List.of());
+                readingUnits(1_000_000_000.0, 1_000_000_000, 3_000_000_000L, 5_000_000_000L), List.of());
 
         home().andExpect(jsonPath("$.data.stats.deepReadingPct").value(50));
     }
@@ -451,8 +462,8 @@ class HomeScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("Deep Reading: 이번 주 데이터가 없으면 비율 0 · 증감 0, 지난주가 없어도 증감 0")
     void deepReadingWithoutData() throws Exception {
-        analyzed(completed("2026-10-21T09:00:00", null), null, dwell(0, 0, 0, 100), List.of());
-        analyzed(completed("2026-10-31T09:00:00", null), null, dwell(0, 0, 0, 0), List.of());
+        analyzed(completed("2026-10-21T09:00:00", null), null, readingUnits(0, 0, 0, 100), List.of());
+        analyzed(completed("2026-10-31T09:00:00", null), null, readingUnits(0, 0, 0, 0), List.of());
         completed("2026-10-30T09:00:00", null);
 
         home()
@@ -463,7 +474,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("Deep Reading: 지난주 데이터가 없으면 이번 주 비율만 오고 증감은 0")
     void deepReadingWithoutLastWeek() throws Exception {
-        analyzed(completed("2026-10-31T09:00:00", null), null, dwell(0, 0, 100, 100), List.of());
+        analyzed(completed("2026-10-31T09:00:00", null), null, readingUnits(0, 0, 100, 100), List.of());
 
         home()
                 .andExpect(jsonPath("$.data.stats.deepReadingPct").value(50))
@@ -473,8 +484,8 @@ class HomeScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("Deep Reading: 비율은 정수로 반올림하고 지난주 비율이 높으면 증감은 음수다")
     void deepReadingRoundsAndNegativeDelta() throws Exception {
-        analyzed(completed("2026-10-31T09:00:00", null), null, dwell(0, 0, 2, 1), List.of());
-        analyzed(completed("2026-10-21T09:00:00", null), null, dwell(0, 0, 1, 2), List.of());
+        analyzed(completed("2026-10-31T09:00:00", null), null, readingUnits(0, 0, 2, 1), List.of());
+        analyzed(completed("2026-10-21T09:00:00", null), null, readingUnits(0, 0, 1, 2), List.of());
 
         home()
                 .andExpect(jsonPath("$.data.stats.deepReadingPct").value(33))
@@ -936,7 +947,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("mindmap 이 null 인 세션: 세션 통계 · 사이트 · 체류시간은 그대로 쓰고 노드만 없다")
     void nullMindmap() throws Exception {
-        analyzed(completed("2026-10-31T09:00:00", "2026-10-31T09:30:00", "태그"), null, dwell(0, 0, 100, 100),
+        analyzed(completed("2026-10-31T09:00:00", "2026-10-31T09:30:00", "태그"), null, readingUnits(0, 0, 100, 100),
                 List.of(page("https://a.example/", 1_000)));
 
         home()
@@ -991,9 +1002,9 @@ class HomeScenarioTest extends ScenarioTestSupport {
                 hierarchy("r", "u")));
         Map<String, Object> malformedSummary = new LinkedHashMap<>();
         malformedSummary.put("Idle", "많음");
-        malformedSummary.put("Scanning", Map.of("units", 1));
-        malformedSummary.put("Reading", Map.of("dwellMs", "300"));
-        malformedSummary.put("Deep Reading", Map.of("dwellMs", 100));
+        malformedSummary.put("Scanning", Map.of("dwellMs", 100));
+        malformedSummary.put("Reading", Map.of("units", "3"));
+        malformedSummary.put("Deep Reading", Map.of("units", 1));
         Map<String, Object> noDwell = new LinkedHashMap<>(page("https://a.example/", 1_000));
         noDwell.remove("dwellMs");
         Map<String, Object> textDwell = new LinkedHashMap<>(page("https://b.example/", 1_000));
@@ -1114,13 +1125,13 @@ class HomeScenarioTest extends ScenarioTestSupport {
         return mindmap(nodes, List.of());
     }
 
-    /** output.py _summary: 라벨별 유닛 수 · 체류시간 합. */
-    private static Map<String, Object> dwell(Object idle, Object scanning, Object reading, Object deepReading) {
+    /** output.py _summary: 라벨별 유닛 수 · 체류시간 합. 체류시간은 일부러 유닛 수와 다른 비율로 둔다. */
+    private static Map<String, Object> readingUnits(Object idle, Object scanning, Object reading, Object deepReading) {
         return Map.of(
-                "Idle", Map.of("units", 1, "dwellMs", idle),
-                "Scanning", Map.of("units", 2, "dwellMs", scanning),
-                "Reading", Map.of("units", 3, "dwellMs", reading),
-                "Deep Reading", Map.of("units", 4, "dwellMs", deepReading));
+                "Idle", Map.of("units", idle, "dwellMs", 4_000),
+                "Scanning", Map.of("units", scanning, "dwellMs", 3_000),
+                "Reading", Map.of("units", reading, "dwellMs", 2_000),
+                "Deep Reading", Map.of("units", deepReading, "dwellMs", 1_000));
     }
 
     /** output.py pages_output 에 withCategory 가 category 를 붙인 모양. */
