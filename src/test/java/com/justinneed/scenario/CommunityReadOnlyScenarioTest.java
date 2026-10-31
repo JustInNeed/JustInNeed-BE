@@ -8,6 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.jayway.jsonpath.JsonPath;
 import com.justinneed.auth.domain.Member;
 import com.justinneed.community.SqlCapture;
+import com.justinneed.community.card.CommunityCardReader;
+import com.justinneed.community.card.CommunityCardRepository;
 import com.justinneed.community.domain.CommunityProfile;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.domain.Source;
@@ -33,6 +35,12 @@ class CommunityReadOnlyScenarioTest extends ScenarioTestSupport {
 
     @Autowired
     private EntityManager entityManager;
+
+    @Autowired
+    private CommunityCardRepository cards;
+
+    @Autowired
+    private CommunityCardReader reader;
 
     private Member owner;
     private Member viewer;
@@ -110,6 +118,39 @@ class CommunityReadOnlyScenarioTest extends ScenarioTestSupport {
         mvc.perform(get("/community/sessions/{id}", prague.getId()).with(as(viewer))).andExpect(okEnvelope());
 
         assertThat(SqlCapture.writesAndLocks()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("검색 · 카드 읽기는 회원 수 · 카드 수만큼 쿼리가 늘지 않는다")
+    void directoryAndReaderAreBulk() throws Exception {
+        seed();
+        BulkQueries first = measure();
+        for (int i = 0; i < 30; i++) {
+            Member more = member("m" + i);
+            session(more, "세션", "2026-04-20T23:05:00", "2026-04-20T23:32:00", 2, false, true,
+                    List.of("프라하"), List.of(new Source("글", "https://example.com/" + i, "발췌")), "본문");
+        }
+        entityManager.flush();
+        entityManager.clear();
+
+        BulkQueries many = measure();
+
+        assertThat(many.search()).isEqualTo(first.search());
+        assertThat(many.reader()).isEqualTo(first.reader());
+    }
+
+    private BulkQueries measure() throws Exception {
+        SqlCapture.clear();
+        mvc.perform(get("/community/search/mindmaps?hashtag=프라하&size=100").with(as(viewer))).andExpect(okEnvelope());
+        int search = SqlCapture.all().size();
+        var ids = cards.findAll().stream().map(card -> card.getSessionId()).toList();
+        entityManager.clear();
+        SqlCapture.clear();
+        reader.cards(ids, viewer.getId());
+        return new BulkQueries(search, SqlCapture.all().size());
+    }
+
+    private record BulkQueries(int search, int reader) {
     }
 
     @Test

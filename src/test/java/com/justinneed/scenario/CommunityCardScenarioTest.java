@@ -9,8 +9,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.justinneed.auth.domain.Member;
 import com.justinneed.community.api.SelectionKey;
+import com.justinneed.community.card.CardCounts;
 import com.justinneed.community.card.CommunityCard;
 import com.justinneed.community.card.CommunityCardBackfill;
+import com.justinneed.community.card.CommunityCardReader;
 import com.justinneed.community.card.CommunityCardRepository;
 import com.justinneed.community.card.CommunityCardRow;
 import com.justinneed.community.catalog.CommunityHashtag;
@@ -28,6 +30,7 @@ import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.domain.SessionStatus;
 import com.justinneed.session.management.domain.Source;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,6 +66,7 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
             """.formatted(MINDMAP);
 
     @Autowired private CommunityCardRepository cards;
+    @Autowired private CommunityCardReader reader;
     @Autowired private CommunityCardBackfill backfill;
     @Autowired private CommunityHashtagRepository hashtags;
     @Autowired private CommunityNodeRepository nodes;
@@ -284,5 +288,95 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
         session.update(null, null, isPublic, false, List.of(tag));
         session.replaceSources(List.of(new Source("글", "https://old.example.com/" + tag, "발췌")));
         return sessions.saveAndFlush(session);
+    }
+
+    @Test
+    @DisplayName("CommunityCardReader: URL 만 공개한 작성자의 카드는 제목 · 요약 · URL 제목이 없고 숫자는 고유 URL 수다")
+    void readerUrlOnly() throws Exception {
+        patchSession(Map.of("isPublic", true));
+
+        CommunityCard card = reader.card(rome.getId(), viewer.getId()).orElseThrow();
+
+        assertThat(card.mindmapId()).isEqualTo(rome.getId());
+        assertThat(card.owner()).isEqualTo(new CommunityCard.Owner(me.getId(), "sprout"));
+        assertThat(card.title()).isNull();
+        assertThat(card.snippet()).isNull();
+        assertThat(card.hashtags()).containsExactly("로마", "콜로세움");
+        assertThat(card.nodeCount()).isEqualTo(2);
+        assertThat(card.relatedUrls()).containsExactly(new CommunityCard.RelatedUrl(null, LINK),
+                new CommunityCard.RelatedUrl(null, "https://x.example.com/z"));
+        assertThat(card.lastActivityAt()).isEqualTo(LocalDateTime.parse("2026-04-26T22:00:00"));
+        assertThat(card.likeCount()).isZero();
+        assertThat(card.bookmarkId()).isNull();
+        assertThat(card.exploringByMe()).isFalse();
+    }
+
+    @Test
+    @DisplayName("CommunityCardReader: 내용까지 공개면 제목 · 요약 · URL 제목이 오고 숫자는 AI 노드 수다")
+    void readerContent() throws Exception {
+        setResult(MINDMAP);
+        patchSession(Map.of("isPublic", true));
+        showContent();
+
+        CommunityCard card = reader.card(rome.getId(), viewer.getId()).orElseThrow();
+
+        assertThat(card.title()).isEqualTo("로마 동선");
+        assertThat(card.snippet()).isEqualTo("첫 문단");
+        assertThat(card.nodeCount()).isEqualTo(3);
+        assertThat(card.relatedUrls().get(0)).isEqualTo(new CommunityCard.RelatedUrl("글", LINK));
+    }
+
+    @Test
+    @DisplayName("CommunityCardReader: 비공개 태그는 빠지고 작성자 본인도 방문자 규칙으로 본다")
+    void readerHiddenTag() throws Exception {
+        patchSession(Map.of("isPublic", true));
+        CommunityProfile profile = new CommunityProfile(me.getId());
+        profile.replaceHiddenHashtags(List.of("콜로세움"));
+        communityProfiles.saveAndFlush(profile);
+
+        assertThat(reader.card(rome.getId(), viewer.getId()).orElseThrow().hashtags()).containsExactly("로마");
+        assertThat(reader.card(rome.getId(), me.getId()).orElseThrow().hashtags()).containsExactly("로마");
+    }
+
+    @Test
+    @DisplayName("CommunityCardReader: 넘긴 순서를 지키고, 없는 카드 · 탈퇴한 작성자의 카드는 빠진다")
+    void readerOrderAndWithdrawnOwner() throws Exception {
+        patchSession(Map.of("isPublic", true));
+        Member other = member("other");
+        BrowsingSession second = session(other, "둘째", "2026-04-26T21:00:00", "2026-04-26T22:00:00", 1, false, true,
+                List.of("파리"), List.of(new Source("글", LINK, "발췌")), "본문");
+        Member gone = member("gone");
+        BrowsingSession third = session(gone, "셋째", "2026-04-26T21:00:00", "2026-04-26T22:00:00", 1, false, true,
+                List.of("파리"), List.of(new Source("글", LINK, "발췌")), "본문");
+        gone.withdraw(null, LocalDateTime.now());
+        members.saveAndFlush(gone);
+
+        var ids = new ArrayList<>(List.of(second.getId(), 999_999L, third.getId(), rome.getId(), second.getId()));
+        assertThat(reader.cards(ids, viewer.getId())).extracting(CommunityCard::mindmapId)
+                .containsExactly(second.getId(), rome.getId());
+        assertThat(reader.card(third.getId(), viewer.getId())).isEmpty();
+        assertThat(reader.cards(List.of(), viewer.getId())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("CommunityCardReader: 응답 JSON 은 계약 모양이고 없는 값도 null 로 온다")
+    void readerJsonShape() throws Exception {
+        patchSession(Map.of("isPublic", true));
+
+        var json = objectMapper.readTree(objectMapper.writeValueAsString(reader.card(rome.getId(), viewer.getId()).orElseThrow()));
+
+        assertThat(json.propertyNames()).containsExactlyInAnyOrder("mindmapId", "owner", "title", "snippet", "hashtags",
+                "nodeCount", "likeCount", "likedByMe", "bookmarkCount", "bookmarkId", "exploringCount", "exploringByMe",
+                "lastActivityAt", "relatedUrls");
+        assertThat(json.get("title").isNull()).isTrue();
+        assertThat(json.get("relatedUrls").get(0).get("title").isNull()).isTrue();
+        assertThat(json.get("lastActivityAt").asString()).isEqualTo("2026-04-26T22:00:00");
+    }
+
+    @Test
+    @DisplayName("CardCounts 기본 구현은 0 이다")
+    void defaultCountsAreZero(@Autowired CardCounts counts) {
+        assertThat(counts.counts(List.of(rome.getId()), viewer.getId()).getOrDefault(rome.getId(), CardCounts.Count.ZERO))
+                .isEqualTo(CardCounts.Count.ZERO);
     }
 }
