@@ -108,7 +108,7 @@ class CommunityReadOnlyScenarioTest extends ScenarioTestSupport {
     @DisplayName("공유 세션 상세 · 커뮤니티 세션 상세도 읽기만 한다")
     void sessionDetailReads() throws Exception {
         seed();
-        mvc.perform(post("/community/me/shared-sessions").with(as(owner)).with(json(Map.of("sessionId", prague.getId()))))
+        mvc.perform(post("/community/me/pinned-sessions").with(as(owner)).with(json(Map.of("sessionId", prague.getId()))))
                 .andExpect(status().is2xxSuccessful());
         entityManager.flush();
         entityManager.clear();

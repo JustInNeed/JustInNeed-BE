@@ -29,6 +29,9 @@ public interface CommunitySessionRepository extends Repository<BrowsingSession, 
             """)
     List<BrowsingSession> findPublicSessions(@Param("userId") Long userId);
 
+    @Query("select count(s) from BrowsingSession s where s.userId = :userId and " + PUBLIC_SESSION)
+    long countPublicSessions(@Param("userId") Long userId);
+
     @Query("""
             select s.id from BrowsingSession s, Member m
             where m.id = s.userId and m.withdrawnAt is null and s.id in :ids and

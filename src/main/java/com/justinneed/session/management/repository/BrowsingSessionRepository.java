@@ -105,6 +105,7 @@ public interface BrowsingSessionRepository extends JpaRepository<BrowsingSession
     Optional<BrowsingSession> findWithSummaryByIdAndDeletedAtIsNull(@Param("id") Long id);
 
     // 세션 행을 바꾸는 경로는 트랜잭션에서 이 잠금을 가장 먼저 잡는다. 그래야 기다린 뒤 최신 행을 읽어 쓰기가 줄을 선다.
+    // 회원 잠금(CommunityProfiles.lock)도 잡을 때만 그쪽이 먼저다 (회원 → 세션).
     // fetch join 을 쓰면 Postgres 가 outer join 의 nullable 쪽 FOR UPDATE 를 거부하므로 세션만 잠근다.
     // summary 는 세션을 읽을 때 따로 조회되고(mappedBy 쪽 1:1), 잠금 뒤의 조회라 역시 최신 값이다
     @Lock(LockModeType.PESSIMISTIC_WRITE)

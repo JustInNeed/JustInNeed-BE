@@ -27,6 +27,7 @@ public class CommunityProfiles {
         return profiles.findById(userId).orElseGet(() -> new CommunityProfile(userId));
     }
 
+    // 세션 행도 잠그는 경로는 이 잠금을 먼저 잡는다 (회원 → 세션). 반대 순서가 섞이면 교착이 생긴다
     @Transactional(propagation = Propagation.MANDATORY)
     public CommunityProfile lock(Long userId) {
         // Lock the existing member row even before the first profile is created.

@@ -71,7 +71,8 @@ class SessionLockScenarioTest extends ScenarioTestSupport {
     @AfterEach
     void cleanUp() {
         pool.shutdownNow();
-        for (String table : List.of("summaries", "session_results", "session_raw_payloads", "sessions", "members")) {
+        for (String table : List.of("summaries", "session_results", "session_raw_payloads", "community_cards",
+                "community_profiles", "sessions", "members")) {
             jdbc.update("delete from " + table);
         }
     }
@@ -187,6 +188,40 @@ class SessionLockScenarioTest extends ScenarioTestSupport {
         assertThat(reload(id).getSummary().getMarkdown()).isIn("첫 번째", "두 번째");
     }
 
+    @Test
+    @DisplayName("비공개 전환과 고정이 겹쳐도 교착 없이 끝나고 비공개 세션에 고정이 남지 않는다")
+    void privateToggleAndPin() throws Exception {
+        Member me = member("sprout");
+        Long id = published(me);
+
+        List<Integer> statuses = race(id, makePrivate(id, me), pin(id, me));
+
+        assertThat(statuses.get(0)).isEqualTo(200);
+        // 비공개가 먼저면 400. 부하가 크면 고정이 먼저 잠글 수 있고, 그래도 뒤이은 비공개가 고정을 지운다
+        assertThat(statuses.get(1)).isIn(400, 201);
+        assertThat(reload(id).isPublicSession()).isFalse();
+        assertThat(communityProfiles.findById(me.getId()).orElseThrow().getPinnedSessionIds()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("비공개 전환은 회원을 먼저 잠근다: 고정처럼 회원 → 세션 순서로 잡는 쪽과 서로 기다리지 않는다")
+    void privateToggleLocksMemberBeforeSession() throws Exception {
+        Member me = member("sprout");
+        Long id = published(me);
+
+        List<Future<Integer>> response = new ArrayList<>();
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            jdbc.queryForObject("select id from members where id = ? for update", Long.class, me.getId());
+            response.add(send(makePrivate(id, me)));
+            pause();
+            // 요청이 세션을 먼저 잡았다면 여기서 서로를 기다려 잠금 오류가 난다
+            jdbc.queryForObject("select id from sessions where id = ? for update", Long.class, id);
+        });
+
+        assertThat(response.get(0).get(20, TimeUnit.SECONDS)).isEqualTo(200);
+        assertThat(reload(id).isPublicSession()).isFalse();
+    }
+
     private List<Integer> race(Long id, MockHttpServletRequestBuilder first, MockHttpServletRequestBuilder second)
             throws Exception {
         return race(status -> jdbc.queryForObject("select id from sessions where id = ? for update", Long.class, id),
@@ -233,6 +268,14 @@ class SessionLockScenarioTest extends ScenarioTestSupport {
         return patch("/sessions/{id}", id).with(as(me)).with(json(Map.of("isFavorite", true)));
     }
 
+    private MockHttpServletRequestBuilder makePrivate(Long id, Member me) {
+        return patch("/sessions/{id}", id).with(as(me)).with(json(Map.of("isPublic", false)));
+    }
+
+    private MockHttpServletRequestBuilder pin(Long id, Member me) {
+        return post("/community/me/pinned-sessions").with(as(me)).with(json(Map.of("sessionId", id)));
+    }
+
     private Long analyzing(Member owner) {
         Long id = sessionWithStatus(owner, "분석 중", "2026-10-30T09:00:00", "2026-10-30T10:00:00",
                 SessionStatus.ANALYZING, List.of()).getId();
@@ -242,6 +285,11 @@ class SessionLockScenarioTest extends ScenarioTestSupport {
 
     private Long completed(Member owner) {
         return session(owner, "완료", "2026-10-30T09:00:00", "2026-10-30T10:00:00", 1, false, false,
+                List.of("로마"), List.of(), null).getId();
+    }
+
+    private Long published(Member owner) {
+        return session(owner, "공개", "2026-10-30T09:00:00", "2026-10-30T10:00:00", 1, false, true,
                 List.of("로마"), List.of(), null).getId();
     }
 

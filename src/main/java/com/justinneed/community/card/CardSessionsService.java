@@ -1,5 +1,6 @@
 package com.justinneed.community.card;
 
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.justinneed.community.bookmark.BookmarkQueryService;
 import com.justinneed.community.catalog.CommunityTags;
 import com.justinneed.community.domain.CommunityProfile;
@@ -10,14 +11,12 @@ import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.dto.SessionListResponse;
-import java.time.LocalDateTime;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,9 +28,6 @@ public class CardSessionsService {
     private static final int MAX_SESSIONS = 3;
     private static final Sort NEWEST_CARD_FIRST =
             Sort.by(Sort.Order.desc("lastActivityAt"), Sort.Order.desc("sessionId"));
-    private static final Comparator<BrowsingSession> NEWEST_SESSION_FIRST = Comparator
-            .comparing(CardSessionsService::lastActivityAt, Comparator.reverseOrder())
-            .thenComparing(BrowsingSession::getId, Comparator.reverseOrder());
 
     private final CommunityCardRepository cards;
     private final CommunityCardReader reader;
@@ -59,7 +55,7 @@ public class CardSessionsService {
         Stream<BrowsingSession> others = ownerSessions.stream()
                 .filter(session -> !session.getId().equals(mindmapId))
                 .filter(session -> !Collections.disjoint(anchorTags, publicTagKeys(owner, session)))
-                .sorted(NEWEST_SESSION_FIRST)
+                .sorted(CommunitySharing.NEWEST_SESSION_FIRST)
                 .limit(MAX_SESSIONS - 1);
         boolean content = owner.getVisibility() == NodeVisibility.CONTENT;
         return new Sessions(Stream.concat(Stream.of(anchor), others)
@@ -68,24 +64,25 @@ public class CardSessionsService {
     }
 
     public Mindmaps ofOwner(Long ownerId, Long viewerId, int page, int size) {
-        profiles.read(ownerId);
-        Slice<Long> ids = cards.findSessionIdsByOwnerId(ownerId,
-                BookmarkQueryService.paging(page, size).withSort(NEWEST_CARD_FIRST));
-        return new Mindmaps(reader.cards(ids.getContent(), viewerId), ids.hasNext());
+        CommunityProfile owner = profiles.read(ownerId);
+        PageRequest paging = BookmarkQueryService.paging(page, size);
+        var found = sharing.pinnedFirst(owner, cards.findSessionIdsByOwnerId(ownerId, NEWEST_CARD_FIRST), paging);
+        Set<Long> pinned = Set.copyOf(owner.getPinnedSessionIds());
+        return new Mindmaps(reader.cards(found.ids(), viewerId).stream()
+                .map(card -> new ProfileCard(card, pinned.contains(card.mindmapId()))).toList(), found.hasNext());
     }
 
     private Set<String> publicTagKeys(CommunityProfile owner, BrowsingSession session) {
         return sharing.visibleTags(owner, session.getTags()).stream().map(CommunityTags::key).collect(Collectors.toSet());
     }
 
-    // community_cards.last_activity_at 과 같은 값
-    private static LocalDateTime lastActivityAt(BrowsingSession session) {
-        return session.getEndedAt() != null ? session.getEndedAt() : session.getStartedAt();
-    }
-
     public record Sessions(List<SessionListResponse> sessions) {
     }
 
-    public record Mindmaps(List<CommunityCard> mindmaps, boolean hasNext) {
+    public record Mindmaps(List<ProfileCard> mindmaps, boolean hasNext) {
+    }
+
+    /** 프로필 카드 = 커뮤니티 카드 + 고정 여부. 피드 · 검색의 CommunityCard 에는 고정이 없다. */
+    public record ProfileCard(@JsonUnwrapped CommunityCard card, boolean isPinned) {
     }
 }

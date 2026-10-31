@@ -190,12 +190,13 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     // ---------- GET /community/profiles/{id}/mindmaps ----------
 
     @Test
-    @DisplayName("프로필 마인드맵 탭: 공개 카드가 최신순으로, 비공개 세션은 빼고 온다. URL_ONLY 면 제목 · 요약은 null")
+    @DisplayName("프로필 마인드맵 탭: 고정 카드가 고정 순서로 먼저, 나머지는 최신순으로 오고 비공개 세션은 빠진다. URL_ONLY 면 제목 · 요약은 null")
     void profileMindmaps() throws Exception {
         mvc.perform(get(MINDMAPS, wanderer.id()).with(as(me)))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(
-                        ids(wanderer.prague(), wanderer.nightjet(), wanderer.vienna(), wanderer.cafe()))))
+                        ids(wanderer.prague(), wanderer.cafe(), wanderer.nightjet(), wanderer.vienna()))))
+                .andExpect(jsonPath("$.data.mindmaps[*].isPinned").value(contains(true, true, true, false)))
                 .andExpect(jsonPath("$.data.hasNext").value(false))
                 .andExpect(jsonPath("$.data.mindmaps[0].owner.userId").value(wanderer.id()))
                 .andExpect(jsonPath("$.data.mindmaps[0].owner.nickname").value("wanderer"))
@@ -206,16 +207,19 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("프로필 마인드맵 탭 페이지: hasNext 로 다음 페이지를 알리고, 같은 시각이면 나중 세션이 먼저다")
+    @DisplayName("프로필 마인드맵 탭 페이지: hasNext 로 다음 페이지를 알리고, 고정 뒤에서는 같은 시각이면 나중 세션이 먼저다")
     void profileMindmapsPaging() throws Exception {
         BrowsingSession tie = publicSession(wanderer.member(), "같은 시각", "2026-04-20T23:05:00", "2026-04-20T23:32:00",
                 false, List.of("체코"));
 
         mvc.perform(get(MINDMAPS, wanderer.id()).param("page", "0").param("size", "2").with(as(me)))
-                .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(tie, wanderer.prague()))))
+                .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(wanderer.prague(), wanderer.cafe()))))
+                .andExpect(jsonPath("$.data.hasNext").value(true));
+        mvc.perform(get(MINDMAPS, wanderer.id()).param("page", "1").param("size", "2").with(as(me)))
+                .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(wanderer.nightjet(), tie))))
                 .andExpect(jsonPath("$.data.hasNext").value(true));
         mvc.perform(get(MINDMAPS, wanderer.id()).param("page", "2").param("size", "2").with(as(me)))
-                .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(wanderer.cafe()))))
+                .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(wanderer.vienna()))))
                 .andExpect(jsonPath("$.data.hasNext").value(false));
     }
 
@@ -352,11 +356,11 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     @DisplayName("공유 세션 카드 필드: URL_ONLY 에서도 시각 · 페이지 수 · 상태가 오고 제목은 빠진다. 프로필의 pinnedSessions 도 같다")
     void sharedSessionCardFieldsUnderUrlOnly() throws Exception {
         mvc.perform(get("/community/profiles/{id}/shared-sessions", wanderer.id()).with(as(me)))
-                .andExpect(jsonPath("$.data[0].title").doesNotExist())
-                .andExpect(jsonPath("$.data[0].startedAt").value("2026-04-20T23:05:00"))
-                .andExpect(jsonPath("$.data[0].endedAt").value("2026-04-20T23:32:00"))
-                .andExpect(jsonPath("$.data[0].pageCount").value(6))
-                .andExpect(jsonPath("$.data[0].status").value("COMPLETED"));
+                .andExpect(jsonPath("$.data.sessions[0].title").doesNotExist())
+                .andExpect(jsonPath("$.data.sessions[0].startedAt").value("2026-04-20T23:05:00"))
+                .andExpect(jsonPath("$.data.sessions[0].endedAt").value("2026-04-20T23:32:00"))
+                .andExpect(jsonPath("$.data.sessions[0].pageCount").value(6))
+                .andExpect(jsonPath("$.data.sessions[0].status").value("COMPLETED"));
         mvc.perform(get("/community/profiles/{id}/shared-sessions/{sessionId}", wanderer.id(), wanderer.prague().getId())
                         .with(as(me)))
                 .andExpect(jsonPath("$.data.startedAt").value("2026-04-20T23:05:00"))
