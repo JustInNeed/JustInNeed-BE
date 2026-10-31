@@ -160,7 +160,7 @@ public class PublicGraphService {
                 profile.getInterests().stream().filter(t -> !sharing.isHidden(profile, t)).limit(10).toList(),
                 likes.countByProfileId(ownerId), likes.existsByActorIdAndProfileId(viewerId, ownerId),
                 follows.existsByActorIdAndTargetId(viewerId, ownerId), totals.exploringCount(),
-                pins.list(ownerId, -1L));
+                sharing.publicSessionCount(profile), pins.pinned(ownerId, -1L));
     }
 
     public Original original(Long viewerId, Long bookmarkId) {
@@ -203,6 +203,6 @@ public class PublicGraphService {
             List<BookmarkSnapshot.Edge> edges, List<TopTag> topHashtags) { }
     public record Profile(int code, Long userId, String nickname, String bio, NodeVisibility visibility,
             long totalNodeCount, List<TopTag> topHashtags, List<String> interests, long likeCount, boolean likedByMe,
-            boolean following, long exploringCount, List<SharedSessionView> pinnedSessions) { }
+            boolean following, long exploringCount, long sharedSessionCount, List<SharedSessionView> pinnedSessions) { }
     public record Original(int code, boolean sourceAvailable, Graph mindmap, List<Long> highlightedNodeIds) { }
 }

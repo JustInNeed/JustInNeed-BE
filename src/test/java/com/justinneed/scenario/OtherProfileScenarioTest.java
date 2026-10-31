@@ -81,6 +81,7 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.topHashtags[0].nodeCount").value(4))
                 .andExpect(jsonPath("$.data.topHashtags[1].nodeCount").value(3))
                 .andExpect(jsonPath("$.data.interests").value(contains("프라하", "비엔나", "야간열차", "카페투어")))
+                .andExpect(jsonPath("$.data.sharedSessionCount").value(4))
                 .andExpect(jsonPath("$.data.pinnedSessions[*].id").value(contains(
                         ids(wanderer.prague(), wanderer.cafe(), wanderer.nightjet()))))
                 .andExpect(jsonPath("$.data.likeCount").value(0))
@@ -151,24 +152,26 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("세션 탭(COM-1-6): 다른 사람에겐 공개 · 핀고정 세션이 핀 순서로 오고, URL_ONLY 면 제목 · 본문은 빠진다")
+    @DisplayName("세션 탭(COM-1-6): 공개 세션 전체가 고정 순서 먼저, 나머지는 뒤에 오고, URL_ONLY 면 제목 · 본문은 빠진다")
     void sharedSessionsTab() throws Exception {
         mvc.perform(get("/community/profiles/{id}/shared-sessions", wanderer.id()).with(as(me)))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data[*].id").value(contains(
-                        ids(wanderer.prague(), wanderer.cafe(), wanderer.nightjet()))))
-                .andExpect(jsonPath("$.data[0].tags").value(contains("프라하", "카를교", "체코")))
-                .andExpect(jsonPath("$.data[0].urls").value(contains(PRAGUE_CASTLE, "https://www.prague.eu/en")))
-                .andExpect(jsonPath("$.data[0].title").doesNotExist())
-                .andExpect(jsonPath("$.data[0].markdown").doesNotExist())
-                .andExpect(jsonPath("$.data[0].sources").doesNotExist());
+                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(
+                        ids(wanderer.prague(), wanderer.cafe(), wanderer.nightjet(), wanderer.vienna()))))
+                .andExpect(jsonPath("$.data.sessions[*].isPinned").value(contains(true, true, true, false)))
+                .andExpect(jsonPath("$.data.hasNext").value(false))
+                .andExpect(jsonPath("$.data.sessions[0].tags").value(contains("프라하", "카를교", "체코")))
+                .andExpect(jsonPath("$.data.sessions[0].urls").value(contains(PRAGUE_CASTLE, "https://www.prague.eu/en")))
+                .andExpect(jsonPath("$.data.sessions[0].title").doesNotExist())
+                .andExpect(jsonPath("$.data.sessions[0].markdown").doesNotExist())
+                .andExpect(jsonPath("$.data.sessions[0].sources").doesNotExist());
 
         // 주인은 자기 공유 세션을 태그 · 내용까지 전부 본다
         mvc.perform(get("/community/profiles/{id}/shared-sessions", wanderer.id()).with(as(wanderer.member())))
-                .andExpect(jsonPath("$.data[*].id").value(contains(
-                        ids(wanderer.prague(), wanderer.cafe(), wanderer.nightjet()))))
-                .andExpect(jsonPath("$.data[0].title").value("프라하 1박 일정 짜기"))
-                .andExpect(jsonPath("$.data[1].tags").value(contains("비엔나", "카페")));
+                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(
+                        ids(wanderer.prague(), wanderer.cafe(), wanderer.nightjet(), wanderer.vienna()))))
+                .andExpect(jsonPath("$.data.sessions[0].title").value("프라하 1박 일정 짜기"))
+                .andExpect(jsonPath("$.data.sessions[1].tags").value(contains("비엔나", "카페")));
     }
 
     @Test
@@ -200,15 +203,22 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("핀고정 안 한 공개 세션 · 비공개 세션은 공유 세션 상세로 열 수 없다 (404)")
-    void hiddenSharedSessionsAre404() throws Exception {
-        for (BrowsingSession blocked : List.of(wanderer.vienna(), wanderer.slow())) {
-            mvc.perform(get("/community/sessions/{id}", blocked.getId()).with(as(me)))
-                    .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, SESSION_NOT_FOUND));
-            mvc.perform(get("/community/profiles/{userId}/shared-sessions/{sessionId}", wanderer.id(), blocked.getId())
-                            .with(as(me)))
-                    .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, SESSION_NOT_FOUND));
-        }
+    @DisplayName("공유 세션 상세: 고정 안 한 공개 세션도 열리고, 비공개 세션은 404")
+    void sharedSessionDetailFollowsPublic() throws Exception {
+        Long vienna = wanderer.vienna().getId();
+        mvc.perform(get("/community/sessions/{id}", vienna).with(as(me)))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.sessionId").value(vienna));
+        mvc.perform(get("/community/profiles/{userId}/shared-sessions/{sessionId}", wanderer.id(), vienna).with(as(me)))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.isPinned").value(false));
+
+        BrowsingSession blocked = wanderer.slow();
+        mvc.perform(get("/community/sessions/{id}", blocked.getId()).with(as(me)))
+                .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, SESSION_NOT_FOUND));
+        mvc.perform(get("/community/profiles/{userId}/shared-sessions/{sessionId}", wanderer.id(), blocked.getId())
+                        .with(as(me)))
+                .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, SESSION_NOT_FOUND));
     }
 
     @Test
@@ -371,19 +381,19 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
         showContent();
 
         mvc.perform(get("/community/profiles/{id}/shared-sessions", wanderer.id()).with(as(me)))
-                .andExpect(jsonPath("$.data[0].title").value("프라하 1박 일정 짜기"))
-                .andExpect(jsonPath("$.data[0].startedAt").value("2026-04-20T23:05:00"))
-                .andExpect(jsonPath("$.data[0].endedAt").value("2026-04-20T23:32:00"))
-                .andExpect(jsonPath("$.data[0].pageCount").value(6));
+                .andExpect(jsonPath("$.data.sessions[0].title").value("프라하 1박 일정 짜기"))
+                .andExpect(jsonPath("$.data.sessions[0].startedAt").value("2026-04-20T23:05:00"))
+                .andExpect(jsonPath("$.data.sessions[0].endedAt").value("2026-04-20T23:32:00"))
+                .andExpect(jsonPath("$.data.sessions[0].pageCount").value(6));
     }
 
     @Test
     @DisplayName("비공개 해시태그가 섞인 공유 세션은 그 태그만 빠진 채 세션 탭에 남는다")
     void mixedTagSessionStaysWithoutHiddenTag() throws Exception {
         mvc.perform(get("/community/profiles/{id}/shared-sessions", wanderer.id()).with(as(me)))
-                .andExpect(jsonPath("$.data[*].id").value(contains(
-                        ids(wanderer.prague(), wanderer.cafe(), wanderer.nightjet()))))
-                .andExpect(jsonPath("$.data[1].tags").value(contains("비엔나")));
+                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(
+                        ids(wanderer.prague(), wanderer.cafe(), wanderer.nightjet(), wanderer.vienna()))))
+                .andExpect(jsonPath("$.data.sessions[1].tags").value(contains("비엔나")));
     }
 
     @Test

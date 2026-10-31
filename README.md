@@ -181,7 +181,7 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 이슈 #35~#40의 프로필 편집, 비공개 저장 목록, 공개 마인드맵 조회, 인터랙션, 검색, 추천 기능을 구현했습니다.
 API, 데이터 모델, 공개 범위 처리, 테스트 및 PR 병합 순서는 [커뮤니티 개발 문서](docs/community/README.md)를 참고하세요.
 
-커뮤니티 GET 은 읽기만 합니다 (쓰기 · 행 잠금 없음). 공개 세션 1개 = 카드 1장이고, `community_cards` · `community_nodes` · `community_hashtags` 는 세션이 바뀌는 쓰기 트랜잭션에서 `CommunityCardSync` 가 맞춥니다 (세션 수정 · 삭제, 공유 핀 · 해제, AI 결과 저장, 재분석). 앱 시작 때 `CommunityCardBackfill` 이 기존 공개 세션의 빠진 행을 채웁니다. 공개 범위 · 비공개 해시태그는 저장하지 않고 읽을 때 적용합니다: 공개 그래프는 `CONTENT` 면 AI 마인드맵(hierarchy), `URL_ONLY` 면 태그 → URL 이고, 비공개 해시태그가 섞인 공개 세션은 그 태그만 빠진 채 보입니다.
+커뮤니티 GET 은 읽기만 합니다 (쓰기 · 행 잠금 없음). 공개 세션 1개 = 카드 1장이고, `community_cards` · `community_nodes` · `community_hashtags` 는 세션이 바뀌는 쓰기 트랜잭션에서 `CommunityCardSync` 가 맞춥니다 (세션 수정 · 삭제, AI 결과 저장, 재분석). 앱 시작 때 `CommunityCardBackfill` 이 기존 공개 세션의 빠진 행을 채웁니다. 공개 범위 · 비공개 해시태그는 저장하지 않고 읽을 때 적용합니다: 공개 그래프는 `CONTENT` 면 AI 마인드맵(hierarchy), `URL_ONLY` 면 태그 → URL 이고, 비공개 해시태그가 섞인 공개 세션은 그 태그만 빠진 채 보입니다.
 
 ### 팔로우 / 비슷한 사람
 
@@ -245,11 +245,11 @@ API, 데이터 모델, 공개 범위 처리, 테스트 및 PR 병합 순서는 [
 
 | Method | Path | 설명 |
 | --- | --- | --- |
-| GET | `/community/profiles/{userId}` | 프로필 헤더 `{code, userId, nickname, bio, visibility, totalNodeCount, topHashtags, interests, likeCount, likedByMe, following, exploringCount, pinnedSessions}`. `totalNodeCount` · `exploringCount` 는 작성자 카드의 `nodeCount` · `exploringCount` 합. 닉네임 · 소개를 정하지 않았으면 null. 없거나 탈퇴한 회원은 404 |
+| GET | `/community/profiles/{userId}` | 프로필 헤더 `{code, userId, nickname, bio, visibility, totalNodeCount, topHashtags, interests, likeCount, likedByMe, following, exploringCount, sharedSessionCount, pinnedSessions}`. `totalNodeCount` · `exploringCount` 는 작성자 카드의 `nodeCount` · `exploringCount` 합. `sharedSessionCount` 는 공개 세션 수, `pinnedSessions` 는 그중 고정한 세션. 닉네임 · 소개를 정하지 않았으면 null. 없거나 탈퇴한 회원은 404 |
 | PATCH | `/community/me/profile` | 소개 수정 `{bio}` → `{bio}`. 앞뒤 공백을 지우고 120자까지, 빠지거나 넘으면 400. 탈퇴하면 지운다 |
-| GET | `/community/profiles/{userId}/mindmaps` | 프로필 마인드맵 탭 `{mindmaps: [카드], hasNext}`. 최근 활동 최신순, `page` 기본 0, `size` 기본 10(1~100, 밖이면 400). 없거나 탈퇴한 회원은 404 |
+| GET | `/community/profiles/{userId}/mindmaps` | 프로필 마인드맵 탭 `{mindmaps: [카드 + isPinned], hasNext}`. 고정 카드가 고정 순서로 먼저, 나머지는 최근 활동 최신순, `page` 기본 0, `size` 기본 10(1~100, 밖이면 400). 없거나 탈퇴한 회원은 404 |
 | GET | `/community/mindmaps/{id}/sessions` | 카드 상세의 관련 세션 `{sessions: [세션 목록 항목]}`. 그 세션 + 공개 태그(대소문자 무시)가 겹치는 같은 작성자의 공개 세션 최신순, 최대 3개. 본인이 불러도 방문자 규칙: `isFavorite` 는 false, `URL_ONLY` 면 `title` 은 `""`, 비공개 해시태그는 뺀다. 공개 카드가 아니면 404 |
-| GET | `/community/profiles/{userId}/shared-sessions` · `/{sessionId}` | 공유 세션 `{id, tags, urls, startedAt, endedAt, pageCount, status, title, markdown, sources}`. `URL_ONLY` 면 다른 사용자에게 `title` · `markdown` · `sources` 는 응답에서 빠진다 |
+| GET | `/community/profiles/{userId}/shared-sessions` · `/{sessionId}` | 공개 세션 `{id, tags, urls, startedAt, endedAt, pageCount, status, title, markdown, sources, isPinned}`. 목록은 `{sessions, hasNext}` 로 고정 세션이 고정 순서로 먼저, 나머지는 최근 활동 최신순이고 `page` 기본 0, `size` 기본 12(1~100, 밖이면 400). `URL_ONLY` 면 다른 사용자에게 `title` · `markdown` · `sources` 는 응답에서 빠진다 |
 | GET | `/community/profiles/{userId}/mindmap` | 작성자 전체 그래프 `{code, mindmapId, ownerId, nickname, title, hashtags, nodes, edges, topHashtags}`. `title` 은 `{닉네임}님의 전체 마인드맵`, 닉네임이 없으면 `전체 마인드맵`. `mindmapId` 는 작성자 id 다 (카드의 `mindmapId` 와 다르다) |
 
 ## 환경 변수

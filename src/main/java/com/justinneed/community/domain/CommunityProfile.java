@@ -53,5 +53,8 @@ public class CommunityProfile extends BaseEntity {
     public void changeBio(String bio) { this.bio = bio; }
     public void replaceHiddenHashtags(List<String> values) { hiddenHashtags = new ArrayList<>(values); }
     public void replacePinnedSessionIds(List<Long> values) { pinnedSessionIds = new ArrayList<>(values); }
+    public void removePinnedSession(Long sessionId) {
+        pinnedSessionIds = new ArrayList<>(pinnedSessionIds.stream().filter(id -> !id.equals(sessionId)).toList());
+    }
     public void replaceInterests(List<String> values) { interests = new ArrayList<>(values); }
 }

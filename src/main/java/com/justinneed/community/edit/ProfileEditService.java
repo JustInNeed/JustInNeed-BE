@@ -9,6 +9,7 @@ import com.justinneed.community.interestdelete.InterestDeleteService;
 import com.justinneed.community.pin.SharedSessionService;
 import com.justinneed.community.service.CommunityProfiles;
 import com.justinneed.community.unpin.UnpinService;
+import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.repository.BrowsingSessionRepository;
 import com.justinneed.auth.repository.MemberRepository;
 import java.util.List;
@@ -82,7 +83,8 @@ public class ProfileEditService {
     }
     public PinView unpin(Long userId, Long id) {
         unpin.unpin(userId, id);
-        return new PinView(200, id, false, false, null);
+        return new PinView(200, id, sessions.findById(id).filter(s -> !s.isDeleted())
+                .map(BrowsingSession::isPublicSession).orElse(false), false, null);
     }
     public OrderView reorder(Long userId, List<Long> ids) {
         pins.reorder(userId, ids);
