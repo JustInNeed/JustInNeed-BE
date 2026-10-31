@@ -302,8 +302,6 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @Disabled("FE 기대와 다름: 필수 쿼리 파라미터(hashtag, targetId 등)를 빠뜨리면 MissingServletRequestParameterException 이 "
-            + "500 '서버 오류가 발생했습니다.' 로 나감 — 400 으로 바꾼 뒤 켠다")
     @DisplayName("검색어 · 대상 id 같은 필수 파라미터를 빠뜨리면 400")
     void missingRequiredParameterIs400() throws Exception {
         mvc.perform(get("/community/search/profiles").with(as(me)))
