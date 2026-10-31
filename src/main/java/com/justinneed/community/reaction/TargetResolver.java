@@ -2,7 +2,9 @@ package com.justinneed.community.reaction;
 
 import com.justinneed.community.api.CommunityErrors;
 import com.justinneed.community.bookmark.*;
+import com.justinneed.community.card.CommunityCard;
 import com.justinneed.community.catalog.CommunityHashtagRepository;
+import com.justinneed.community.catalog.CommunityTags;
 import com.justinneed.community.graph.*;
 import java.util.*;
 import java.util.function.Function;
@@ -13,8 +15,10 @@ public class TargetResolver {
     private final CommunityNodeRepository nodes;
     private final CommunityHashtagRepository tags;
     private final PublicGraphService graphs;
-    public TargetResolver(CommunityNodeRepository nodes, CommunityHashtagRepository tags, PublicGraphService graphs) {
-        this.nodes = nodes; this.tags = tags; this.graphs = graphs;
+    private final CommunityTags communityTags;
+    public TargetResolver(CommunityNodeRepository nodes, CommunityHashtagRepository tags, PublicGraphService graphs,
+            CommunityTags communityTags) {
+        this.nodes = nodes; this.tags = tags; this.graphs = graphs; this.communityTags = communityTags;
     }
     public Long owner(TargetType type, Long id) {
         return type == TargetType.NODE
@@ -48,6 +52,29 @@ public class TargetResolver {
         return new Resolved(graph.ownerId(),
                 graph.hashtags().stream().filter(t -> tagKeys.contains("tag:" + t.hashtagId())).toList(),
                 graph.nodes().stream().filter(n -> nodeKeys.contains("node:" + n.nodeId())).toList(), edges);
+    }
+    /** 카드의 공개 해시태그 행. 카드 응답의 태그가 이미 비공개 태그를 뺀 것이다. 행이 없는 태그는 그래프처럼 건너뛴다. */
+    public List<BookmarkSnapshot.Tag> cardTags(CommunityCard card) {
+        Long ownerId = card.owner().userId();
+        var index = communityTags.index(ownerId);
+        return card.hashtags().stream().map(CommunityTags::key).distinct().map(index::get).filter(Objects::nonNull)
+                .map(tag -> new BookmarkSnapshot.Tag(tag.getId(), ownerId, tag.getName())).toList();
+    }
+    /** 카드 한 장의 그래프: 공개 범위를 따르는 작성자 그래프에서 그 세션의 노드 · 연결선만 고른다. AI 결과가 없는 세션은 URL 노드를 쓴다. */
+    public Resolved card(CommunityCard card) {
+        Long ownerId = card.owner().userId();
+        var ids = new HashSet<Long>();
+        nodes.findBySessionId(card.mindmapId()).forEach(node -> ids.add(node.getId()));
+        var graph = graphs.graph(ownerId, null);
+        if (graph.nodes().stream().noneMatch(n -> ids.contains(n.nodeId()))) graph = graphs.urlGraph(ownerId);
+        var cardNodes = graph.nodes().stream().filter(n -> ids.contains(n.nodeId())).toList();
+        var cardTags = cardTags(card);
+        var keys = new HashSet<String>();
+        cardNodes.forEach(n -> keys.add("node:" + n.nodeId()));
+        var from = new HashSet<>(keys);
+        cardTags.forEach(t -> from.add("tag:" + t.hashtagId()));
+        return new Resolved(ownerId, cardTags, cardNodes,
+                graph.edges().stream().filter(e -> keys.contains(e.to()) && from.contains(e.from())).toList());
     }
     private static boolean hasNode(PublicGraphService.Graph graph, Long id) {
         return graph.nodes().stream().anyMatch(n -> n.nodeId().equals(id));
