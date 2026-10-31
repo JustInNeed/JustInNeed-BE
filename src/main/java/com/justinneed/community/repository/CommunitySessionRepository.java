@@ -1,6 +1,7 @@
 package com.justinneed.community.repository;
 
 import com.justinneed.community.domain.CommunityProfile;
+import com.justinneed.community.dto.PinCandidateRow;
 import com.justinneed.community.dto.SessionTagsRow;
 import com.justinneed.session.management.domain.BrowsingSession;
 import jakarta.persistence.LockModeType;
@@ -34,6 +35,14 @@ public interface CommunitySessionRepository extends Repository<BrowsingSession, 
             where m.id = s.userId and m.withdrawnAt is null and s.id in :ids and
             """ + PUBLIC_SESSION)
     List<Long> findPublicIds(@Param("ids") Collection<Long> ids);
+
+    // 내 세션 중 지우지 않은 것. 엔티티로 읽으면 세션마다 요약 조회가 한 번씩 더 나가므로 판단에 쓰는 값만 읽는다
+    @Query("""
+            select new com.justinneed.community.dto.PinCandidateRow(s.id, s.status, s.publicSession)
+            from BrowsingSession s
+            where s.userId = :userId and s.deletedAt is null and s.id in :ids
+            """)
+    List<PinCandidateRow> findPinCandidates(@Param("userId") Long userId, @Param("ids") Collection<Long> ids);
 
     // 아래 셋은 CommunityCardBackfill 용
     @Query("""
