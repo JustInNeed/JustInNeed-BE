@@ -2,6 +2,7 @@ package com.justinneed.session.management.controller;
 
 import com.justinneed.global.common.ApiResponse;
 import com.justinneed.session.management.dto.SessionDetailResponse;
+import com.justinneed.session.management.dto.SessionMindmapResponse;
 import com.justinneed.session.management.dto.SessionPageResponse;
 import com.justinneed.session.management.dto.SessionUpdateRequest;
 import com.justinneed.session.management.service.SessionService;
@@ -52,6 +53,14 @@ public class SessionController {
             @PathVariable Long id
     ) {
         return ApiResponse.ok(sessionService.getSession(userId, id));
+    }
+
+    @GetMapping("/{id}/mindmap")
+    public ApiResponse<SessionMindmapResponse> getMindmap(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long id
+    ) {
+        return ApiResponse.ok(sessionService.getMindmap(userId, id));
     }
 
     @PatchMapping("/{id}")

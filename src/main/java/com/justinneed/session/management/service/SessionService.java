@@ -7,9 +7,13 @@ import com.justinneed.community.service.CommunitySharing;
 import com.justinneed.global.common.HashtagValidator;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
+import com.justinneed.session.analysis.SessionMindmapBuilder;
+import com.justinneed.session.analysis.repository.SessionResultRepository;
 import com.justinneed.session.management.domain.BrowsingSession;
+import com.justinneed.session.management.domain.SessionStatus;
 import com.justinneed.session.management.dto.SessionDetailResponse;
 import com.justinneed.session.management.dto.SessionListResponse;
+import com.justinneed.session.management.dto.SessionMindmapResponse;
 import com.justinneed.session.management.dto.SessionPageResponse;
 import com.justinneed.session.management.dto.SessionUpdateRequest;
 import com.justinneed.session.management.repository.BrowsingSessionRepository;
@@ -30,12 +34,14 @@ public class SessionService {
     private static final int MAX_PAGE_SIZE = 50;
 
     private final BrowsingSessionRepository sessionRepository;
+    private final SessionResultRepository resultRepository;
     private final CommunitySharing sharing;
     private final CommunityProfiles profiles;
 
-    public SessionService(BrowsingSessionRepository sessionRepository, CommunitySharing sharing,
-            CommunityProfiles profiles) {
+    public SessionService(BrowsingSessionRepository sessionRepository, SessionResultRepository resultRepository,
+            CommunitySharing sharing, CommunityProfiles profiles) {
         this.sessionRepository = sessionRepository;
+        this.resultRepository = resultRepository;
         this.sharing = sharing;
         this.profiles = profiles;
     }
@@ -74,6 +80,20 @@ public class SessionService {
         CommunityProfile owner = publicOwner(session);
         List<String> tags = session.getTags().stream().filter(tag -> !sharing.isHidden(owner, tag)).toList();
         return SessionDetailResponse.forViewer(session, tags, owner.getVisibility() == NodeVisibility.CONTENT);
+    }
+
+    // 접근 규칙은 세션 상세와 같다. 키워드 · 인용은 내용이라 URL 만 공개한 작성자의 마인드맵은 다른 사용자에게 비워서 준다
+    public SessionMindmapResponse getMindmap(Long userId, Long sessionId) {
+        BrowsingSession session = findSession(sessionId);
+        if (!session.getUserId().equals(userId) && publicOwner(session).getVisibility() != NodeVisibility.CONTENT) {
+            return SessionMindmapResponse.EMPTY;
+        }
+        if (session.getStatus() != SessionStatus.COMPLETED) {
+            return SessionMindmapResponse.EMPTY;
+        }
+        return resultRepository.findMindmapSource(sessionId)
+                .map(source -> SessionMindmapBuilder.build(source.mindmap(), source.selectedUnits(), session.getSources()))
+                .orElse(SessionMindmapResponse.EMPTY);
     }
 
     @Transactional
