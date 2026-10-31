@@ -149,7 +149,22 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 | GET | `/settings/extension` | 확장 프로그램 설정 조회. 저장한 적이 없으면 기본값(모두 켜짐) |
 | PATCH | `/settings/extension/{popup-visible\|auto-end-notification\|manual-scrap}` | 토글 저장 `{enabled}`. 자동 종료 알림은 5초 알림만 끄고 자동 종료는 항상 동작 |
 
-인증이 필요한 API(`/sessions/**`, `/tag-groups/**`, `/home`, `/members/**`, `/settings/**`)는 `Authorization: Bearer {accessToken}` 헤더가 필수입니다. 토큰이 없거나 · 잘못됐거나 · 만료 · 무효화됐거나 · refresh 토큰이거나 · 탈퇴한 회원의 토큰이면 401 과 함께 `{"success":false,"data":null,"message":"로그인이 만료되었습니다. 다시 로그인해 주세요."}` 를 반환합니다 (`/auth/refresh` 실패는 "유효하지 않은 리프레시 토큰입니다."). 사용자 식별은 access 토큰의 memberId 로 합니다.
+### 분석 / 추천
+
+대상은 내 완료 · 미삭제 세션, 기간은 오늘 포함 최근 7일(세션 시작 시각 KST)입니다. 보여줄 데이터가 없으면 `data` 는 `null` 입니다.
+
+| Method | Path | 설명 |
+| --- | --- | --- |
+| GET | `/analytics/week-sessions` | 이번 주 인사이트 후보. 세션 목록과 같은 항목 `{sessions}`, 최신순. 없으면 빈 목록 |
+| GET | `/analytics/exploration` | 탐색 성향 `{avgUrlsPerSession, avgDwellSec, avgSessionMinutes, type, note}`. 세션별로 판정해 가장 많이 나온 성향 |
+| GET | `/analytics/reading-behavior` | 읽기 행동 분포 `{shares, note}`. 유닛 수 기준, Idle 포함, 합 100 |
+| GET | `/analytics/categories` | 카테고리별 방문 비율 `{categories: [{name, pct, count}], note}`. 재방문 포함, 많은 순 |
+| GET | `/analytics/time-patterns` | 시간대별 패턴 `{surfing, focus, note}`. 요일 7(월~일) × 3시간 구간 8, 값 0~1 |
+| GET | `/analytics/recommendations` | 추천 행동 `{recommendations: [{title, body}]}`. 조건에 맞는 것이 없으면 빈 목록 |
+
+판정 기준값은 `AnalyticsRules` 한 곳에 있습니다. `note` 의 `**강조**` 는 FE 가 강조 글씨로 보여줍니다.
+
+인증이 필요한 API(`/sessions/**`, `/tag-groups/**`, `/home`, `/analytics/**`, `/members/**`, `/settings/**`)는 `Authorization: Bearer {accessToken}` 헤더가 필수입니다. 토큰이 없거나 · 잘못됐거나 · 만료 · 무효화됐거나 · refresh 토큰이거나 · 탈퇴한 회원의 토큰이면 401 과 함께 `{"success":false,"data":null,"message":"로그인이 만료되었습니다. 다시 로그인해 주세요."}` 를 반환합니다 (`/auth/refresh` 실패는 "유효하지 않은 리프레시 토큰입니다."). 사용자 식별은 access 토큰의 memberId 로 합니다.
 
 모든 응답은 `{ success, data, message }` 형식입니다. 에러도 같은 형식으로 내려가며 `success=false`, `message`에 사유가 담깁니다.
 

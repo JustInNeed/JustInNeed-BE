@@ -44,7 +44,7 @@ import org.springframework.transaction.annotation.Transactional;
  * AI 분석 결과(/analyze 응답)를 저장한다.
  *
  * <pre>
- * state.unitFeatures · mindmap · selected · analysis · pages → session_results
+ * state.unitFeatures · mindmap · selected · analysis · pages · pageVisits → session_results
  * state.userModel (재학습했을 때만)                         → ai_cluster_models (USER)
  * essay    → summaries.essay · summaries.markdown, sessions.title
  * mindmap  → sessions.tags (최대 5개)
@@ -156,6 +156,7 @@ public class AnalysisResultService {
                 listOf(mapOrEmpty(result.state()).get("unitFeatures")),
                 result.modelSource(),
                 result.scoreMethod());
+        sessionResult.replacePageVisits(result.pageVisits());
         resultRepository.save(sessionResult);
     }
 

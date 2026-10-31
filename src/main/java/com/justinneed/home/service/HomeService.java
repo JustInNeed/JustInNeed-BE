@@ -1,6 +1,7 @@
 package com.justinneed.home.service;
 
 import com.justinneed.JustInNeedApplication;
+import com.justinneed.analytics.ReadingDistribution;
 import com.justinneed.home.HomeGraphBuilder;
 import com.justinneed.home.dto.HomeResponse;
 import com.justinneed.home.dto.HomeResponse.DayActivity;
@@ -65,8 +66,6 @@ public class HomeService {
     private static final double SECONDS_PER_MINUTE = 60.0;
     private static final double MILLIS_PER_SECOND = 1000.0;
     private static final List<String> WEEKDAYS = List.of("월", "화", "수", "목", "금", "토", "일");
-    private static final String DEEP_READING = "Deep Reading";
-    private static final List<String> READING_LABELS = List.of("Idle", "Scanning", "Reading", DEEP_READING);
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("M.d");
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
     // 쿼리에는 URI 가 거부하는 문자(| { } 등)가 그대로 남을 수 있어 host 판단에 필요한 앞부분만 쓴다
@@ -122,10 +121,10 @@ public class HomeService {
                 .mapToLong(HomeService::lengthSeconds)
                 .average()
                 .orElse(0);
-        ReadingUnits thisWeekUnits = ReadingUnits.of(thisWeek);
-        ReadingUnits lastWeekUnits = ReadingUnits.of(lastWeek);
+        ReadingDistribution thisWeekUnits = readingUnits(thisWeek);
+        ReadingDistribution lastWeekUnits = readingUnits(lastWeek);
         int deepReadingDelta = thisWeekUnits.hasData() && lastWeekUnits.hasData()
-                ? thisWeekUnits.deepPct() - lastWeekUnits.deepPct()
+                ? thisWeekUnits.deepReadingPct() - lastWeekUnits.deepReadingPct()
                 : 0;
 
         return new Stats(
@@ -135,7 +134,7 @@ public class HomeService {
                 thisWeek.size(),
                 thisWeek.size() - lastWeek.size(),
                 (int) Math.round(averageSeconds / SECONDS_PER_MINUTE),
-                thisWeekUnits.deepPct(),
+                thisWeekUnits.deepReadingPct(),
                 deepReadingDelta
         );
     }
@@ -232,7 +231,11 @@ public class HomeService {
         return SiteCategory.extractHost(origin.group());
     }
 
-    // AI JSON 의 체류시간 · 유닛 수. Integer · Long · Double 어느 쪽으로든 올 수 있고, 숫자가 아니거나 음수면 0
+    private static ReadingDistribution readingUnits(List<HomeSessionRow> sessions) {
+        return ReadingDistribution.ofSummaries(sessions.stream().map(HomeSessionRow::analysisSummary).toList());
+    }
+
+    // AI JSON 의 체류시간. Integer · Long · Double 어느 쪽으로든 올 수 있고, 숫자가 아니거나 음수면 0
     private static long nonNegative(Object value) {
         return value instanceof Number number ? Math.max(0, number.longValue()) : 0;
     }
@@ -298,38 +301,6 @@ public class HomeService {
     }
 
     private record PageVisit(String domain, long dwellMs) {
-    }
-
-    // analysis_summary 의 읽기 상태별 유닛 수 합. 전체가 0 이면 데이터가 없는 것으로 본다
-    private record ReadingUnits(long deepUnits, long totalUnits) {
-
-        private static ReadingUnits of(List<HomeSessionRow> sessions) {
-            long deepUnits = 0;
-            long totalUnits = 0;
-            for (HomeSessionRow session : sessions) {
-                deepUnits += units(session, DEEP_READING);
-                for (String label : READING_LABELS) {
-                    totalUnits += units(session, label);
-                }
-            }
-            return new ReadingUnits(deepUnits, totalUnits);
-        }
-
-        private static long units(HomeSessionRow session, String label) {
-            if (session.analysisSummary() == null
-                    || !(session.analysisSummary().get(label) instanceof Map<?, ?> summary)) {
-                return 0;
-            }
-            return nonNegative(summary.get("units"));
-        }
-
-        private boolean hasData() {
-            return totalUnits > 0;
-        }
-
-        private int deepPct() {
-            return hasData() ? (int) Math.round(deepUnits * 100.0 / totalUnits) : 0;
-        }
     }
 
     private static final class TagTally {

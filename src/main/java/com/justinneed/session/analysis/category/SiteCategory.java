@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 /**
  * 방문 페이지 URL 의 사이트 카테고리. (ANA-1 카테고리별 방문 비율 / Deep Reading)
@@ -36,6 +37,8 @@ public enum SiteCategory {
     ETC("기타", SiteCategoryDomains.ETC_DOMAINS, List.of(), List.of());
 
     private static final String WWW_PREFIX = "www.";
+    private static final Pattern SCHEME = Pattern.compile("^[a-zA-Z][a-zA-Z0-9+.-]*://");
+    private static final Pattern AFTER_AUTHORITY = Pattern.compile("^([a-zA-Z][a-zA-Z0-9+.-]*://[^/?#]*).*$", Pattern.DOTALL);
     private static final Map<String, SiteCategory> DOMAIN_INDEX = buildDomainIndex();
 
     private final String displayName;
@@ -64,13 +67,14 @@ public enum SiteCategory {
             return Optional.empty();
         }
         String value = url.trim();
-        if (!value.contains("://")) {
+        if (!SCHEME.matcher(value).find()) {
             value = "http://" + value;
         }
 
         String host;
         try {
-            URI uri = new URI(value);
+            // 경로 · 쿼리에는 URI 가 거부하는 문자(| { } 등)가 그대로 남을 수 있어 host 판단에 필요한 앞부분만 쓴다
+            URI uri = new URI(AFTER_AUTHORITY.matcher(value).replaceFirst("$1"));
             host = uri.getHost() != null ? uri.getHost() : hostFromAuthority(uri.getRawAuthority());
         } catch (URISyntaxException e) {
             return Optional.empty();

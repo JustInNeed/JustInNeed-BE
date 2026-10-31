@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -242,6 +243,21 @@ class SiteCategoryTest {
     })
     void invalidUrlIsEtc(String url) {
         assertThat(SiteCategory.classify(url)).isEqualTo(SiteCategory.ETC);
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = ' ', value = {
+            "BLOG https://blog.naver.com/x?a=1|2",
+            "OFFICIAL_DOCS https://docs.spring.io/a?q={b}",
+            "COMMUNITY https://stackoverflow.com/q?x=%zz",
+    })
+    void queryThatUriRejectsDoesNotChangeCategory(SiteCategory expected, String url) {
+        assertThat(SiteCategory.classify(url)).isEqualTo(expected);
+    }
+
+    @Test
+    void urlInQueryIsNotTakenForScheme() {
+        assertThat(SiteCategory.classify("blog.naver.com/x?from=http://a.com")).isEqualTo(SiteCategory.BLOG);
     }
 
     @Test

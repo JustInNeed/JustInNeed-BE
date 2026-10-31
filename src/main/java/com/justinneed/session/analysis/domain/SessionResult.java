@@ -56,6 +56,11 @@ public class SessionResult extends BaseEntity {
     @Column(name = "pages", nullable = false)
     private List<Map<String, Object>> pages = new ArrayList<>();
 
+    // 방문 글 전체 (짧은 방문 포함, 링크 · 체류시간 · 방문 횟수). 분석 화면용. AI 가 이 항목을 주기 전에 분석한 세션은 null
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "page_visits")
+    private List<Map<String, Object>> pageVisits;
+
     // AI 상태: 이번 세션 유닛 피처 (다음 세션의 개인 정규화 · 개인 군집 재학습에 사용)
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "unit_features", nullable = false)
@@ -98,6 +103,10 @@ public class SessionResult extends BaseEntity {
         this.scoreMethod = scoreMethod;
     }
 
+    public void replacePageVisits(List<Map<String, Object>> pageVisits) {
+        this.pageVisits = pageVisits;
+    }
+
     public Long getSessionId() {
         return sessionId;
     }
@@ -124,6 +133,10 @@ public class SessionResult extends BaseEntity {
 
     public List<Map<String, Object>> getPages() {
         return pages;
+    }
+
+    public List<Map<String, Object>> getPageVisits() {
+        return pageVisits;
     }
 
     public List<Map<String, Object>> getUnitFeatures() {
