@@ -20,7 +20,6 @@ import com.justinneed.auth.domain.Member;
 import com.justinneed.session.management.domain.BrowsingSession;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -368,8 +367,6 @@ class ProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @Disabled("API 미구현: 프로필 수정 해시태그 목록(GET /community/me/hashtags)에 노드 수가 없음 — FE ProfileHashtag{tag, count, isPublic} "
-            + "(필드명 nodeCount 는 제안, 비공개 태그도 내 화면에선 개수가 보여야 함) — 구현되면 켠다")
     @DisplayName("프로필 수정의 해시태그 목록에 공개 여부와 함께 노드 수가 온다 (비공개 태그 포함)")
     void myHashtagsHaveCounts() throws Exception {
         Member me = member("sprout");
@@ -379,8 +376,9 @@ class ProfileScenarioTest extends ScenarioTestSupport {
                 .with(json(Map.of("isPublic", false)))).andExpect(okEnvelope());
 
         mvc.perform(get("/community/me/hashtags").with(as(me)))
-                .andExpect(jsonPath("$.data[?(@.hashtag == '로마')].nodeCount").value(contains(4)))
-                .andExpect(jsonPath("$.data[?(@.hashtag == '먹거리')].nodeCount").value(contains(4)))
+                // 노드 수는 AI 노드 기준이라 분석 결과가 없는 이 세션들은 0 이다 (값이 있는 경우는 MyProfileScenarioTest)
+                .andExpect(jsonPath("$.data[?(@.hashtag == '로마')].nodeCount").value(contains(0)))
+                .andExpect(jsonPath("$.data[?(@.hashtag == '먹거리')].nodeCount").value(contains(0)))
                 .andExpect(jsonPath("$.data[?(@.hashtag == '먹거리')].isPublic").value(contains(false)));
     }
 }

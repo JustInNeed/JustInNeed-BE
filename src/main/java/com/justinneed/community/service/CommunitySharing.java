@@ -75,7 +75,7 @@ public class CommunitySharing {
     }
 
     // community_cards.last_activity_at 과 같은 값
-    private static LocalDateTime lastActivityAt(BrowsingSession session) {
+    public static LocalDateTime lastActivityAt(BrowsingSession session) {
         return session.getEndedAt() != null ? session.getEndedAt() : session.getStartedAt();
     }
 

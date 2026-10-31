@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 public class CardSessionsService {
-    private static final int MAX_SESSIONS = 3;
+    public static final int MAX_SESSIONS = 3;
     private static final Sort NEWEST_CARD_FIRST =
             Sort.by(Sort.Order.desc("lastActivityAt"), Sort.Order.desc("sessionId"));
 

@@ -1,6 +1,7 @@
 package com.justinneed.community.edit;
 
 import com.justinneed.community.api.CommunityErrors;
+import com.justinneed.community.card.TagNodeCounts;
 import com.justinneed.community.catalog.CommunityTags;
 import com.justinneed.community.domain.NodeVisibility;
 import com.justinneed.community.hashtag.HashtagVisibilityService;
@@ -28,13 +29,15 @@ public class ProfileEditService {
     private final UnpinService unpin;
     private final BrowsingSessionRepository sessions;
     private final MemberRepository members;
+    private final TagNodeCounts nodeCounts;
 
     public ProfileEditService(CommunityTags tags, CommunityProfiles profiles, HashtagVisibilityService visibility,
             InterestService interests, InterestDeleteService interestDelete, SharedSessionService pins,
-            UnpinService unpin, BrowsingSessionRepository sessions, MemberRepository members) {
+            UnpinService unpin, BrowsingSessionRepository sessions, MemberRepository members, TagNodeCounts nodeCounts) {
         this.tags = tags; this.profiles = profiles; this.visibility = visibility;
         this.interests = interests; this.interestDelete = interestDelete; this.pins = pins;
         this.unpin = unpin; this.sessions = sessions; this.members = members;
+        this.nodeCounts = nodeCounts;
     }
 
     public BioView bio(Long userId, String bio) {
@@ -45,7 +48,9 @@ public class ProfileEditService {
     @Transactional(readOnly = true)
     public List<TagView> hashtags(Long userId) {
         var profile = profiles.read(userId);
+        var counts = nodeCounts.byTag(userId);
         return tags.owned(userId).stream().map(t -> new TagView(200, t.getId(), t.getName(),
+                counts.getOrDefault(t.getNormalizedName(), 0L),
                 profile.getHiddenHashtags().stream().noneMatch(h -> h.equalsIgnoreCase(t.getName())))).toList();
     }
 
@@ -53,7 +58,7 @@ public class ProfileEditService {
         var tag = tags.owned(userId).stream().filter(t -> t.getId().equals(id))
                 .findFirst().orElseThrow(CommunityErrors::missing);
         visibility.update(userId, tag.getName(), isPublic);
-        return new TagView(200, id, tag.getName(), isPublic);
+        return new TagView(200, id, tag.getName(), nodeCounts.byTag(userId).getOrDefault(tag.getNormalizedName(), 0L), isPublic);
     }
 
     public InterestView addInterest(Long userId, String hashtag) {
@@ -100,7 +105,7 @@ public class ProfileEditService {
     }
 
     public record BioView(String bio) { }
-    public record TagView(int code, Long hashtagId, String hashtag, boolean isPublic) { }
+    public record TagView(int code, Long hashtagId, String hashtag, long nodeCount, boolean isPublic) { }
     public record InterestView(int code, Long interestId, String hashtag, int interestCount) { }
     public record DeletedInterest(int code, Long interestId) { }
     public record PinView(int code, Long sessionId, boolean isPublic, boolean isPinned, Integer order) { }
