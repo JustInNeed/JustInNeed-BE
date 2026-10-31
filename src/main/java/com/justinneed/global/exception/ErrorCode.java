@@ -8,6 +8,7 @@ public enum ErrorCode {
     DUPLICATE_URL(HttpStatus.CONFLICT, "이미 등록된 URL입니다."),
     EXCLUDED_URL_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "URL은 최대 100개까지 등록할 수 있습니다."),
     SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "세션을 찾을 수 없습니다."),
+    SESSION_FORBIDDEN(HttpStatus.FORBIDDEN, "비공개 세션이라 볼 수 없어요."),
     RAW_PAYLOAD_NOT_FOUND(HttpStatus.NOT_FOUND, "세션 원본을 찾을 수 없습니다."),
     // AI 콜백에 대한 응답. 5xx 면 AI 가 재시도하므로 4xx 로 둔다
     ANALYSIS_LLM_FAILED(HttpStatus.UNPROCESSABLE_CONTENT, "AI 요약 생성에 실패했습니다."),

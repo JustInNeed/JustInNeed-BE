@@ -100,15 +100,9 @@ public interface BrowsingSessionRepository extends JpaRepository<BrowsingSession
             select session
             from BrowsingSession session
             where session.id = :id
-              and session.userId = :userId
               and session.deletedAt is null
             """)
-    Optional<BrowsingSession> findWithSummaryByIdAndUserIdAndDeletedAtIsNull(
-            @Param("id") Long id,
-            @Param("userId") Long userId
-    );
-
-    Optional<BrowsingSession> findByIdAndUserIdAndDeletedAtIsNull(Long id, Long userId);
+    Optional<BrowsingSession> findWithSummaryByIdAndDeletedAtIsNull(@Param("id") Long id);
 
     // 세션 행을 바꾸는 경로는 트랜잭션에서 이 잠금을 가장 먼저 잡는다. 그래야 기다린 뒤 최신 행을 읽어 쓰기가 줄을 선다.
     // fetch join 을 쓰면 Postgres 가 outer join 의 nullable 쪽 FOR UPDATE 를 거부하므로 세션만 잠근다.

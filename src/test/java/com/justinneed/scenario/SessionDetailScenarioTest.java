@@ -1,12 +1,10 @@
 package com.justinneed.scenario;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
@@ -15,7 +13,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.justinneed.auth.domain.Member;
 import com.justinneed.session.management.domain.BrowsingSession;
@@ -102,30 +99,13 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("다른 사람의 세션은 공개 여부와 상관없이 /sessions/{id} 로 열 수 없고(403 또는 404) 내용도 새지 않는다")
-    void foreignSessionIsBlocked() throws Exception {
-        Member me = member("sprout");
-        Wanderer wanderer = seedWanderer();
-
-        for (BrowsingSession foreign : List.of(wanderer.prague(), wanderer.slow())) {
-            mvc.perform(get("/sessions/{id}", foreign.getId()).with(as(me)))
-                    .andExpect(status().is(anyOf(is(403), is(404))))
-                    .andExpect(jsonPath("$.success").value(false))
-                    .andExpect(jsonPath("$.data").value(nullValue()));
-        }
-    }
-
-    @Test
-    @Disabled("FE 기대와 다름: FE SessionDetail 은 403 을 '볼 수 없는 세션이에요 · 비공개 세션이라 볼 수 없어요'로 따로 보여주지만 "
-            + "BE GET /sessions/{id} 는 남의 세션을 모두 404 로 응답 — 403 으로 나눌지 팀 결정 후 켠다")
-    @DisplayName("다른 사람의 비공개 세션을 열면 403 을 받아 FE 가 '비공개 세션이라 볼 수 없어요'를 보여준다")
+    @DisplayName("다른 사람의 비공개 세션을 열면 403 을 받아 FE 가 '비공개 세션이라 볼 수 없어요'를 보여주고 내용은 새지 않는다")
     void foreignPrivateSessionIs403() throws Exception {
         Member me = member("sprout");
         Wanderer wanderer = seedWanderer();
 
         mvc.perform(get("/sessions/{id}", wanderer.slow().getId()).with(as(me)))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.success").value(false));
+                .andExpect(errorEnvelope(HttpStatus.FORBIDDEN, "비공개 세션이라 볼 수 없어요."));
     }
 
     @Test

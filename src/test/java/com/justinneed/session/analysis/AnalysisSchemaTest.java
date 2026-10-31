@@ -195,7 +195,7 @@ class AnalysisSchemaTest {
         summary.replaceEssay(essay, "## 음수량\n\n하루 약 50ml.");
         flushAndClear();
 
-        BrowsingSession found = sessionRepository.findWithSummaryByIdAndUserIdAndDeletedAtIsNull(session.getId(), USER_ID)
+        BrowsingSession found = sessionRepository.findWithSummaryByIdAndDeletedAtIsNull(session.getId())
                 .orElseThrow();
         assertThat(found.getSummary().getEssay()).isEqualTo(essay);
         assertThat(found.getSummary().getMarkdown()).startsWith("## 음수량");

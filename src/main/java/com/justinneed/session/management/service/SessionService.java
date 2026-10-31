@@ -1,5 +1,9 @@
 package com.justinneed.session.management.service;
 
+import com.justinneed.community.domain.CommunityProfile;
+import com.justinneed.community.domain.NodeVisibility;
+import com.justinneed.community.service.CommunityProfiles;
+import com.justinneed.community.service.CommunitySharing;
 import com.justinneed.global.common.HashtagValidator;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
@@ -26,9 +30,14 @@ public class SessionService {
     private static final int MAX_PAGE_SIZE = 50;
 
     private final BrowsingSessionRepository sessionRepository;
+    private final CommunitySharing sharing;
+    private final CommunityProfiles profiles;
 
-    public SessionService(BrowsingSessionRepository sessionRepository) {
+    public SessionService(BrowsingSessionRepository sessionRepository, CommunitySharing sharing,
+            CommunityProfiles profiles) {
         this.sessionRepository = sessionRepository;
+        this.sharing = sharing;
+        this.profiles = profiles;
     }
 
     public SessionPageResponse getSessions(Long userId, int page, int size, boolean favoriteOnly) {
@@ -56,10 +65,15 @@ public class SessionService {
         return List.copyOf(hashtagByKey.values());
     }
 
+    // 없거나 삭제 404, 소유자는 전체, 다른 사용자는 공개 세션만 읽기 전용, 그 밖에는 403
     public SessionDetailResponse getSession(Long userId, Long sessionId) {
-        BrowsingSession session = sessionRepository.findWithSummaryByIdAndUserIdAndDeletedAtIsNull(sessionId, userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
-        return SessionDetailResponse.from(session);
+        BrowsingSession session = findSession(sessionId);
+        if (session.getUserId().equals(userId)) {
+            return SessionDetailResponse.from(session);
+        }
+        CommunityProfile owner = publicOwner(session);
+        List<String> tags = session.getTags().stream().filter(tag -> !sharing.isHidden(owner, tag)).toList();
+        return SessionDetailResponse.forViewer(session, tags, owner.getVisibility() == NodeVisibility.CONTENT);
     }
 
     @Transactional
@@ -78,6 +92,19 @@ public class SessionService {
         BrowsingSession session = sessionRepository.lockOwned(sessionId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         session.delete();
+    }
+
+    private BrowsingSession findSession(Long sessionId) {
+        return sessionRepository.findWithSummaryByIdAndDeletedAtIsNull(sessionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+    }
+
+    // 다른 사용자가 볼 수 있는 세션이면 작성자 프로필, 아니면 403
+    private CommunityProfile publicOwner(BrowsingSession session) {
+        if (!sharing.publicSessionIds(List.of(session.getId())).contains(session.getId())) {
+            throw new CustomException(ErrorCode.SESSION_FORBIDDEN);
+        }
+        return profiles.read(session.getUserId());
     }
 
     private Pageable pageRequest(int page, int size) {
