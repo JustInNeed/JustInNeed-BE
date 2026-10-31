@@ -190,6 +190,17 @@ API, 데이터 모델, 공개 범위 처리, 테스트 및 PR 병합 순서는 [
 | PATCH | `/community/profiles/{userId}/follow` | 팔로우 설정 `{following}` → `{following}`. 같은 값을 다시 보내거나 동시에 보내도 200. 자기 자신은 400, 없거나 탈퇴한 회원은 404. 탈퇴해도 팔로우 행은 남고 읽을 때 뺀다 |
 | GET | `/community/recommendations/profiles/similar` | 관심사가 비슷한 사람 `{people: [{userId, nickname, matchedHashtags, following}]}`. `limit` 기본 3, 1~20(밖이면 400). 태그 = 공개 · 완료 · 미삭제 세션의 태그 + 관심 해시태그에서 각자의 비공개 해시태그를 뺀 것(대소문자 무시). 겹치는 태그 수가 많은 순 → 최근 공개 활동(세션 종료 시각, 없으면 시작 시각) 순, 활동이 없으면 뒤 → id 순. 나 · 탈퇴 회원 · 겹치는 태그가 없는 사람은 빠진다. 닉네임을 정하지 않은 사람은 `nickname: null` 로 온다. 조회는 쓰기 · 잠금을 하지 않는다 |
 
+### 프로필 · 카드 세션
+
+| Method | Path | 설명 |
+| --- | --- | --- |
+| GET | `/community/profiles/{userId}` | 프로필 헤더 `{code, userId, nickname, bio, visibility, totalNodeCount, topHashtags, interests, likeCount, likedByMe, following, exploringCount, pinnedSessions}`. `totalNodeCount` · `exploringCount` 는 작성자 카드의 `nodeCount` · `exploringCount` 합. 닉네임 · 소개를 정하지 않았으면 null. 없거나 탈퇴한 회원은 404 |
+| PATCH | `/community/me/profile` | 소개 수정 `{bio}` → `{bio}`. 앞뒤 공백을 지우고 120자까지, 빠지거나 넘으면 400. 탈퇴하면 지운다 |
+| GET | `/community/profiles/{userId}/mindmaps` | 프로필 마인드맵 탭 `{mindmaps: [카드], hasNext}`. 최근 활동 최신순, `page` 기본 0, `size` 기본 10(1~100, 밖이면 400). 없거나 탈퇴한 회원은 404 |
+| GET | `/community/mindmaps/{id}/sessions` | 카드 상세의 관련 세션 `{sessions: [세션 목록 항목]}`. 그 세션 + 공개 태그(대소문자 무시)가 겹치는 같은 작성자의 공개 세션 최신순, 최대 3개. 본인이 불러도 방문자 규칙: `isFavorite` 는 false, `URL_ONLY` 면 `title` 은 `""`, 비공개 해시태그는 뺀다. 공개 카드가 아니면 404 |
+| GET | `/community/profiles/{userId}/shared-sessions` · `/{sessionId}` | 공유 세션 `{id, tags, urls, startedAt, endedAt, pageCount, status, title, markdown, sources}`. `URL_ONLY` 면 다른 사용자에게 `title` · `markdown` · `sources` 는 응답에서 빠진다 |
+| GET | `/community/profiles/{userId}/mindmap` | 작성자 전체 그래프 `{code, mindmapId, ownerId, nickname, title, hashtags, nodes, edges, topHashtags}`. `title` 은 `{닉네임}님의 전체 마인드맵`, 닉네임이 없으면 `전체 마인드맵`. `mindmapId` 는 작성자 id 다 (카드의 `mindmapId` 와 다르다) |
+
 ## 환경 변수
 
 | 변수 | 설명 |
