@@ -38,8 +38,8 @@ class RecommendationTest extends CommunityTestSupport {
         var result = recommendations.interests(viewerId, 3);
         assertThat(result.basisHashtags()).containsExactly("java");
         assertThat(result.mindmaps()).hasSize(1);
-        assertThat(result.mindmaps().get(0).ownerId()).isEqualTo(ownerId);
-        assertThat(result.mindmaps().get(0).relatedUrls()).containsExactly("https://example.com");
+        assertThat(result.mindmaps().get(0).owner().userId()).isEqualTo(ownerId);
+        assertThat(result.mindmaps().get(0).relatedUrls()).extracting(url -> url.url()).containsExactly("https://example.com");
         assertThat(recommendations.recent(viewerId, 3).mindmaps()).isEmpty();
         var tag = graphs.graph(ownerId, null).hashtags().get(0).hashtagId();
         bookmarks.save(viewerId, TargetType.HASHTAG, List.of(tag), SaveType.HASHTAG_BUNDLE, null);
@@ -68,7 +68,7 @@ class RecommendationTest extends CommunityTestSupport {
         viewerProfile.replaceInterests(List.of("Secret"));
         assertThat(recommendations.interests(viewerId, 3).mindmaps()).isEmpty();
         viewerProfile.replaceInterests(List.of("Other"));
-        assertThat(recommendations.interests(viewerId, 3).mindmaps().get(0).matchedHashtags()).containsExactly("Other");
+        assertThat(recommendations.interests(viewerId, 3).mindmaps().get(0).hashtags()).containsExactly("Other");
     }
 
     @Test
