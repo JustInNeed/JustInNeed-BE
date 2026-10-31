@@ -24,7 +24,9 @@ public class BookmarkCommandController {
         service.delete(actor, bookmarkId);
         return ApiResponse.ok(null);
     }
-    public record SaveRequest(@NotNull TargetType targetType,
-            @NotEmpty @Size(max = 100) List<@NotNull @Positive Long> targetIds,
-            @NotNull SaveType saveType, @Positive Long sourceMindmapId) { }
+    public record SaveRequest(@NotNull(message = "대상 종류를 입력해 주세요.") TargetType targetType,
+            @NotEmpty(message = "저장할 대상을 선택해 주세요.") @Size(max = 100, message = "저장할 대상은 최대 100개까지 선택할 수 있습니다.")
+            List<@NotNull(message = "대상이 올바르지 않습니다.") @Positive(message = "대상이 올바르지 않습니다.") Long> targetIds,
+            @NotNull(message = "저장 방식을 입력해 주세요.") SaveType saveType,
+            @Positive(message = "원본 마인드맵이 올바르지 않습니다.") Long sourceMindmapId) { }
 }

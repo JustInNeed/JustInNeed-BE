@@ -397,8 +397,6 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @Disabled("FE 기대와 다름: FE 는 오류 message 를 그대로 토스트로 보여주는데 커뮤니티 API 일부는 영어 문구"
-            + "(Cannot like your own profile, Community resource not found, Select 1 to 100 distinct targets 등) — 한국어로 바꾼 뒤 켠다")
     @DisplayName("커뮤니티 API 오류 문구도 한국어로 온다")
     void communityErrorsAreKorean() throws Exception {
         String korean = ".*[가-힣].*";

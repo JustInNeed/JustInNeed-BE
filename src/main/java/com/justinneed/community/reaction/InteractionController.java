@@ -27,7 +27,8 @@ public class InteractionController {
             @RequestParam TargetType targetType, @RequestParam @Positive Long targetId) {
         return ApiResponse.ok(service.status(actor, targetType, targetId));
     }
-    public record LikeRequest(@NotNull Boolean liked) { }
-    public record ExploringRequest(@NotNull TargetType targetType, @NotNull @Positive Long targetId,
-            @NotNull Boolean exploring) { }
+    public record LikeRequest(@NotNull(message = "좋아요 상태를 입력해 주세요.") Boolean liked) { }
+    public record ExploringRequest(@NotNull(message = "대상 종류를 입력해 주세요.") TargetType targetType,
+            @NotNull(message = "대상을 입력해 주세요.") @Positive(message = "대상이 올바르지 않습니다.") Long targetId,
+            @NotNull(message = "나도 탐색중 상태를 입력해 주세요.") Boolean exploring) { }
 }

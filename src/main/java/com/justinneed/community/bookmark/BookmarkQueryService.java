@@ -6,6 +6,8 @@ import com.justinneed.community.graph.CommunityNode;
 import com.justinneed.community.graph.CommunityNodeRepository;
 import com.justinneed.community.service.CommunityProfiles;
 import com.justinneed.community.service.CommunitySharing;
+import com.justinneed.global.exception.CustomException;
+import com.justinneed.global.exception.ErrorCode;
 import java.time.Instant;
 import java.util.*;
 import java.util.function.BiFunction;
@@ -161,7 +163,7 @@ public class BookmarkQueryService {
         return bookmarks.findByIdAndUserId(bookmarkId, userId).orElseThrow(CommunityErrors::missing);
     }
     public static PageRequest paging(int page, int size) {
-        if (page < 0 || size < 1 || size > 100) throw CommunityErrors.invalid("page >= 0 and size between 1 and 100 required");
+        if (page < 0 || size < 1 || size > 100) throw new CustomException(ErrorCode.INVALID_PAGE_REQUEST);
         return PageRequest.of(page, size, NEWEST_FIRST);
     }
     private record Visible(Set<Long> hashtagIds, Set<Long> nodeIds) { }
