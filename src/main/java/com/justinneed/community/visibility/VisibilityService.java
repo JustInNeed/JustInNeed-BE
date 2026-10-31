@@ -45,9 +45,9 @@ public class VisibilityService {
         CommunityProfile profile = profiles.read(userId);
         Map<String, List<SharedSessionView>> sessionsByTag = new LinkedHashMap<>();
         Map<String, String> labels = new LinkedHashMap<>();
-        for (var session : sharing.visibleSessions(profile, viewerId)) {
+        for (var session : sharing.visibleSessions(profile)) {
             var view = sharing.project(profile, viewerId, session);
-            for (String tag : session.getTags()) {
+            for (String tag : view.tags()) {
                 String key = tag.toLowerCase(Locale.ROOT);
                 labels.putIfAbsent(key, tag);
                 sessionsByTag.computeIfAbsent(key, ignored -> new ArrayList<>()).add(view);

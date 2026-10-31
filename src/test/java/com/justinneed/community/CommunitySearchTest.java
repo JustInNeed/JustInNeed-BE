@@ -33,13 +33,18 @@ class CommunitySearchTest extends CommunityTestSupport {
     void hiddenPrivateDeletedAndInterestOnlyGraphsAreFiltered() {
         session(ownerId, true, "Java", "Hidden");
         session(ownerId, false, "Private");
-        session(ownerId, true, "Deleted").delete();
+        var deleted = session(ownerId, true, "Deleted");
+        deleted.delete();
+        cardSync.sync(deleted);
         var profile = new CommunityProfile(ownerId);
         profile.replaceHiddenHashtags(List.of("hidden"));
         profile.replaceInterests(List.of("Interest"));
         profiles.saveAndFlush(profile);
-        assertThat(search.profiles("Java", 0, 10).profiles()).isEmpty();
+        // 비공개 태그가 섞인 세션은 그 태그로만 안 찾힌다
+        assertThat(search.profiles("Java", 0, 10).profiles()).hasSize(1);
+        assertThat(search.mindmaps("Java", 0, 10).mindmaps()).hasSize(1);
         assertThat(search.mindmaps("Hidden", 0, 10).mindmaps()).isEmpty();
+        assertThat(search.profiles("Hidden", 0, 10).profiles()).isEmpty();
         assertThat(search.profiles("Private", 0, 10).profiles()).isEmpty();
         assertThat(search.profiles("Deleted", 0, 10).profiles()).isEmpty();
         assertThat(search.profiles("Interest", 0, 10).profiles()).hasSize(1);

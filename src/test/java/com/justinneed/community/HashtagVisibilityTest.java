@@ -21,15 +21,14 @@ class HashtagVisibilityTest extends CommunityTestSupport {
     }
 
     @Test
-    void hidingTagSuppressesMixedSessionsAndRestoringMakesThemVisible() throws Exception {
+    void hidingTagRemovesOnlyThatTagAndRestoringBringsItBack() throws Exception {
         session(ownerId, true, "Java", "Secret");
         session(ownerId, true, "Other");
         mvc.perform(patch("/community/me/hashtags/visibility").header("Authorization", auth(ownerId))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"hashtag\":\"SECRET\",\"isPublic\":false}"))
                 .andExpect(status().isOk());
         mvc.perform(get("/community/profiles/{id}/nodes", ownerId).header("Authorization", auth(viewerId)))
-                .andExpect(jsonPath("$.data.length()").value(1))
-                .andExpect(jsonPath("$.data[0].hashtag").value("Other"));
+                .andExpect(jsonPath("$.data[*].hashtag").value(org.hamcrest.Matchers.containsInAnyOrder("Java", "Other")));
         mvc.perform(get("/community/profiles/{id}/nodes", ownerId).header("Authorization", auth(ownerId)))
                 .andExpect(jsonPath("$.data.length()").value(3));
         mvc.perform(patch("/community/me/hashtags/visibility").header("Authorization", auth(ownerId))

@@ -1,5 +1,6 @@
 package com.justinneed.session.management.service;
 
+import com.justinneed.community.card.CommunityCardSync;
 import com.justinneed.community.domain.CommunityProfile;
 import com.justinneed.community.domain.NodeVisibility;
 import com.justinneed.community.service.CommunityProfiles;
@@ -38,14 +39,16 @@ public class SessionService {
     private final SessionResultRepository resultRepository;
     private final CommunitySharing sharing;
     private final CommunityProfiles profiles;
+    private final CommunityCardSync cards;
     private final ObjectMapper objectMapper;
 
     public SessionService(BrowsingSessionRepository sessionRepository, SessionResultRepository resultRepository,
-            CommunitySharing sharing, CommunityProfiles profiles, ObjectMapper objectMapper) {
+            CommunitySharing sharing, CommunityProfiles profiles, CommunityCardSync cards, ObjectMapper objectMapper) {
         this.sessionRepository = sessionRepository;
         this.resultRepository = resultRepository;
         this.sharing = sharing;
         this.profiles = profiles;
+        this.cards = cards;
         this.objectMapper = objectMapper;
     }
 
@@ -115,6 +118,9 @@ public class SessionService {
         validateTitle(request.title());
         List<String> tags = HashtagValidator.normalizeAndValidate(request.tags());
         session.update(request.title(), request.editedMarkdown(), request.isPublic(), request.isFavorite(), tags);
+        if (request.changesContent()) {
+            cards.sync(session);
+        }
         return SessionDetailResponse.from(session);
     }
 
@@ -123,6 +129,7 @@ public class SessionService {
         BrowsingSession session = sessionRepository.lockOwned(sessionId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         session.delete();
+        cards.sync(session);
     }
 
     private BrowsingSession findSession(Long sessionId) {

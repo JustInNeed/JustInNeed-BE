@@ -2,6 +2,7 @@ package com.justinneed.settings.account.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -9,6 +10,7 @@ import com.justinneed.auth.domain.Member;
 import com.justinneed.auth.domain.SocialProvider;
 import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.auth.service.AuthTokenService;
+import com.justinneed.community.card.CommunityCardSync;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
 import com.justinneed.settings.account.dto.request.AccountWithdrawRequest;
@@ -33,7 +35,7 @@ class AccountSettingsServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AccountSettingsService(memberRepository, authTokenService);
+        service = new AccountSettingsService(memberRepository, authTokenService, mock(CommunityCardSync.class));
         member = new Member(SocialProvider.KAKAO, "provider-id", "before", "user@example.com");
     }
 

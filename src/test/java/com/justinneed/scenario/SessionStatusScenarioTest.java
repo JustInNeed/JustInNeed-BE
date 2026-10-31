@@ -185,6 +185,7 @@ class SessionStatusScenarioTest extends ScenarioTestSupport {
                 List.of("로마"), List.of(new Source("글", "https://example.com/a", "발췌")), "본문");
         ReflectionTestUtils.setField(bad, "status", SessionStatus.FAILED);
         sessions.saveAndFlush(bad);
+        cardSync.sync(bad);
         CommunityProfile profile = new CommunityProfile(me.getId());
         profile.replacePinnedSessionIds(List.of(bad.getId()));
         communityProfiles.saveAndFlush(profile);

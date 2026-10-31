@@ -2,6 +2,7 @@ package com.justinneed.session.analysis.service;
 
 import com.justinneed.auth.domain.Member;
 import com.justinneed.auth.repository.MemberRepository;
+import com.justinneed.community.card.CommunityCardSync;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
 import com.justinneed.session.analysis.RawLinkVisits;
@@ -53,6 +54,7 @@ public class AnalysisRequestService {
     private final AiClusterModelRepository clusterModelRepository;
     private final MemberRepository memberRepository;
     private final AiAnalysisClient aiClient;
+    private final CommunityCardSync cards;
     private final ApplicationEventPublisher eventPublisher;
     private final TransactionTemplate transactionTemplate;
 
@@ -62,6 +64,7 @@ public class AnalysisRequestService {
             AiClusterModelRepository clusterModelRepository,
             MemberRepository memberRepository,
             AiAnalysisClient aiClient,
+            CommunityCardSync cards,
             ApplicationEventPublisher eventPublisher,
             PlatformTransactionManager transactionManager) {
         this.sessionRepository = sessionRepository;
@@ -70,6 +73,7 @@ public class AnalysisRequestService {
         this.clusterModelRepository = clusterModelRepository;
         this.memberRepository = memberRepository;
         this.aiClient = aiClient;
+        this.cards = cards;
         this.eventPublisher = eventPublisher;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
@@ -98,6 +102,7 @@ public class AnalysisRequestService {
             throw new CustomException(ErrorCode.RAW_PAYLOAD_NOT_FOUND);
         }
         session.markReady();
+        cards.sync(session);
         eventPublisher.publishEvent(new SessionReadyEvent(sessionId));
         return SessionDetailResponse.from(session);
     }

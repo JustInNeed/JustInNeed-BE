@@ -32,19 +32,14 @@ public class RecommendationService {
         var found = new ArrayList<Mindmap>();
         var ranking = Comparator.<Mindmap>comparingInt(m -> m.matchedHashtags().size()).reversed()
                 .thenComparing(Mindmap::ownerId);
-        directory.visit(graph -> {
-            if (graph.ownerId().equals(actor)) return true;
-            var tags = graph.hashtags().stream().filter(t -> unique.containsKey(CommunityTags.key(t.name())))
-                    .filter(t -> graph.edges().stream().anyMatch(e -> e.from().equals("tag:" + t.hashtagId()))).toList();
+        directory.visit(owner -> {
+            if (owner.ownerId().equals(actor)) return true;
+            var tags = owner.cardTags(unique.keySet());
             if (tags.isEmpty()) return true;
-            var tagKeys = new HashSet<String>();
-            tags.forEach(t -> tagKeys.add("tag:" + t.hashtagId()));
-            var nodeKeys = new HashSet<String>();
-            graph.edges().stream().filter(e -> tagKeys.contains(e.from())).forEach(e -> nodeKeys.add(e.to()));
-            var urls = graph.nodes().stream().filter(n -> nodeKeys.contains("node:" + n.nodeId()))
-                    .map(n -> n.sourceUrl()).distinct().limit(10).toList();
-            found.add(new Mindmap(graph.mindmapId(), graph.title(), graph.ownerId(),
-                    tags.stream().map(t -> t.name()).toList(), urls));
+            var urls = owner.cards().stream().filter(c -> c.nodeCount() > 0)
+                    .filter(c -> c.hashtags().stream().anyMatch(t -> unique.containsKey(CommunityTags.key(t))))
+                    .flatMap(c -> c.urls().stream()).distinct().limit(10).toList();
+            found.add(new Mindmap(owner.ownerId(), "Community mindmap", owner.ownerId(), tags, urls));
             found.sort(ranking);
             if (found.size() > limit) found.remove(found.size() - 1);
             return true;
