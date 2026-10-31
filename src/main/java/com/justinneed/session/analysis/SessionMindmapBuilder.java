@@ -35,9 +35,8 @@ public final class SessionMindmapBuilder {
     private SessionMindmapBuilder() {
     }
 
-    public static SessionMindmapResponse build(Map<String, Object> mindmap, List<Map<String, Object>> selectedUnits,
-            List<Source> sources) {
-        if (mindmap == null) {
+    public static SessionMindmapResponse build(Object storedMindmap, Object selectedUnits, List<Source> sources) {
+        if (!(storedMindmap instanceof Map<?, ?> mindmap)) {
             return SessionMindmapResponse.EMPTY;
         }
         Map<String, Citation> citations = citations(selectedUnits, sources);
@@ -64,7 +63,7 @@ public final class SessionMindmapBuilder {
         return new SessionMindmapResponse(List.copyOf(nodes.values()), edges);
     }
 
-    private static Map<String, Citation> citations(List<Map<String, Object>> selectedUnits, List<Source> sources) {
+    private static Map<String, Citation> citations(Object selectedUnits, List<Source> sources) {
         Map<String, LocalDateTime> visitedAtByLink = new HashMap<>();
         for (Source source : sources) {
             if (source.visitedAt() != null) {

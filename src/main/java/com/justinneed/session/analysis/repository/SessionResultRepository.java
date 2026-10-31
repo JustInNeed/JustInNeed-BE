@@ -24,7 +24,8 @@ public interface SessionResultRepository extends JpaRepository<SessionResult, Lo
 
     // 세션 마인드맵 화면용. 유닛 피처 · 분석 유닛 등 큰 컬럼은 읽지 않는다
     @Query("""
-            select new com.justinneed.session.analysis.dto.SessionMindmapSource(result.mindmap, result.selectedUnits)
+            select new com.justinneed.session.analysis.dto.SessionMindmapSource(
+                cast(result.mindmap as String), cast(result.selectedUnits as String))
             from SessionResult result
             where result.sessionId = :sessionId
             """)

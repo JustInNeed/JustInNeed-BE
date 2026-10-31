@@ -24,6 +24,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.ResultActions;
 import tools.jackson.core.type.TypeReference;
 
@@ -62,6 +63,9 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
 
     @Autowired
     private SessionResultRepository results;
+
+    @Autowired
+    private JdbcTemplate jdbc;
 
     private Member me;
     private BrowsingSession mine;
@@ -178,6 +182,24 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
         saveResult(mine, """
                 {"nodes": "없음", "edges": {"a": 1}}
                 """, "[]");
+        mindmap(mine, me)
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.nodes", hasSize(0)))
+                .andExpect(jsonPath("$.data.edges", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("저장된 mindmap 이 객체가 아니거나 selected_units 에 객체가 아닌 값이 있어도 500 없이 응답한다")
+    void wrongColumnShapeIsNot500() throws Exception {
+        saveResult(mine, MINDMAP, SELECTED);
+
+        jdbc.update("update session_results set selected_units = JSON '[1, \"x\", null]' where session_id = ?", mine.getId());
+        mindmap(mine, me)
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.nodes", hasSize(4)))
+                .andExpect(jsonPath("$.data.nodes[2].citation").value(nullValue()));
+
+        jdbc.update("update session_results set mindmap = JSON '[]' where session_id = ?", mine.getId());
         mindmap(mine, me)
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.nodes", hasSize(0)))

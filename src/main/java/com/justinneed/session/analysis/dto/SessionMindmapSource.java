@@ -1,11 +1,8 @@
 package com.justinneed.session.analysis.dto;
 
-import java.util.List;
-import java.util.Map;
-
-// 세션 마인드맵 응답에 필요한 session_results 컬럼만 읽은 값
+// 세션 마인드맵 응답에 필요한 session_results 컬럼만 읽은 값. 저장된 AI JSON 이 Map · List 모양이 아니어도 읽히도록 문자열로 받는다
 public record SessionMindmapSource(
-        Map<String, Object> mindmap,
-        List<Map<String, Object>> selectedUnits
+        String mindmap,
+        String selectedUnits
 ) {
 }

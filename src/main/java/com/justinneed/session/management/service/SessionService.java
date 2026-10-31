@@ -25,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 @Transactional(readOnly = true)
@@ -37,13 +38,15 @@ public class SessionService {
     private final SessionResultRepository resultRepository;
     private final CommunitySharing sharing;
     private final CommunityProfiles profiles;
+    private final ObjectMapper objectMapper;
 
     public SessionService(BrowsingSessionRepository sessionRepository, SessionResultRepository resultRepository,
-            CommunitySharing sharing, CommunityProfiles profiles) {
+            CommunitySharing sharing, CommunityProfiles profiles, ObjectMapper objectMapper) {
         this.sessionRepository = sessionRepository;
         this.resultRepository = resultRepository;
         this.sharing = sharing;
         this.profiles = profiles;
+        this.objectMapper = objectMapper;
     }
 
     public SessionPageResponse getSessions(Long userId, int page, int size, boolean favoriteOnly) {
@@ -92,8 +95,13 @@ public class SessionService {
             return SessionMindmapResponse.EMPTY;
         }
         return resultRepository.findMindmapSource(sessionId)
-                .map(source -> SessionMindmapBuilder.build(source.mindmap(), source.selectedUnits(), session.getSources()))
+                .map(source -> SessionMindmapBuilder.build(
+                        parseJson(source.mindmap()), parseJson(source.selectedUnits()), session.getSources()))
                 .orElse(SessionMindmapResponse.EMPTY);
+    }
+
+    private Object parseJson(String json) {
+        return json == null ? null : objectMapper.readValue(json, Object.class);
     }
 
     @Transactional
