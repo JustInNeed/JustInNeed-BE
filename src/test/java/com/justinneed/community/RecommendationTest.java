@@ -38,20 +38,21 @@ class RecommendationTest extends CommunityTestSupport {
         var result = recommendations.interests(viewerId, 3);
         assertThat(result.basisHashtags()).containsExactly("java");
         assertThat(result.mindmaps()).hasSize(1);
-        assertThat(result.mindmaps().get(0).ownerId()).isEqualTo(ownerId);
-        assertThat(result.mindmaps().get(0).relatedUrls()).containsExactly("https://example.com");
+        assertThat(result.mindmaps().get(0).owner().userId()).isEqualTo(ownerId);
+        assertThat(result.mindmaps().get(0).relatedUrls()).extracting(url -> url.url()).containsExactly("https://example.com");
         assertThat(recommendations.recent(viewerId, 3).mindmaps()).isEmpty();
         var tag = graphs.graph(ownerId, null).hashtags().get(0).hashtagId();
         bookmarks.save(viewerId, TargetType.HASHTAG, List.of(tag), SaveType.HASHTAG_BUNDLE, null);
         assertThat(recommendations.recent(viewerId, 3).mindmaps()).hasSize(1);
         assertThat(recommendations.recent(ownerId, 3).basisHashtags()).isEmpty();
         publicSession.update(null, null, false, null, null);
+        cardSync.sync(publicSession);
         assertThat(recommendations.interests(viewerId, 3).mindmaps()).isEmpty();
         assertThat(recommendations.recent(viewerId, 3).mindmaps()).isEmpty();
     }
 
     @Test
-    void hiddenInterestsWithoutPublicLeavesDoNotProduceRecommendations() {
+    void hiddenTagsDoNotProduceRecommendationsButMixedSessionStays() {
         var owner = new CommunityProfile(ownerId);
         owner.replaceInterests(List.of("Java"));
         owner = profiles.saveAndFlush(owner);
@@ -60,13 +61,18 @@ class RecommendationTest extends CommunityTestSupport {
         profiles.saveAndFlush(viewer);
         session(ownerId, true, "Unrelated");
         assertThat(recommendations.interests(viewerId, 3).mindmaps()).isEmpty();
-        session(ownerId, true, "Java", "Secret");
+        session(ownerId, true, "Other", "Secret");
         owner.replaceHiddenHashtags(List.of("Secret"));
+        profiles.saveAndFlush(owner);
+        var viewerProfile = profiles.findById(viewerId).orElseThrow();
+        viewerProfile.replaceInterests(List.of("Secret"));
         assertThat(recommendations.interests(viewerId, 3).mindmaps()).isEmpty();
+        viewerProfile.replaceInterests(List.of("Other"));
+        assertThat(recommendations.interests(viewerId, 3).mindmaps().get(0).hashtags()).containsExactly("Other");
     }
 
     @Test
-    void trendBoundariesUseKoreanMidnightMondayAndExcludeFutureEvents() {
+    void trendBoundariesUseKoreanMidnightAndRollingWeekAndExcludeFutureEvents() {
         session(ownerId, true, "Java");
         var graph = graphs.graph(ownerId, null);
         Long tag = graph.hashtags().get(0).hashtagId();
@@ -78,11 +84,9 @@ class RecommendationTest extends CommunityTestSupport {
         event(ownerId, TargetType.NODE, node, tag, ActivityKind.EXPLORE, "2026-09-27T14:59:59Z");
         event(ownerId, TargetType.HASHTAG, tag, tag, ActivityKind.EXPLORE, "2026-10-01T03:00:00Z");
         var today = trending.trending(TrendingService.Period.TODAY, 10).hashtags().get(0);
-        assertThat(today.exploreCount()).isEqualTo(1);
-        assertThat(today.bookmarkCount()).isZero();
+        assertThat(today.count()).isEqualTo(1);
         var week = trending.trending(TrendingService.Period.WEEK, 10).hashtags().get(0);
-        assertThat(week.exploreCount()).isEqualTo(2);
-        assertThat(week.bookmarkCount()).isEqualTo(1);
+        assertThat(week.count()).isEqualTo(4);
         assertThat(week.rank()).isEqualTo(1);
     }
 

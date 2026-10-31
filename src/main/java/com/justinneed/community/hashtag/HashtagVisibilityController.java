@@ -31,5 +31,6 @@ public class HashtagVisibilityController {
         return ApiResponse.ok(service.update(userId, request.hashtag(), request.isPublic()));
     }
 
-    public record Request(@NotBlank String hashtag, @NotNull Boolean isPublic) { }
+    public record Request(@NotBlank(message = "해시태그를 입력해 주세요.") String hashtag,
+            @NotNull(message = "공개 여부를 입력해 주세요.") Boolean isPublic) { }
 }

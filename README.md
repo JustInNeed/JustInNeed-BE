@@ -117,7 +117,7 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 | GET | `/members/nickname/available?nickname=` | 닉네임 중복 확인. `{nickname, available}` 반환. 형식 규칙은 PATCH 와 같음(위반 시 400), 본인 닉네임은 사용 가능 |
 
 로그인 흐름: FE `/oauth2/authorization/{kakao|naver}` 진입 → 소셜 로그인 → BE 콜백 → FE `/oauth/callback?code=..` → FE 가 `POST /auth/token` 으로 토큰 교환 → `needsNickname=true` 면 닉네임 입력 화면.
-탈퇴(`DELETE /settings/account`)하면 회원 행의 소셜 식별자 · 닉네임 · 이메일을 비우므로, 같은 소셜 계정으로 다시 로그인하면 새 회원으로 가입되고 예전 닉네임도 다시 쓸 수 있습니다. 탈퇴한 회원은 커뮤니티(프로필 · 검색 · 추천 · 북마크 해시태그)에서도 보이지 않습니다. 탈퇴하면 다른 기기에 남은 access 토큰도 모든 보호 API 에서 401 입니다.
+탈퇴(`DELETE /settings/account`)하면 회원 행의 소셜 식별자 · 닉네임 · 이메일을 비우므로, 같은 소셜 계정으로 다시 로그인하면 새 회원으로 가입되고 예전 닉네임도 다시 쓸 수 있습니다. 탈퇴한 회원은 커뮤니티(프로필 · 검색 · 추천 · 북마크 해시태그)에서도 보이지 않습니다. 그 회원이 남긴 좋아요 · 나도 탐색중 · 활동 행은 지우지 않고 읽을 때 숫자에서만 뺍니다. 탈퇴하면 다른 기기에 남은 access 토큰도 모든 보호 API 에서 401 입니다.
 
 ### 세션 / 해시태그 그룹
 
@@ -125,7 +125,7 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 | --- | --- | --- |
 | GET | `/sessions` | 세션 목록 조회 (무한 스크롤). `page`(기본 0) · `size`(기본 10, 1~50) · `favorite`(기본 false, true 면 즐겨찾기만). `{ sessions, hasNext, totalCount, favoriteCount }` 반환 — `totalCount` · `favoriteCount` 는 필터 · 페이지와 상관없는 내 전체 세션 수 / 즐겨찾기 수. 음수 page · 범위 밖 size 는 400. 정렬: 진행 중(완료 · 실패가 아닌) 세션이 맨 위(시작 시각 최신순), 나머지는 종료 시각 최신순(종료 시각 없으면 뒤) → 시작 시각 최신순 → id 역순 |
 | GET | `/sessions/hashtags` | 그룹 만들기 해시태그 후보. 내 세션 전체(삭제 제외, 모든 상태)의 태그를 목록과 같은 순서로 훑어 처음 나온 순서대로, 대소문자 무시 중복 제거(처음 나온 표기 유지). `data` 는 문자열 배열, 세션이 없으면 `[]` |
-| GET | `/sessions/{id}` | 세션 상세 조회. 요약 본문과 출처를 함께 반환. 없거나 삭제한 세션은 404. 소유자는 어떤 상태든 전체(`isOwner: true`). 다른 사용자는 공개 세션(공개 · 분석 완료 · 비공개 해시태그 없음 · 작성자 탈퇴 전)만 읽기 전용으로 보고(`isOwner: false`, `isFavorite: false`), 작성자의 노드 공개 범위가 `URL_ONLY` 면 제목 · 본문 · 출처 내용 없이 링크만 받는다. 그 밖에는 403 |
+| GET | `/sessions/{id}` | 세션 상세 조회. 요약 본문과 출처를 함께 반환. 없거나 삭제한 세션은 404. 소유자는 어떤 상태든 전체(`isOwner: true`). 다른 사용자는 공개 세션(공개 · 분석 완료 · 작성자 탈퇴 전)만 읽기 전용으로 보고(`isOwner: false`, `isFavorite: false`, 작성자가 비공개로 둔 해시태그는 `tags` 에서 빠진다), 작성자의 노드 공개 범위가 `URL_ONLY` 면 제목 · 본문 · 출처 내용 없이 링크만 받는다. 그 밖에는 403 |
 | GET | `/sessions/{id}/mindmap` | 세션 마인드맵. 접근 규칙은 상세와 같다. `{ nodes: [{ id, type(root/topic/unit), keyword, score, childCount, citation }], edges: [{ from, to, type(hierarchy/related), primary }] }`. `citation`(`title`, `url`, `excerpt`, `visitedAt`)은 컷오프 유닛 노드에만 온다. 분석이 끝나지 않았거나 결과가 없으면 빈 그래프, `URL_ONLY` 작성자의 세션은 다른 사용자에게 빈 그래프 |
 | PATCH | `/sessions/{id}` | 세션 편집. `title`, `editedMarkdown`, `isPublic`, `isFavorite`, `tags` 중 보낸 필드만 수정. 분석이 끝나기 전에는 `isFavorite` 만 바꿀 수 있고 나머지는 409. 소유자가 아니면 404 |
 | POST | `/sessions/{id}/reanalyze` | 실패한 세션 다시 분석. 소유자만(아니면 404), `FAILED` 가 아니면 409, 원본이 없으면 404. `READY` 상태의 세션 상세를 반환하고 AI 요청은 커밋 뒤 비동기로 보낸다 |
@@ -180,6 +180,51 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 
 이슈 #35~#40의 프로필 편집, 비공개 저장 목록, 공개 마인드맵 조회, 인터랙션, 검색, 추천 기능을 구현했습니다.
 API, 데이터 모델, 공개 범위 처리, 테스트 및 PR 병합 순서는 [커뮤니티 개발 문서](docs/community/README.md)를 참고하세요.
+
+커뮤니티 GET 은 읽기만 합니다 (쓰기 · 행 잠금 없음). 공개 세션 1개 = 카드 1장이고, `community_cards` · `community_nodes` · `community_hashtags` 는 세션이 바뀌는 쓰기 트랜잭션에서 `CommunityCardSync` 가 맞춥니다 (세션 수정 · 삭제, 공유 핀 · 해제, AI 결과 저장, 재분석). 앱 시작 때 `CommunityCardBackfill` 이 기존 공개 세션의 빠진 행을 채웁니다. 공개 범위 · 비공개 해시태그는 저장하지 않고 읽을 때 적용합니다: 공개 그래프는 `CONTENT` 면 AI 마인드맵(hierarchy), `URL_ONLY` 면 태그 → URL 이고, 비공개 해시태그가 섞인 공개 세션은 그 태그만 빠진 채 보입니다.
+
+### 팔로우 / 비슷한 사람
+
+| Method | Path | 설명 |
+| --- | --- | --- |
+| PATCH | `/community/profiles/{userId}/follow` | 팔로우 설정 `{following}` → `{following}`. 같은 값을 다시 보내거나 동시에 보내도 200. 자기 자신은 400, 없거나 탈퇴한 회원은 404. 탈퇴해도 팔로우 행은 남고 읽을 때 뺀다 |
+| GET | `/community/recommendations/profiles/similar` | 관심사가 비슷한 사람 `{people: [{userId, nickname, matchedHashtags, following}]}`. `limit` 기본 3, 1~20(밖이면 400). 태그 = 공개 · 완료 · 미삭제 세션의 태그 + 관심 해시태그에서 각자의 비공개 해시태그를 뺀 것(대소문자 무시). 겹치는 태그 수가 많은 순 → 최근 공개 활동(세션 종료 시각, 없으면 시작 시각) 순, 활동이 없으면 뒤 → id 순. 나 · 탈퇴 회원 · 겹치는 태그가 없는 사람은 빠진다. 닉네임을 정하지 않은 사람은 `nickname: null` 로 온다. 조회는 쓰기 · 잠금을 하지 않는다 |
+| GET | `/community/recommendations/hashtags/trending` | 떠오르는 해시태그 `{period, hashtags: [{rank, name, count, trend}]}`. `period` 는 `today`(기본) · `week`, 대소문자 무시, 응답은 `TODAY` · `WEEK`. `limit` 기본 10, 1~100. `count` = 기간 안의 나도 탐색중 + 북마크(내 행동 포함, 탈퇴 회원 제외, 사람 · 태그 · 종류 · 날짜마다 1, 취소해도 유지). `trend` = `count` - 직전 기간 값. 직전 기간은 길이가 같다: 오늘(직전은 어제 같은 시각까지, KST), 최근 7일(직전은 그 앞 7일) |
+
+### 카드 반응
+
+공개 세션 1개 = 카드 1장, `{mindmapId}` = 세션 id. 공개 카드가 아니면(비공개 · 미완료 · 삭제 · 탈퇴한 작성자) 켜기 · 끄기 모두 404. 같은 값을 다시 보내거나 동시에 보내도 200 이고 두 번 세지 않습니다. 카드가 공개에서 빠져도 행은 남아 다시 공개하면 숫자가 돌아옵니다. 숫자에서 탈퇴 회원 행동은 빠지고 내 행동은 포함됩니다.
+
+| Method | Path | 설명 |
+| --- | --- | --- |
+| PATCH | `/community/mindmaps/{mindmapId}/like` | 좋아요 `{liked}` → `{likeCount, likedByMe}`. 내 카드는 400 |
+| PATCH | `/community/mindmaps/{mindmapId}/exploring` | 나도 탐색중 `{exploring}` → `{exploringCount, exploringByMe}`. 새로 켜면 공개 해시태그마다 활동을 남깁니다 |
+| PATCH | `/community/mindmaps/{mindmapId}/bookmark` | 북마크 `{bookmarked}` → `{bookmarkCount, bookmarkId}`. 켜면 카드의 노드를 미니 마인드맵으로 저장(이미 있으면 그 id), 끄면 삭제. 노드가 없는 카드는 400 |
+
+### 추천 / 검색
+
+카드 응답은 공개 세션 1개 = 1장이고, `mindmapId` 는 세션 id 입니다. URL 만 공개한 작성자의 카드는 `title` · `snippet` · `relatedUrls[].title` 이 `null` 입니다.
+
+| Method | Path | 설명 |
+| --- | --- | --- |
+| GET | `/community/recommendations/mindmaps/interests` | 관심 해시태그 기반 추천 `{basisHashtags, mindmaps: [카드]}`. `limit` 기본 3, 1~100. 내 카드는 빠진다. 기준 태그는 중복을 뺀 앞 10개까지다. 카드의 공개 태그와 온전히(대소문자 무시) 겹치는 수가 많은 순 → 최근 활동순 → id 큰 순 |
+| GET | `/community/recommendations/mindmaps/recent-bookmarks` | 최근 저장 기반 추천. 응답 · 순위는 위와 같고, 기준은 보이는 북마크 최근 20개의 태그다. 이미 저장한 카드도 나온다 |
+| GET | `/community/search/mindmaps` | `q`, `page`, `size` → `{mindmaps: [카드], hasNext}`. 해시태그 · 작성자 닉네임, 내용까지 공개한 작성자는 제목도 찾는다. 최근 활동순 → id 큰 순. 내 카드도 나온다 |
+| GET | `/community/search/profiles` | `q`, `page`, `size` → `{profiles: [{userId, nickname, hashtags, mindmapCount}], hasNext}`. 공개 카드가 있는 회원 중 해시태그 · 닉네임이 맞는 사람, id 순. `hashtags` 는 공개 태그 많은 순 5개. 나도 나온다 |
+| GET | `/community/search/hashtags` | `q`, `limit` → `{hashtags: [{tag, count}]}`. 검색어가 든 공개 태그와 그 태그를 단 카드 수. `limit` 기본 5, 1~20. 많은 순 → 이름 순 |
+
+`q` 는 앞 `#` · 앞뒤 공백을 떼고 대소문자 무시 포함 검색합니다. 비공개 해시태그로는 찾을 수 없고, 비면 400 입니다. `page` 기본 0, `size` 기본 10 · 1~100 입니다.
+
+### 프로필 · 카드 세션
+
+| Method | Path | 설명 |
+| --- | --- | --- |
+| GET | `/community/profiles/{userId}` | 프로필 헤더 `{code, userId, nickname, bio, visibility, totalNodeCount, topHashtags, interests, likeCount, likedByMe, following, exploringCount, pinnedSessions}`. `totalNodeCount` · `exploringCount` 는 작성자 카드의 `nodeCount` · `exploringCount` 합. 닉네임 · 소개를 정하지 않았으면 null. 없거나 탈퇴한 회원은 404 |
+| PATCH | `/community/me/profile` | 소개 수정 `{bio}` → `{bio}`. 앞뒤 공백을 지우고 120자까지, 빠지거나 넘으면 400. 탈퇴하면 지운다 |
+| GET | `/community/profiles/{userId}/mindmaps` | 프로필 마인드맵 탭 `{mindmaps: [카드], hasNext}`. 최근 활동 최신순, `page` 기본 0, `size` 기본 10(1~100, 밖이면 400). 없거나 탈퇴한 회원은 404 |
+| GET | `/community/mindmaps/{id}/sessions` | 카드 상세의 관련 세션 `{sessions: [세션 목록 항목]}`. 그 세션 + 공개 태그(대소문자 무시)가 겹치는 같은 작성자의 공개 세션 최신순, 최대 3개. 본인이 불러도 방문자 규칙: `isFavorite` 는 false, `URL_ONLY` 면 `title` 은 `""`, 비공개 해시태그는 뺀다. 공개 카드가 아니면 404 |
+| GET | `/community/profiles/{userId}/shared-sessions` · `/{sessionId}` | 공유 세션 `{id, tags, urls, startedAt, endedAt, pageCount, status, title, markdown, sources}`. `URL_ONLY` 면 다른 사용자에게 `title` · `markdown` · `sources` 는 응답에서 빠진다 |
+| GET | `/community/profiles/{userId}/mindmap` | 작성자 전체 그래프 `{code, mindmapId, ownerId, nickname, title, hashtags, nodes, edges, topHashtags}`. `title` 은 `{닉네임}님의 전체 마인드맵`, 닉네임이 없으면 `전체 마인드맵`. `mindmapId` 는 작성자 id 다 (카드의 `mindmapId` 와 다르다) |
 
 ## 환경 변수
 

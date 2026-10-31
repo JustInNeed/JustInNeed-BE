@@ -42,6 +42,7 @@ public class SharedSessionController {
         return ApiResponse.ok(service.detail(userId, viewerId, sessionId));
     }
 
-    public record PinRequest(@NotNull @Positive Long sessionId) { }
-    public record OrderRequest(@NotNull List<@NotNull @Positive Long> sessionIds) { }
+    public record PinRequest(@NotNull(message = "세션을 선택해 주세요.") @Positive(message = "세션이 올바르지 않습니다.") Long sessionId) { }
+    public record OrderRequest(@NotNull(message = "정렬할 세션 목록을 입력해 주세요.")
+            List<@NotNull(message = "세션이 올바르지 않습니다.") @Positive(message = "세션이 올바르지 않습니다.") Long> sessionIds) { }
 }

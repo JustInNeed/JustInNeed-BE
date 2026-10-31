@@ -1,7 +1,9 @@
 package com.justinneed.session.analysis.repository;
 
 import com.justinneed.session.analysis.domain.SessionResult;
+import com.justinneed.session.analysis.dto.SessionMindmapRow;
 import com.justinneed.session.analysis.dto.SessionMindmapSource;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -30,4 +32,13 @@ public interface SessionResultRepository extends JpaRepository<SessionResult, Lo
             where result.sessionId = :sessionId
             """)
     Optional<SessionMindmapSource> findMindmapSource(@Param("sessionId") Long sessionId);
+
+    // 커뮤니티 카드 · 공개 그래프용. findMindmapSource 를 여러 세션에 한 번에
+    @Query("""
+            select new com.justinneed.session.analysis.dto.SessionMindmapRow(
+                result.sessionId, cast(result.mindmap as String), cast(result.selectedUnits as String))
+            from SessionResult result
+            where result.sessionId in :sessionIds
+            """)
+    List<SessionMindmapRow> findMindmapRows(@Param("sessionIds") Collection<Long> sessionIds);
 }

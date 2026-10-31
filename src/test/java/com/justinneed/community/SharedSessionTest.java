@@ -55,7 +55,7 @@ class SharedSessionTest extends CommunityTestSupport {
     }
 
     @Test
-    void detailCannotBypassHiddenTagsUnpinnedPrivateOrDeletedState() throws Exception {
+    void detailCannotBypassUnpinnedPrivateOrDeletedStateAndHidesOnlyTheTag() throws Exception {
         var hidden = session(ownerId, true, "Secret", "Public");
         var privateSession = session(ownerId, false, "Private");
         var deleted = session(ownerId, true, "Deleted");
@@ -66,13 +66,16 @@ class SharedSessionTest extends CommunityTestSupport {
         profile.replaceHiddenHashtags(List.of("secret"));
         profile.replacePinnedSessionIds(List.of(hidden.getId(), privateSession.getId(), deleted.getId()));
         profiles.saveAndFlush(profile);
-        for (Long id : List.of(hidden.getId(), privateSession.getId(), deleted.getId(), unpinned.getId())) {
+        mvc.perform(get("/community/profiles/{id}/shared-sessions/{sessionId}", ownerId, hidden.getId())
+                        .header("Authorization", auth(viewerId)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.tags[*]").value(org.hamcrest.Matchers.contains("Public")));
+        for (Long id : List.of(privateSession.getId(), deleted.getId(), unpinned.getId())) {
             mvc.perform(get("/community/profiles/{id}/shared-sessions/{sessionId}", ownerId, id)
                             .header("Authorization", auth(viewerId))).andExpect(status().isNotFound());
         }
         mvc.perform(get("/community/profiles/{id}/shared-sessions", ownerId)
                         .header("Authorization", auth(viewerId)))
-                .andExpect(jsonPath("$.data.length()").value(0));
+                .andExpect(jsonPath("$.data.length()").value(1));
         mvc.perform(get("/community/profiles/{id}/shared-sessions/{sessionId}", ownerId, hidden.getId())
                         .header("Authorization", auth(ownerId)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.markdown").value("private markdown"));

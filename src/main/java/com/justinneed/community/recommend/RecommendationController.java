@@ -23,8 +23,8 @@ public class RecommendationController {
         return ApiResponse.ok(recommendations.recent(actor, limit));
     }
     @GetMapping("/hashtags/trending")
-    public ApiResponse<TrendingService.Trends> trending(@RequestParam(defaultValue = "TODAY") TrendingService.Period period,
+    public ApiResponse<TrendingService.Trends> trending(@RequestParam(defaultValue = "today") String period,
             @RequestParam(defaultValue = "10") int limit) {
-        return ApiResponse.ok(trending.trending(period, limit));
+        return ApiResponse.ok(trending.trending(TrendingService.Period.parse(period), limit));
     }
 }

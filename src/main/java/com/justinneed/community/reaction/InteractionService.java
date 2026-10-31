@@ -1,8 +1,9 @@
 package com.justinneed.community.reaction;
 
 import com.justinneed.community.activity.*;
-import com.justinneed.community.api.CommunityErrors;
 import com.justinneed.community.bookmark.TargetType;
+import com.justinneed.global.exception.CustomException;
+import com.justinneed.global.exception.ErrorCode;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +23,7 @@ public class InteractionService {
         this.targets = targets; this.activity = activity;
     }
     public LikeView like(Long actor, Long profileId, boolean liked) {
-        if (actor.equals(profileId)) throw CommunityErrors.invalid("Cannot like your own profile");
+        if (actor.equals(profileId)) throw new CustomException(ErrorCode.SELF_LIKE_NOT_ALLOWED);
         locks.acquire(actor, List.of(profileId));
         var existing = likes.findByActorIdAndProfileId(actor, profileId);
         if (liked && existing.isEmpty()) likes.save(new ProfileLike(actor, profileId));
@@ -48,8 +49,8 @@ public class InteractionService {
         explorations.flush();
         return new ExploringView(200, type, id, exploring, explorations.countByTargetTypeAndTargetId(type, id));
     }
+    @Transactional(readOnly = true)
     public ExploringView status(Long actor, TargetType type, Long id) {
-        locks.acquire(actor, List.of(targets.owner(type, id)));
         targets.resolve(type, id);
         return new ExploringView(200, type, id,
                 explorations.findByActorIdAndTargetTypeAndTargetId(actor, type, id).isPresent(),

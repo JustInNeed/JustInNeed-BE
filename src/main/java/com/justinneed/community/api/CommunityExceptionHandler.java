@@ -16,6 +16,6 @@ public class CommunityExceptionHandler {
     }
     @ExceptionHandler({ConstraintViolationException.class, HandlerMethodValidationException.class})
     public ResponseEntity<ApiResponse<Void>> validation(Exception error) {
-        return ResponseEntity.badRequest().body(ApiResponse.error("Invalid community request parameters"));
+        return ResponseEntity.badRequest().body(ApiResponse.error("요청 값이 올바르지 않습니다."));
     }
 }

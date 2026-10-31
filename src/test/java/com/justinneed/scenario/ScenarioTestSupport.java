@@ -10,6 +10,8 @@ import com.justinneed.auth.domain.Member;
 import com.justinneed.auth.domain.SocialProvider;
 import com.justinneed.auth.jwt.JwtTokenProvider;
 import com.justinneed.auth.repository.MemberRepository;
+import com.justinneed.community.card.CommunityCardSync;
+import com.justinneed.community.catalog.CommunityTags;
 import com.justinneed.community.domain.CommunityProfile;
 import com.justinneed.community.repository.CommunityProfileRepository;
 import com.justinneed.session.management.domain.BrowsingSession;
@@ -70,6 +72,12 @@ public abstract class ScenarioTestSupport {
 
     @Autowired
     protected JwtTokenProvider jwt;
+
+    @Autowired
+    protected CommunityCardSync cardSync;
+
+    @Autowired
+    protected CommunityTags communityTags;
 
     // ---------- 회원 / 인증 ----------
 
@@ -176,7 +184,9 @@ public abstract class ScenarioTestSupport {
         if (markdown != null) {
             new Summary(session, markdown);
         }
-        return sessions.saveAndFlush(session);
+        BrowsingSession saved = sessions.saveAndFlush(session);
+        cardSync.sync(saved);
+        return saved;
     }
 
     /**
@@ -270,9 +280,9 @@ public abstract class ScenarioTestSupport {
      * FE otherProfile("wanderlust") 을 닮은 다른 사용자. 닉네임 규칙(영문 시작 3~8자) 때문에 "wanderer" 로 줄였다.
      * <ul>
      *     <li>공개 세션: 프라하 · 비엔나 · 야간열차 (+ 카페 태그가 섞인 세션)</li>
-     *     <li>비공개 해시태그: 카페, 슬로우트래블 → 다른 사람에겐 태그와 그 세션 · 노드가 안 보인다 (COM-1-2)</li>
+     *     <li>비공개 해시태그: 카페, 슬로우트래블 → 다른 사람에겐 그 태그만 안 보이고, 태그가 섞인 세션은 보인다 (COM-1-2)</li>
      *     <li>비공개 세션: 슬로우트래블 메모</li>
-     *     <li>핀고정(공유) 세션: 프라하 → 카페 → 야간열차 순 (카페 세션은 다른 사람에겐 빠진다)</li>
+     *     <li>핀고정(공유) 세션: 프라하 → 카페 → 야간열차 순</li>
      *     <li>관심 해시태그: 프라하, 비엔나, 야간열차, 카페투어, 카페(비공개)</li>
      * </ul>
      */
@@ -312,6 +322,7 @@ public abstract class ScenarioTestSupport {
         profile.replaceInterests(List.of("프라하", "비엔나", "야간열차", "카페투어", "카페"));
         profile.replacePinnedSessionIds(List.of(prague.getId(), cafe.getId(), nightjet.getId()));
         communityProfiles.saveAndFlush(profile);
+        communityTags.ensure(wanderer.getId(), profile.getInterests());
         return new Wanderer(wanderer, prague, vienna, cafe, nightjet, slow);
     }
 
