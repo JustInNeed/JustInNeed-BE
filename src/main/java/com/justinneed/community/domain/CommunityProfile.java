@@ -10,12 +10,18 @@ import org.hibernate.type.SqlTypes;
 @Entity
 @Table(name = "community_profiles")
 public class CommunityProfile extends BaseEntity {
+    public static final int BIO_MAX_LENGTH = 120;
+
     @Id
     private Long userId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private NodeVisibility visibility = NodeVisibility.URL_ONLY;
+
+    // 정하지 않았으면 null
+    @Column(length = BIO_MAX_LENGTH)
+    private String bio;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false)
@@ -38,11 +44,13 @@ public class CommunityProfile extends BaseEntity {
 
     public Long getUserId() { return userId; }
     public NodeVisibility getVisibility() { return visibility; }
+    public String getBio() { return bio; }
     public List<String> getHiddenHashtags() { return List.copyOf(hiddenHashtags); }
     public List<Long> getPinnedSessionIds() { return List.copyOf(pinnedSessionIds); }
     public List<String> getInterests() { return List.copyOf(interests); }
 
     public void changeVisibility(NodeVisibility visibility) { this.visibility = visibility; }
+    public void changeBio(String bio) { this.bio = bio; }
     public void replaceHiddenHashtags(List<String> values) { hiddenHashtags = new ArrayList<>(values); }
     public void replacePinnedSessionIds(List<Long> values) { pinnedSessionIds = new ArrayList<>(values); }
     public void replaceInterests(List<String> values) { interests = new ArrayList<>(values); }

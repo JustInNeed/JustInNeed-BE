@@ -1,5 +1,6 @@
 package com.justinneed.community.unpin;
 
+import com.justinneed.community.card.CommunityCardSync;
 import com.justinneed.community.domain.CommunityProfile;
 import com.justinneed.community.repository.CommunitySessionRepository;
 import com.justinneed.community.service.CommunityProfiles;
@@ -13,10 +14,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class UnpinService {
     private final CommunityProfiles profiles;
     private final CommunitySessionRepository sessions;
+    private final CommunityCardSync cards;
 
-    public UnpinService(CommunityProfiles profiles, CommunitySessionRepository sessions) {
+    public UnpinService(CommunityProfiles profiles, CommunitySessionRepository sessions, CommunityCardSync cards) {
         this.profiles = profiles;
         this.sessions = sessions;
+        this.cards = cards;
     }
 
     @Transactional
@@ -31,5 +34,6 @@ public class UnpinService {
         pins.remove(sessionId);
         profile.replacePinnedSessionIds(pins);
         session.update(null, null, false, null, null);
+        cards.sync(session);
     }
 }

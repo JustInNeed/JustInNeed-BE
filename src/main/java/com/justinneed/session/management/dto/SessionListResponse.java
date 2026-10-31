@@ -30,4 +30,19 @@ public record SessionListResponse(
                 session.getTags()
         );
     }
+
+    // 다른 사용자가 보는 공개 세션. 규칙은 SessionDetailResponse.forViewer 와 같다
+    public static SessionListResponse forViewer(BrowsingSession session, List<String> tags, boolean includeContent) {
+        return new SessionListResponse(
+                session.getId(),
+                includeContent ? session.getTitle() : "",
+                session.getStartedAt(),
+                session.getEndedAt(),
+                session.getPageCount(),
+                session.getStatus(),
+                false,
+                session.isPublicSession(),
+                tags
+        );
+    }
 }

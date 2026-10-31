@@ -121,12 +121,14 @@ class SessionAccessScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("공개 세션이어도 비공개 해시태그가 섞여 있으면 커뮤니티처럼 다른 사용자에겐 403 이고, 소유자는 그대로 본다")
+    @DisplayName("공개 세션에 비공개 해시태그가 섞여 있으면 다른 사용자에겐 그 태그만 빠지고, 소유자는 그대로 본다")
     void hiddenTagSession() throws Exception {
         mvc.perform(get("/sessions/{id}", wanderer.cafe().getId()).with(as(me)))
-                .andExpect(errorEnvelope(HttpStatus.FORBIDDEN, FORBIDDEN));
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.tags").value(contains("비엔나")));
         mvc.perform(get("/sessions/{id}", wanderer.cafe().getId()).with(as(wanderer.member())))
-                .andExpect(okEnvelope());
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.tags").value(contains("비엔나", "카페")));
     }
 
     @ParameterizedTest

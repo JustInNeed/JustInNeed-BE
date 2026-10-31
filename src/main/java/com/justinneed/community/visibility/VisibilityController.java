@@ -35,5 +35,5 @@ public class VisibilityController {
         return ApiResponse.ok(service.nodes(userId, viewerId));
     }
 
-    public record VisibilityRequest(@NotNull @JsonAlias("visibilityScope") NodeVisibility visibility) { }
+    public record VisibilityRequest(@NotNull(message = "공개 범위를 입력해 주세요.") @JsonAlias("visibilityScope") NodeVisibility visibility) { }
 }

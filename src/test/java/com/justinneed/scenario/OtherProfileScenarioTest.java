@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.not;
@@ -21,14 +22,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.ResultActions;
 
 /**
- * 다른 사용자 프로필 (/profile/{handle}). FE: ProfileView.tsx (isMine=false), 목 otherProfile("wanderlust").
+ * 다른 사용자 프로필 (/profile/{id}). FE: ProfileView.tsx (isMine=false), 목 otherProfile("wanderlust").
  * 시드 wanderer: 공개 세션 프라하 · 비엔나 · 야간열차, 비공개 해시태그 카페 · 슬로우트래블 (ScenarioTestSupport#seedWanderer).
  */
 @DisplayName("다른 사용자 프로필 화면")
@@ -70,24 +70,26 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("프로필을 열면 비공개 해시태그(카페 · 슬로우트래블)와 그 세션 · 노드를 뺀 노드 수 · 상위 5개 · 대표 해시태그가 온다 (COM-1-2, COM-3-2~3-4)")
+    @DisplayName("프로필을 열면 비공개 해시태그(카페 · 슬로우트래블)를 뺀 상위 5개 · 대표 해시태그와, 태그가 섞인 세션을 포함한 노드 수가 온다 (COM-1-2, COM-3-2~3-4)")
     void profileHidesPrivateHashtags() throws Exception {
         mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me)))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.userId").value(wanderer.id()))
                 .andExpect(jsonPath("$.data.nickname").value("wanderer"))
-                .andExpect(jsonPath("$.data.totalNodeCount").value(6))
+                .andExpect(jsonPath("$.data.totalNodeCount").value(7))
                 .andExpect(jsonPath("$.data.topHashtags[*].name").value(contains("프라하", "비엔나", "야간열차", "체코", "카를교")))
                 .andExpect(jsonPath("$.data.topHashtags[0].nodeCount").value(4))
+                .andExpect(jsonPath("$.data.topHashtags[1].nodeCount").value(3))
                 .andExpect(jsonPath("$.data.interests").value(contains("프라하", "비엔나", "야간열차", "카페투어")))
-                .andExpect(jsonPath("$.data.pinnedSessions[*].id").value(contains(ids(wanderer.prague(), wanderer.nightjet()))))
+                .andExpect(jsonPath("$.data.pinnedSessions[*].id").value(contains(
+                        ids(wanderer.prague(), wanderer.cafe(), wanderer.nightjet()))))
                 .andExpect(jsonPath("$.data.likeCount").value(0))
                 .andExpect(jsonPath("$.data.likedByMe").value(false));
     }
 
     @Test
-    @DisplayName("마인드맵 탭: 비공개 해시태그 · 그 노드는 없고, 해시태그 → 노드 연결선과 원문 URL 이 온다")
-    void mindmapHidesPrivateNodes() throws Exception {
+    @DisplayName("마인드맵 탭: 비공개 해시태그만 없고, 해시태그 → 노드 연결선과 원문 URL 이 온다")
+    void mindmapHidesPrivateHashtags() throws Exception {
         mvc.perform(get("/community/profiles/{id}/mindmap", wanderer.id()).with(as(me)))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.mindmapId").value(wanderer.id()))
@@ -95,10 +97,9 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.nickname").value("wanderer"))
                 .andExpect(jsonPath("$.data.hashtags[*].name").value(containsInAnyOrder(
                         "야간열차", "프라하", "비엔나", "카를교", "체코", "카페투어")))
-                .andExpect(jsonPath("$.data.nodes", hasSize(6)))
-                .andExpect(jsonPath("$.data.nodes[*].sourceUrl").value(not(hasItem(CAFE_URL))))
-                .andExpect(jsonPath("$.data.nodes[*].sourceUrl").value(hasItem(PRAGUE_CASTLE)))
-                .andExpect(jsonPath("$.data.edges", hasSize(12)))
+                .andExpect(jsonPath("$.data.nodes", hasSize(7)))
+                .andExpect(jsonPath("$.data.nodes[*].sourceUrl").value(hasItems(CAFE_URL, PRAGUE_CASTLE)))
+                .andExpect(jsonPath("$.data.edges", hasSize(13)))
                 .andExpect(jsonPath("$.data.edges[*].from", everyItem(startsWith("tag:"))))
                 .andExpect(jsonPath("$.data.edges[*].to", everyItem(startsWith("node:"))))
                 .andExpect(jsonPath("$.data.topHashtags[*].name").value(not(hasItem("카페"))));
@@ -113,7 +114,7 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
         mvc.perform(get("/community/profiles/{id}/mindmap", wanderer.id()).param("hashtagId", vienna.toString()).with(as(me)))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.nodes[*].sourceUrl").value(containsInAnyOrder(
-                        "https://www.wien.info/en", "https://www.belvedere.at/en")));
+                        "https://www.wien.info/en", "https://www.belvedere.at/en", CAFE_URL)));
         mvc.perform(get("/community/profiles/{id}/mindmap", wanderer.id()).param("hashtagId", cafe.toString()).with(as(me)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false));
@@ -126,24 +127,18 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data[*].hashtag").value(contains("야간열차", "프라하", "비엔나", "카를교", "체코")))
                 .andExpect(jsonPath("$.data[?(@.hashtag == '체코')].sessions[0].urls[0]").value(contains(PRAGUE_CASTLE)))
-                .andExpect(jsonPath("$.data[*].sessions[*].urls[*]").value(not(hasItem(CAFE_URL))));
+                .andExpect(jsonPath("$.data[?(@.hashtag == '비엔나')].sessions[*].urls[*]").value(hasItem(CAFE_URL)))
+                .andExpect(jsonPath("$.data[*].sessions[*].tags[*]").value(not(hasItem("카페"))));
     }
 
     @Test
-    @DisplayName("노드 공개 범위가 URL_ONLY(기본)면 원문 URL 만, 주인이 CONTENT 로 바꾸면 노드에 제목 · 발췌까지 보인다")
+    @DisplayName("노드 공개 범위가 URL_ONLY(기본)면 원문 URL 만 보인다 (CONTENT 는 CommunityGraphSourceScenarioTest)")
     void nodeContentFollowsVisibilityScope() throws Exception {
         String castle = "$.data.nodes[?(@.sourceUrl == '" + PRAGUE_CASTLE + "')]";
         mvc.perform(get("/community/profiles/{id}/mindmap", wanderer.id()).with(as(me)))
                 .andExpect(jsonPath(castle + ".label").value(contains(PRAGUE_CASTLE)))
                 .andExpect(jsonPath(castle + ".content").value(contains((Object) null)))
                 .andExpect(jsonPath(castle + ".visibilityScope").value(contains("URL_ONLY")));
-
-        showContent();
-
-        mvc.perform(get("/community/profiles/{id}/mindmap", wanderer.id()).with(as(me)))
-                .andExpect(jsonPath(castle + ".label").value(contains("프라하 성")))
-                .andExpect(jsonPath(castle + ".content").value(contains("성 내부는 통합권으로 본다.")))
-                .andExpect(jsonPath(castle + ".visibilityScope").value(contains("CONTENT")));
     }
 
     @Test
@@ -156,22 +151,24 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("세션 탭(COM-1-6): 다른 사람에겐 공개 · 핀고정 · 비공개 태그 없는 세션만 핀 순서로 오고, URL_ONLY 면 제목 · 본문은 빠진다")
+    @DisplayName("세션 탭(COM-1-6): 다른 사람에겐 공개 · 핀고정 세션이 핀 순서로 오고, URL_ONLY 면 제목 · 본문은 빠진다")
     void sharedSessionsTab() throws Exception {
         mvc.perform(get("/community/profiles/{id}/shared-sessions", wanderer.id()).with(as(me)))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data[*].id").value(contains(ids(wanderer.prague(), wanderer.nightjet()))))
+                .andExpect(jsonPath("$.data[*].id").value(contains(
+                        ids(wanderer.prague(), wanderer.cafe(), wanderer.nightjet()))))
                 .andExpect(jsonPath("$.data[0].tags").value(contains("프라하", "카를교", "체코")))
                 .andExpect(jsonPath("$.data[0].urls").value(contains(PRAGUE_CASTLE, "https://www.prague.eu/en")))
                 .andExpect(jsonPath("$.data[0].title").doesNotExist())
                 .andExpect(jsonPath("$.data[0].markdown").doesNotExist())
                 .andExpect(jsonPath("$.data[0].sources").doesNotExist());
 
-        // 주인은 자기 공유 세션을 전부(비공개 태그 세션 포함) 내용까지 본다
+        // 주인은 자기 공유 세션을 태그 · 내용까지 전부 본다
         mvc.perform(get("/community/profiles/{id}/shared-sessions", wanderer.id()).with(as(wanderer.member())))
                 .andExpect(jsonPath("$.data[*].id").value(contains(
                         ids(wanderer.prague(), wanderer.cafe(), wanderer.nightjet()))))
-                .andExpect(jsonPath("$.data[0].title").value("프라하 1박 일정 짜기"));
+                .andExpect(jsonPath("$.data[0].title").value("프라하 1박 일정 짜기"))
+                .andExpect(jsonPath("$.data[1].tags").value(contains("비엔나", "카페")));
     }
 
     @Test
@@ -203,9 +200,9 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("비공개 태그가 섞인 세션 · 핀고정 안 한 공개 세션 · 비공개 세션은 공유 세션 상세로 열 수 없다 (404)")
+    @DisplayName("핀고정 안 한 공개 세션 · 비공개 세션은 공유 세션 상세로 열 수 없다 (404)")
     void hiddenSharedSessionsAre404() throws Exception {
-        for (BrowsingSession blocked : List.of(wanderer.cafe(), wanderer.vienna(), wanderer.slow())) {
+        for (BrowsingSession blocked : List.of(wanderer.vienna(), wanderer.slow())) {
             mvc.perform(get("/community/sessions/{id}", blocked.getId()).with(as(me)))
                     .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, SESSION_NOT_FOUND));
             mvc.perform(get("/community/profiles/{userId}/shared-sessions/{sessionId}", wanderer.id(), blocked.getId())
@@ -355,25 +352,20 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @Disabled("API 미구현: 팔로우 / 팔로잉 (A표 반영 결정) — PATCH /community/profiles/{userId}/follow {following} 와 "
-            + "프로필 followerCount · followedByMe 는 제안(좋아요 API 와 같은 모양), 구현되면 켠다")
-    @DisplayName("팔로우 버튼: 누르면 팔로잉이 되고 팔로워 수가 오르며, 다시 누르면 풀린다")
+    @DisplayName("팔로우 버튼: 누르면 팔로잉이 되어 프로필에 보이고, 다시 누르면 풀린다")
     void follow() throws Exception {
         mvc.perform(patch("/community/profiles/{id}/follow", wanderer.id()).with(as(me)).with(json(Map.of("following", true))))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.following").value(true))
-                .andExpect(jsonPath("$.data.followerCount").value(1));
+                .andExpect(jsonPath("$.data.following").value(true));
         mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me)))
-                .andExpect(jsonPath("$.data.followedByMe").value(true))
-                .andExpect(jsonPath("$.data.followerCount").value(1));
+                .andExpect(jsonPath("$.data.following").value(true));
         mvc.perform(patch("/community/profiles/{id}/follow", wanderer.id()).with(as(me)).with(json(Map.of("following", false))))
-                .andExpect(jsonPath("$.data.following").value(false))
-                .andExpect(jsonPath("$.data.followerCount").value(0));
+                .andExpect(jsonPath("$.data.following").value(false));
+        mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me)))
+                .andExpect(jsonPath("$.data.following").value(false));
     }
 
     @Test
-    @Disabled("FE 기대와 다름: 프로필 세션 탭은 SessionCard(제목 · 소요시간 · 날짜 · 페이지 수)로 그리는데 공유 세션 응답(SharedSessionView)엔 "
-            + "startedAt · endedAt · pageCount 가 없고 URL_ONLY 면 title 도 빠짐 — 카드 필드를 줄지 팀 결정 후 켠다")
     @DisplayName("공유 세션 카드에 FE SessionCard 가 읽는 제목 · 시작/종료 시각 · 페이지 수가 온다")
     void sharedSessionCardFields() throws Exception {
         showContent();
@@ -386,8 +378,6 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @Disabled("FE 기대와 다름: FE ProfileView 는 비공개 태그만 빼고 공유 세션 카드를 그대로 보여주지만 BE 는 비공개 태그가 하나라도 섞인 세션을 "
-            + "통째로 숨김(본문 · 출처로 새는 것 방지) — 팀 결정 후 켠다")
     @DisplayName("비공개 해시태그가 섞인 공유 세션은 그 태그만 빠진 채 세션 탭에 남는다")
     void mixedTagSessionStaysWithoutHiddenTag() throws Exception {
         mvc.perform(get("/community/profiles/{id}/shared-sessions", wanderer.id()).with(as(me)))
@@ -397,8 +387,6 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @Disabled("FE 기대와 다름: FE 는 오류 message 를 그대로 토스트로 보여주는데 커뮤니티 API 일부는 영어 문구"
-            + "(Cannot like your own profile, Community resource not found, Select 1 to 100 distinct targets 등) — 한국어로 바꾼 뒤 켠다")
     @DisplayName("커뮤니티 API 오류 문구도 한국어로 온다")
     void communityErrorsAreKorean() throws Exception {
         String korean = ".*[가-힣].*";
