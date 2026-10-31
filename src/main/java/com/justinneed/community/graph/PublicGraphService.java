@@ -5,6 +5,7 @@ import com.justinneed.community.api.CommunityErrors;
 import com.justinneed.community.api.HttpUrl;
 import com.justinneed.community.api.SelectionKey;
 import com.justinneed.community.bookmark.*;
+import com.justinneed.community.card.SessionMindmaps;
 import com.justinneed.community.catalog.*;
 import com.justinneed.community.domain.CommunityProfile;
 import com.justinneed.community.domain.NodeVisibility;
@@ -14,6 +15,7 @@ import com.justinneed.community.reaction.ProfileLikeRepository;
 import com.justinneed.community.service.CommunityProfiles;
 import com.justinneed.community.service.CommunitySharing;
 import com.justinneed.session.management.domain.BrowsingSession;
+import com.justinneed.session.management.dto.SessionMindmapResponse;
 import java.util.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,27 +23,37 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 public class PublicGraphService {
+    private static final String HIERARCHY = "hierarchy";
+
     private final CommunityProfiles profiles;
     private final CommunitySharing sharing;
     private final CommunityTags tags;
     private final CommunityNodeRepository nodes;
+    private final SessionMindmaps mindmaps;
     private final MemberRepository members;
     private final ProfileLikeRepository likes;
     private final SharedSessionService pins;
     private final BookmarkQueryService bookmarks;
 
     public PublicGraphService(CommunityProfiles profiles, CommunitySharing sharing, CommunityTags tags,
-            CommunityNodeRepository nodes, MemberRepository members,
+            CommunityNodeRepository nodes, SessionMindmaps mindmaps, MemberRepository members,
             ProfileLikeRepository likes, SharedSessionService pins, BookmarkQueryService bookmarks) {
         this.profiles = profiles; this.sharing = sharing; this.tags = tags; this.nodes = nodes;
-        this.members = members; this.likes = likes; this.pins = pins; this.bookmarks = bookmarks;
+        this.mindmaps = mindmaps; this.members = members; this.likes = likes; this.pins = pins; this.bookmarks = bookmarks;
     }
 
+    /** 작성자 공개 범위를 따른다: 내용까지는 AI 마인드맵(hierarchy), URL만은 태그 → URL. */
     public Graph graph(Long ownerId, Long hashtagId) {
-        return build(profiles.read(ownerId), hashtagId);
+        var profile = profiles.read(ownerId);
+        return build(profile, hashtagId, profile.getVisibility() == NodeVisibility.CONTENT);
     }
 
-    private Graph build(CommunityProfile profile, Long hashtagId) {
+    /** 공개 범위와 상관없이 태그 → URL. AI 노드 전에 저장한 URL 노드 id 를 찾을 때 쓴다. */
+    public Graph urlGraph(Long ownerId) {
+        return build(profiles.read(ownerId), null, false);
+    }
+
+    private Graph build(CommunityProfile profile, Long hashtagId, boolean aiNodes) {
         Long ownerId = profile.getUserId();
         var owner = members.findByIdAndWithdrawnAtIsNull(ownerId).orElseThrow(CommunityErrors::missing);
         var tagIndex = tags.index(ownerId);
@@ -53,11 +65,13 @@ public class PublicGraphService {
         var counts = new HashMap<Long, Long>();
         // Public graph endpoints use visitor rules even when the owner requests them.
         var sessions = sharing.visibleSessions(profile);
+        var aiMaps = aiNodes ? mindmaps.of(sessions) : Map.<Long, SessionMindmapResponse>of();
         for (var session : sessions) {
             var sessionTags = sharing.visibleTags(profile, session.getTags()).stream().map(CommunityTags::key).distinct()
                     .map(tagIndex::get).filter(Objects::nonNull).toList();
             if (hashtagId != null && sessionTags.stream().noneMatch(t -> t.getId().equals(hashtagId))) continue;
-            var part = urlPart(session, profile, indexedNodes);
+            var part = aiNodes ? aiPart(session, aiMaps.get(session.getId()), indexedNodes)
+                    : urlPart(session, profile, indexedNodes);
             leaves.addAll(part.nodes());
             edges.addAll(part.edges());
             for (var tag : sessionTags) {
@@ -100,6 +114,30 @@ public class PublicGraphService {
         return new GraphPart(parts, List.of(), parts.stream().map(BookmarkSnapshot.Node::nodeId).toList());
     }
 
+    // 세션의 AI 마인드맵. 태그는 부모가 없는 노드(뿌리)에 잇는다
+    private GraphPart aiPart(BrowsingSession session, SessionMindmapResponse mindmap, Map<String, CommunityNode> indexed) {
+        var ids = new LinkedHashMap<String, Long>();
+        var parts = new ArrayList<BookmarkSnapshot.Node>();
+        for (var aiNode : mindmap.nodes()) {
+            var node = indexed.get(session.getId() + ":" + SelectionKey.of("ai:" + aiNode.id()));
+            if (node == null) continue;
+            ids.put(aiNode.id(), node.getId());
+            var citation = aiNode.citation();
+            parts.add(new BookmarkSnapshot.Node(node.getId(), aiNode.keyword(), citation == null ? null : citation.url(),
+                    citation == null ? null : citation.excerpt(), NodeVisibility.CONTENT));
+        }
+        var edges = new ArrayList<BookmarkSnapshot.Edge>();
+        var children = new HashSet<String>();
+        for (var edge : mindmap.edges()) {
+            if (HIERARCHY.equals(edge.type()) && ids.containsKey(edge.from()) && ids.containsKey(edge.to())) {
+                edges.add(new BookmarkSnapshot.Edge("node:" + ids.get(edge.from()), "node:" + ids.get(edge.to())));
+                children.add(edge.to());
+            }
+        }
+        var entries = ids.entrySet().stream().filter(e -> !children.contains(e.getKey())).map(Map.Entry::getValue).toList();
+        return new GraphPart(parts, edges, entries);
+    }
+
     public Profile profile(Long ownerId, Long viewerId) {
         var graph = graph(ownerId, null);
         var profile = profiles.read(ownerId);
@@ -118,8 +156,12 @@ public class PublicGraphService {
         if (ownerId == null || current == null || !members.existsByIdAndWithdrawnAtIsNull(ownerId)) {
             return new Original(200, false, null, List.of());
         }
-        var graph = graph(ownerId, null);
         var saved = current.nodes().stream().map(BookmarkSnapshot.Node::nodeId).toList();
+        var graph = graph(ownerId, null);
+        // 공개 범위를 내용까지로 바꾸기 전에 URL 노드로 저장한 북마크는 URL 그래프에서 원본을 보여준다
+        if (!saved.isEmpty() && graph.nodes().stream().map(BookmarkSnapshot.Node::nodeId).noneMatch(saved::contains)) {
+            graph = urlGraph(ownerId);
+        }
         return new Original(200, !graph.nodes().isEmpty(), graph,
                 graph.nodes().stream().map(BookmarkSnapshot.Node::nodeId).filter(saved::contains).toList());
     }
