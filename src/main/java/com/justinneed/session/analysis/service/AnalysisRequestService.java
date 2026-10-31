@@ -75,7 +75,7 @@ public class AnalysisRequestService {
     // 확장 수집이 끝났을 때 호출 (청크 수신 · 완료 판정 쪽에서). 원본은 이 전에 session_raw_payloads 에 있어야 한다
     @Transactional
     public void finishCollection(Long sessionId) {
-        BrowsingSession session = sessionRepository.findById(sessionId)
+        BrowsingSession session = sessionRepository.lockById(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         if (session.getStatus() != SessionStatus.COLLECTING) {
             throw new CustomException(ErrorCode.SESSION_NOT_COLLECTING);
@@ -100,14 +100,20 @@ public class AnalysisRequestService {
             aiClient.requestAnalysis(request);
         } catch (RestClientException e) {
             log.warn("[ai analysis] session {} 분석 요청 실패: {}", sessionId, e.getMessage());
-            transactionTemplate.executeWithoutResult(status -> sessionRepository.findById(sessionId)
-                    .ifPresent(BrowsingSession::failAnalysis));
+            transactionTemplate.executeWithoutResult(status -> markRequestFailed(sessionId));
         }
+    }
+
+    // 응답 시간 초과는 AI 가 이미 처리했을 수 있어, 그 사이 콜백으로 끝난 세션은 FAILED 로 덮지 않는다
+    private void markRequestFailed(Long sessionId) {
+        sessionRepository.lockById(sessionId)
+                .filter(session -> session.getStatus() == SessionStatus.ANALYZING)
+                .ifPresent(BrowsingSession::failAnalysis);
     }
 
     // READY 가 아니면(이미 요청됨 등) 건너뛴다. 원본이 없거나 탈퇴한 회원의 세션은 AI 로 보내지 않고 FAILED
     private AiAnalyzeRequest startAnalysis(Long sessionId) {
-        BrowsingSession session = sessionRepository.findById(sessionId).orElse(null);
+        BrowsingSession session = sessionRepository.lockById(sessionId).orElse(null);
         if (session == null || session.getStatus() != SessionStatus.READY) {
             log.info("[ai analysis] session {} 는 READY 가 아니라 분석 요청을 건너뜀", sessionId);
             return null;

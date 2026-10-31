@@ -82,7 +82,7 @@ public class AnalysisResultService {
 
     @Transactional(noRollbackFor = CustomException.class)
     public void save(Long sessionId, AiAnalysisResult result) {
-        BrowsingSession session = sessionRepository.findById(sessionId)
+        BrowsingSession session = sessionRepository.lockById(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         if (session.getStatus() != SessionStatus.ANALYZING) {
             throw new CustomException(ErrorCode.ANALYSIS_NOT_IN_PROGRESS);
@@ -121,7 +121,7 @@ public class AnalysisResultService {
     // AI 가 분석 중 오류를 알려 오면 FAILED 로 둔다 (원본은 남아 있어 다시 요청할 수 있다)
     @Transactional
     public void fail(Long sessionId, String reason) {
-        BrowsingSession session = sessionRepository.findById(sessionId)
+        BrowsingSession session = sessionRepository.lockById(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         if (session.getStatus() != SessionStatus.ANALYZING) {
             throw new CustomException(ErrorCode.ANALYSIS_NOT_IN_PROGRESS);

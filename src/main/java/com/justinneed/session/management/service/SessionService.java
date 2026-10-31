@@ -64,7 +64,7 @@ public class SessionService {
 
     @Transactional
     public SessionDetailResponse updateSession(Long userId, Long sessionId, SessionUpdateRequest request) {
-        BrowsingSession session = sessionRepository.findWithSummaryByIdAndUserIdAndDeletedAtIsNull(sessionId, userId)
+        BrowsingSession session = sessionRepository.lockOwned(sessionId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
 
         validateTitle(request.title());
@@ -75,7 +75,7 @@ public class SessionService {
 
     @Transactional
     public void deleteSession(Long userId, Long sessionId) {
-        BrowsingSession session = sessionRepository.findByIdAndUserIdAndDeletedAtIsNull(sessionId, userId)
+        BrowsingSession session = sessionRepository.lockOwned(sessionId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         session.delete();
     }
