@@ -67,7 +67,14 @@ class CommunityCommitTest {
                     .update(null, null, false, null, null));
             assertThat(interactions.exploring(actor, TargetType.NODE, node, false).exploring()).isFalse();
             assertThat(graphs.original(actor, id).highlightedNodeIds()).isEmpty();
+            // 원본이 비공개면 북마크는 숨겨지고 행은 남는다. 다시 공개하면 같은 스냅샷이 돌아온다
+            assertThat(queries.mindmaps(actor, 0, 10).mindmaps()).isEmpty();
+            assertThat(bookmarkRows.findById(id)).isPresent();
+            new TransactionTemplate(manager).executeWithoutResult(status -> sessions.findById(s).orElseThrow()
+                    .update(null, null, true, null, null));
             assertThat(queries.mindmaps(actor, 0, 10).mindmaps().get(0)).isEqualTo(snapshot);
+            new TransactionTemplate(manager).executeWithoutResult(status -> sessions.findById(s).orElseThrow()
+                    .update(null, null, false, null, null));
             assertThat(trending.trending(TrendingService.Period.TODAY, 10).hashtags()).isEmpty();
             bookmarks.delete(actor, id);
             assertThat(bookmarkRows.findById(id)).isEmpty();
@@ -117,6 +124,7 @@ class CommunityCommitTest {
     }
     private Long session(Long owner) {
         var s = new BrowsingSession(owner, "private", LocalDateTime.now());
+        s.complete(LocalDateTime.now(), 1);
         s.update(null, null, true, null, List.of("Java"));
         s.replaceSources(List.of(new Source("private", "https://example.com", "private")));
         return sessions.saveAndFlush(s).getId();

@@ -8,6 +8,7 @@ import com.justinneed.community.service.CommunitySharing;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
 import com.justinneed.session.management.domain.BrowsingSession;
+import com.justinneed.session.management.domain.SessionStatus;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -36,6 +37,9 @@ public class SharedSessionService {
         CommunityProfile profile = profiles.lock(userId);
         BrowsingSession session = sessions.lockOwnedSession(userId, sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        if (session.getStatus() != SessionStatus.COMPLETED) {
+            throw new CustomException(ErrorCode.SESSION_NOT_COMPLETED);
+        }
         List<Long> pins = new ArrayList<>(livePins(profile, userId).stream().map(BrowsingSession::getId).toList());
         if (!pins.contains(sessionId)) {
             pins.add(sessionId);

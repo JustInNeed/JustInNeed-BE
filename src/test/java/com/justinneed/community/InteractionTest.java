@@ -49,7 +49,7 @@ class InteractionTest extends CommunityTestSupport {
     }
 
     @Test
-    void snapshotPreservesRelationsIsPrivateAndDoesNotFollowSourceChanges() throws Exception {
+    void snapshotPreservesRelationsIsPrivateAndStaysStoredWhenSourceGoesPrivate() throws Exception {
         var s = session(ownerId, true, "Java", "Spring");
         var graph = graphs.graph(ownerId, null);
         var node = graph.nodes().get(0).nodeId();

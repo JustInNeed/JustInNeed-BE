@@ -97,9 +97,13 @@ public class PublicGraphService {
         var bookmark = bookmarks.owned(viewerId, bookmarkId);
         if (bookmark.getSaveType() != SaveType.MINI_MINDMAP) throw CommunityErrors.invalid("Mini mindmap required");
         Long ownerId = bookmark.getSourceMindmapId();
-        if (ownerId == null || !members.existsByIdAndWithdrawnAtIsNull(ownerId)) return new Original(200, false, null, List.of());
+        // 목록에서 숨겨진 북마크는 원본도 열리지 않는다
+        var current = bookmarks.currentMindmap(bookmark);
+        if (ownerId == null || current == null || !members.existsByIdAndWithdrawnAtIsNull(ownerId)) {
+            return new Original(200, false, null, List.of());
+        }
         var graph = graph(ownerId, null);
-        var saved = bookmark.getSnapshot().nodes().stream().map(BookmarkSnapshot.Node::nodeId).toList();
+        var saved = current.nodes().stream().map(BookmarkSnapshot.Node::nodeId).toList();
         return new Original(200, !graph.nodes().isEmpty(), graph,
                 graph.nodes().stream().map(BookmarkSnapshot.Node::nodeId).filter(saved::contains).toList());
     }

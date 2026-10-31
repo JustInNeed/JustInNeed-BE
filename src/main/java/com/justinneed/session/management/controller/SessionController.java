@@ -1,7 +1,9 @@
 package com.justinneed.session.management.controller;
 
 import com.justinneed.global.common.ApiResponse;
+import com.justinneed.session.analysis.service.AnalysisRequestService;
 import com.justinneed.session.management.dto.SessionDetailResponse;
+import com.justinneed.session.management.dto.SessionMindmapResponse;
 import com.justinneed.session.management.dto.SessionPageResponse;
 import com.justinneed.session.management.dto.SessionUpdateRequest;
 import com.justinneed.session.management.service.SessionService;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,9 +25,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class SessionController {
 
     private final SessionService sessionService;
+    private final AnalysisRequestService analysisRequestService;
 
-    public SessionController(SessionService sessionService) {
+    public SessionController(SessionService sessionService, AnalysisRequestService analysisRequestService) {
         this.sessionService = sessionService;
+        this.analysisRequestService = analysisRequestService;
     }
 
     // 무한 스크롤 (REC-10-1): page 0 부터 size 개씩. favorite=true 면 즐겨찾기만 (REC-10-3)
@@ -54,6 +59,14 @@ public class SessionController {
         return ApiResponse.ok(sessionService.getSession(userId, id));
     }
 
+    @GetMapping("/{id}/mindmap")
+    public ApiResponse<SessionMindmapResponse> getMindmap(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long id
+    ) {
+        return ApiResponse.ok(sessionService.getMindmap(userId, id));
+    }
+
     @PatchMapping("/{id}")
     public ApiResponse<SessionDetailResponse> updateSession(
             @AuthenticationPrincipal Long userId,
@@ -61,6 +74,14 @@ public class SessionController {
             @Valid @RequestBody SessionUpdateRequest request
     ) {
         return ApiResponse.ok(sessionService.updateSession(userId, id, request));
+    }
+
+    @PostMapping("/{id}/reanalyze")
+    public ApiResponse<SessionDetailResponse> reanalyze(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long id
+    ) {
+        return ApiResponse.ok(analysisRequestService.reanalyze(userId, id));
     }
 
     @DeleteMapping("/{id}")

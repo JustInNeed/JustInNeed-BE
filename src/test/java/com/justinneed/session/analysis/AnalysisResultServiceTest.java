@@ -131,7 +131,7 @@ class AnalysisResultServiceTest {
         BrowsingSession session = sessionRepository.findById(sessionId).orElseThrow();
         assertThat(session.getStatus()).isEqualTo(SessionStatus.COMPLETED);
         assertThat(session.getTitle()).isEqualTo("고양이와 JPA");
-        assertThat(session.getSummary().getMarkdown()).isEqualTo("# 고양이와 JPA\n\n## 음수량\n\n하루 50ml");
+        assertThat(session.getSummary().getMarkdown()).isEqualTo("## 음수량\n\n하루 50ml");
         assertThat(session.getSummary().getEssay()).containsEntry("title", "고양이와 JPA").containsKey("sections");
         assertThat(session.getTags()).containsExactly("고양이", "JPA");
         // 원본의 방문 링크 수 (AI pages 는 1개뿐이지만 원본 링크는 cat · spring · dog 3개)

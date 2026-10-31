@@ -124,15 +124,18 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 | --- | --- | --- |
 | GET | `/sessions` | 세션 목록 조회 (무한 스크롤). `page`(기본 0) · `size`(기본 10, 1~50) · `favorite`(기본 false, true 면 즐겨찾기만). `{ sessions, hasNext, totalCount, favoriteCount }` 반환 — `totalCount` · `favoriteCount` 는 필터 · 페이지와 상관없는 내 전체 세션 수 / 즐겨찾기 수. 음수 page · 범위 밖 size 는 400. 정렬: 진행 중(완료 · 실패가 아닌) 세션이 맨 위(시작 시각 최신순), 나머지는 종료 시각 최신순(종료 시각 없으면 뒤) → 시작 시각 최신순 → id 역순 |
 | GET | `/sessions/hashtags` | 그룹 만들기 해시태그 후보. 내 세션 전체(삭제 제외, 모든 상태)의 태그를 목록과 같은 순서로 훑어 처음 나온 순서대로, 대소문자 무시 중복 제거(처음 나온 표기 유지). `data` 는 문자열 배열, 세션이 없으면 `[]` |
-| GET | `/sessions/{id}` | 세션 상세 조회. 요약 본문과 출처를 함께 반환 |
-| PATCH | `/sessions/{id}` | 세션 편집. `title`, `editedMarkdown`, `isPublic`, `isFavorite`, `tags`, `insights` 중 보낸 필드만 수정 |
-| DELETE | `/sessions/{id}` | 세션 삭제. 실제 삭제가 아니라 soft delete 처리 |
+| GET | `/sessions/{id}` | 세션 상세 조회. 요약 본문과 출처를 함께 반환. 없거나 삭제한 세션은 404. 소유자는 어떤 상태든 전체(`isOwner: true`). 다른 사용자는 공개 세션(공개 · 분석 완료 · 비공개 해시태그 없음 · 작성자 탈퇴 전)만 읽기 전용으로 보고(`isOwner: false`, `isFavorite: false`), 작성자의 노드 공개 범위가 `URL_ONLY` 면 제목 · 본문 · 출처 내용 없이 링크만 받는다. 그 밖에는 403 |
+| GET | `/sessions/{id}/mindmap` | 세션 마인드맵. 접근 규칙은 상세와 같다. `{ nodes: [{ id, type(root/topic/unit), keyword, score, childCount, citation }], edges: [{ from, to, type(hierarchy/related), primary }] }`. `citation`(`title`, `url`, `excerpt`, `visitedAt`)은 컷오프 유닛 노드에만 온다. 분석이 끝나지 않았거나 결과가 없으면 빈 그래프, `URL_ONLY` 작성자의 세션은 다른 사용자에게 빈 그래프 |
+| PATCH | `/sessions/{id}` | 세션 편집. `title`, `editedMarkdown`, `isPublic`, `isFavorite`, `tags` 중 보낸 필드만 수정. 분석이 끝나기 전에는 `isFavorite` 만 바꿀 수 있고 나머지는 409. 소유자가 아니면 404 |
+| POST | `/sessions/{id}/reanalyze` | 실패한 세션 다시 분석. 소유자만(아니면 404), `FAILED` 가 아니면 409, 원본이 없으면 404. `READY` 상태의 세션 상세를 반환하고 AI 요청은 커밋 뒤 비동기로 보낸다 |
+| DELETE | `/sessions/{id}` | 세션 삭제. 실제 삭제가 아니라 soft delete 처리. 어떤 상태에서도 가능 |
 | POST | `/sessions/chunks` | 확장 프로그램이 세션 원본 청크를 보냄. `sessionId`(수집기 세션 id) · `segId` · `n` · `payload`, 마지막 청크는 `final` · `maxN` · `stopReason`. 처음 받으면 201, 이미 받은 청크면 저장하지 않고 200(`duplicate: true`) |
 | GET | `/tag-groups` | 해시태그 그룹 목록 조회. 그룹별 매칭 세션 포함 (세션 순서는 `GET /sessions` 와 같음, 생성 · 수정 · 순서 변경 응답도 동일) |
 | POST | `/tag-groups` | 새 해시태그 그룹 생성. `hashtags` 는 1개 이상 필수(비었거나 없으면 400). `position` 생략 시 맨 뒤, 지정 시 해당 위치에 끼워 넣음 |
 | PATCH | `/tag-groups/{id}` | 그룹 이름과 해시태그 수정. 보낸 필드만 수정, 이름을 보낼 때 빈 값 · 공백만은 400, `hashtags` 를 빈 배열로 보내면 400 |
 | DELETE | `/tag-groups/{id}` | 그룹 삭제 |
 | PATCH | `/tag-groups/order` | 그룹 표시 순서 변경 |
+| GET | `/home` | 홈 대시보드 한 번에 조회. 내 완료 · 미삭제 세션 기준이고 날짜는 시작 시각(KST), 이번 주는 오늘 포함 최근 7일 · 지난주는 그 앞 7일. `{ graph, stats, weekActivity, topTags, todayTimeline, weekSessions, sessions }` 반환 — `graph` 는 세션별 마인드맵을 키워드(공백 · 대소문자 무시)로 합친 그래프(`nodes` · `edges`, 중심 노드 `core` 포함 최대 150개)와 `nodeMeta` · `tagGroups` · `filterTags`, `sessions` 는 시작 시각 최신순 최대 300개. 세션이 없으면 0 · 빈 목록 |
 
 ### 설정
 
@@ -145,7 +148,7 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 | GET | `/settings/extension` | 확장 프로그램 설정 조회. 저장한 적이 없으면 기본값(모두 켜짐) |
 | PATCH | `/settings/extension/{popup-visible\|auto-end-notification\|manual-scrap}` | 토글 저장 `{enabled}`. 자동 종료 알림은 5초 알림만 끄고 자동 종료는 항상 동작 |
 
-인증이 필요한 API(`/sessions/**`, `/tag-groups/**`, `/members/**`, `/settings/**`)는 `Authorization: Bearer {accessToken}` 헤더가 필수입니다. 토큰이 없거나 · 잘못됐거나 · 만료 · 무효화됐거나 · refresh 토큰이거나 · 탈퇴한 회원의 토큰이면 401 과 함께 `{"success":false,"data":null,"message":"로그인이 만료되었습니다. 다시 로그인해 주세요."}` 를 반환합니다 (`/auth/refresh` 실패는 "유효하지 않은 리프레시 토큰입니다."). 사용자 식별은 access 토큰의 memberId 로 합니다.
+인증이 필요한 API(`/sessions/**`, `/tag-groups/**`, `/home`, `/members/**`, `/settings/**`)는 `Authorization: Bearer {accessToken}` 헤더가 필수입니다. 토큰이 없거나 · 잘못됐거나 · 만료 · 무효화됐거나 · refresh 토큰이거나 · 탈퇴한 회원의 토큰이면 401 과 함께 `{"success":false,"data":null,"message":"로그인이 만료되었습니다. 다시 로그인해 주세요."}` 를 반환합니다 (`/auth/refresh` 실패는 "유효하지 않은 리프레시 토큰입니다."). 사용자 식별은 access 토큰의 memberId 로 합니다.
 
 모든 응답은 `{ success, data, message }` 형식입니다. 에러도 같은 형식으로 내려가며 `success=false`, `message`에 사유가 담깁니다.
 

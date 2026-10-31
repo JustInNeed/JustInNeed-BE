@@ -15,6 +15,7 @@ import com.justinneed.session.analysis.repository.SessionRawPayloadRepository;
 import com.justinneed.session.analysis.repository.SessionResultRepository;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.domain.SessionStatus;
+import com.justinneed.session.management.dto.SessionDetailResponse;
 import com.justinneed.session.management.repository.BrowsingSessionRepository;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,6 +37,7 @@ import org.springframework.web.client.RestClientException;
  *
  * <pre>
  * 수집 완료 (finishCollection)  COLLECTING → READY, 커밋 뒤 비동기로 아래 실행
+ * 재분석 (reanalyze)            FAILED → READY, 커밋 뒤 비동기로 아래 실행
  * 분석 요청 (requestAnalysis)   READY → ANALYZING 커밋 → POST /analyze (AI 는 202 로 접수만)
  *                               요청이 실패하면 FAILED. 결과 · 실패는 AI 가 콜백으로 보낸다 (AiCallbackController)
  * </pre>
@@ -75,13 +77,29 @@ public class AnalysisRequestService {
     // 확장 수집이 끝났을 때 호출 (청크 수신 · 완료 판정 쪽에서). 원본은 이 전에 session_raw_payloads 에 있어야 한다
     @Transactional
     public void finishCollection(Long sessionId) {
-        BrowsingSession session = sessionRepository.findById(sessionId)
+        BrowsingSession session = sessionRepository.lockById(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         if (session.getStatus() != SessionStatus.COLLECTING) {
             throw new CustomException(ErrorCode.SESSION_NOT_COLLECTING);
         }
         session.markReady();
         eventPublisher.publishEvent(new SessionReadyEvent(sessionId));
+    }
+
+    // 실패한 세션 다시 분석 (S-06). 두 번 눌러도 둘째 요청은 잠금 뒤 READY 를 보고 409 라 AI 요청은 한 번만 나간다
+    @Transactional
+    public SessionDetailResponse reanalyze(Long userId, Long sessionId) {
+        BrowsingSession session = sessionRepository.lockOwned(sessionId, userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        if (session.getStatus() != SessionStatus.FAILED) {
+            throw new CustomException(ErrorCode.SESSION_NOT_FAILED);
+        }
+        if (!rawPayloadRepository.existsById(sessionId)) {
+            throw new CustomException(ErrorCode.RAW_PAYLOAD_NOT_FOUND);
+        }
+        session.markReady();
+        eventPublisher.publishEvent(new SessionReadyEvent(sessionId));
+        return SessionDetailResponse.from(session);
     }
 
     @Async
@@ -100,16 +118,22 @@ public class AnalysisRequestService {
             aiClient.requestAnalysis(request);
         } catch (RestClientException e) {
             log.warn("[ai analysis] session {} 분석 요청 실패: {}", sessionId, e.getMessage());
-            transactionTemplate.executeWithoutResult(status -> sessionRepository.findById(sessionId)
-                    .ifPresent(BrowsingSession::failAnalysis));
+            transactionTemplate.executeWithoutResult(status -> markRequestFailed(sessionId));
         }
     }
 
-    // READY 가 아니면(이미 요청됨 등) 건너뛴다. 원본이 없거나 탈퇴한 회원의 세션은 AI 로 보내지 않고 FAILED
+    // 응답 시간 초과는 AI 가 이미 처리했을 수 있어, 그 사이 콜백으로 끝난 세션은 FAILED 로 덮지 않는다
+    private void markRequestFailed(Long sessionId) {
+        sessionRepository.lockById(sessionId)
+                .filter(session -> session.getStatus() == SessionStatus.ANALYZING && !session.isDeleted())
+                .ifPresent(BrowsingSession::failAnalysis);
+    }
+
+    // 지웠거나 READY 가 아니면(이미 요청됨 등) 건너뛴다. 원본이 없거나 탈퇴한 회원의 세션은 AI 로 보내지 않고 FAILED
     private AiAnalyzeRequest startAnalysis(Long sessionId) {
-        BrowsingSession session = sessionRepository.findById(sessionId).orElse(null);
-        if (session == null || session.getStatus() != SessionStatus.READY) {
-            log.info("[ai analysis] session {} 는 READY 가 아니라 분석 요청을 건너뜀", sessionId);
+        BrowsingSession session = sessionRepository.lockById(sessionId).orElse(null);
+        if (session == null || session.isDeleted() || session.getStatus() != SessionStatus.READY) {
+            log.info("[ai analysis] session {} 는 분석 대기 중이 아니라 분석 요청을 건너뜀", sessionId);
             return null;
         }
         Long userId = session.getUserId();
@@ -136,7 +160,7 @@ public class AnalysisRequestService {
 
     // 같은 사용자의 이전 세션 유닛 피처 (AI 가 개인 정규화 · 개인 군집 재학습에 쓴다)
     private List<Map<String, Object>> history(Long userId, Long sessionId) {
-        return resultRepository.findByUserId(userId).stream()
+        return resultRepository.findActiveByUserId(userId).stream()
                 .filter(result -> !result.getSessionId().equals(sessionId))
                 .flatMap(result -> result.getUnitFeatures().stream())
                 .toList();

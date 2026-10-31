@@ -2,12 +2,14 @@ package com.justinneed.session.management.repository;
 
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.domain.SessionStatus;
+import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -98,13 +100,19 @@ public interface BrowsingSessionRepository extends JpaRepository<BrowsingSession
             select session
             from BrowsingSession session
             where session.id = :id
-              and session.userId = :userId
               and session.deletedAt is null
             """)
-    Optional<BrowsingSession> findWithSummaryByIdAndUserIdAndDeletedAtIsNull(
-            @Param("id") Long id,
-            @Param("userId") Long userId
-    );
+    Optional<BrowsingSession> findWithSummaryByIdAndDeletedAtIsNull(@Param("id") Long id);
 
-    Optional<BrowsingSession> findByIdAndUserIdAndDeletedAtIsNull(Long id, Long userId);
+    // 세션 행을 바꾸는 경로는 트랜잭션에서 이 잠금을 가장 먼저 잡는다. 그래야 기다린 뒤 최신 행을 읽어 쓰기가 줄을 선다.
+    // fetch join 을 쓰면 Postgres 가 outer join 의 nullable 쪽 FOR UPDATE 를 거부하므로 세션만 잠근다.
+    // summary 는 세션을 읽을 때 따로 조회되고(mappedBy 쪽 1:1), 잠금 뒤의 조회라 역시 최신 값이다
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select session from BrowsingSession session where session.id = :id")
+    Optional<BrowsingSession> lockById(@Param("id") Long id);
+
+    // 소유자 · 삭제 여부는 잠금을 잡은 뒤의 행으로 판단한다 (기다리는 동안 삭제될 수 있다)
+    default Optional<BrowsingSession> lockOwned(Long id, Long userId) {
+        return lockById(id).filter(session -> session.getUserId().equals(userId) && !session.isDeleted());
+    }
 }

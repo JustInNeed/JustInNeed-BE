@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * AI 컨테이너 → Spring 콜백 (내부 전용, X-Internal-Token 필요).
- * 세션이 ANALYZING 일 때만 받는다. 그 외 상태면 409.
+ * 세션이 ANALYZING 일 때만 받는다. 그 외 상태이거나 지운 세션이면 409.
  */
 @RestController
 @RequestMapping("/internal/ai/sessions/{sessionId}")
