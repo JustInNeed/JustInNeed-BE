@@ -190,6 +190,16 @@ API, 데이터 모델, 공개 범위 처리, 테스트 및 PR 병합 순서는 [
 | PATCH | `/community/profiles/{userId}/follow` | 팔로우 설정 `{following}` → `{following}`. 같은 값을 다시 보내거나 동시에 보내도 200. 자기 자신은 400, 없거나 탈퇴한 회원은 404. 탈퇴해도 팔로우 행은 남고 읽을 때 뺀다 |
 | GET | `/community/recommendations/profiles/similar` | 관심사가 비슷한 사람 `{people: [{userId, nickname, matchedHashtags, following}]}`. `limit` 기본 3, 1~20(밖이면 400). 태그 = 공개 · 완료 · 미삭제 세션의 태그 + 관심 해시태그에서 각자의 비공개 해시태그를 뺀 것(대소문자 무시). 겹치는 태그 수가 많은 순 → 최근 공개 활동(세션 종료 시각, 없으면 시작 시각) 순, 활동이 없으면 뒤 → id 순. 나 · 탈퇴 회원 · 겹치는 태그가 없는 사람은 빠진다. 닉네임을 정하지 않은 사람은 `nickname: null` 로 온다. 조회는 쓰기 · 잠금을 하지 않는다 |
 
+### 카드 반응
+
+공개 세션 1개 = 카드 1장, `{mindmapId}` = 세션 id. 공개 카드가 아니면(비공개 · 미완료 · 삭제 · 탈퇴한 작성자) 켜기 · 끄기 모두 404. 같은 값을 다시 보내거나 동시에 보내도 200 이고 두 번 세지 않습니다. 카드가 공개에서 빠져도 행은 남아 다시 공개하면 숫자가 돌아옵니다. 숫자에서 탈퇴 회원 행동은 빠지고 내 행동은 포함됩니다.
+
+| Method | Path | 설명 |
+| --- | --- | --- |
+| PATCH | `/community/mindmaps/{mindmapId}/like` | 좋아요 `{liked}` → `{likeCount, likedByMe}`. 내 카드는 400 |
+| PATCH | `/community/mindmaps/{mindmapId}/exploring` | 나도 탐색중 `{exploring}` → `{exploringCount, exploringByMe}`. 새로 켜면 공개 해시태그마다 활동을 남깁니다 |
+| PATCH | `/community/mindmaps/{mindmapId}/bookmark` | 북마크 `{bookmarked}` → `{bookmarkCount, bookmarkId}`. 켜면 카드의 노드를 미니 마인드맵으로 저장(이미 있으면 그 id), 끄면 삭제. 노드가 없는 카드는 400 |
+
 ## 환경 변수
 
 | 변수 | 설명 |

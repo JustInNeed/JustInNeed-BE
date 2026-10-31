@@ -374,8 +374,8 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("CardCounts 기본 구현은 0 이다")
-    void defaultCountsAreZero(@Autowired CardCounts counts) {
+    @DisplayName("행동이 없는 카드의 숫자는 0 이다")
+    void countsWithoutActionsAreZero(@Autowired CardCounts counts) {
         assertThat(counts.counts(List.of(rome.getId()), viewer.getId()).getOrDefault(rome.getId(), CardCounts.Count.ZERO))
                 .isEqualTo(CardCounts.Count.ZERO);
     }

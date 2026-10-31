@@ -33,6 +33,32 @@ remove/re-add does not inflate that event. Undo does not erase historical activi
 The recommendation feature (#40) further deduplicates actor/tag/kind/day and
 revalidates current public visibility before publishing trends.
 
+## Card reactions
+
+| Method | Path | Body | Response data |
+| --- | --- | --- | --- |
+| PATCH | /community/mindmaps/{mindmapId}/like | liked: boolean | likeCount, likedByMe |
+| PATCH | /community/mindmaps/{mindmapId}/exploring | exploring: boolean | exploringCount, exploringByMe |
+| PATCH | /community/mindmaps/{mindmapId}/bookmark | bookmarked: boolean | bookmarkCount, bookmarkId |
+
+mindmapId is a session ID. Every request, including turning a state off, needs a
+publicly visible card (CommunityCardReader) or returns 404. Own-card likes are
+rejected like self-likes. Rows stay when a card leaves public state and counts
+return with it. CardCounts reads all cards in a fixed number of queries.
+
+Likes and exploring use community_mindmap_likes / community_mindmap_explorations
+with on conflict inserts. TargetType stays NODE/HASHTAG: its CHECK constraints are
+not changed by ddl-auto update. Card activity is therefore stored per public tag
+with target_type HASHTAG and target_id = the hashtag ID.
+
+A card bookmark is a NODE-targeted MINI_MINDMAP with card_session_id set, so the
+existing read rules apply. source_mindmap_id stays the owner ID (the original view
+needs it). Only rows with card_session_id count on the card. The snapshot holds
+that session's nodes from the owner's current graph: AI nodes for CONTENT, URL
+nodes otherwise or when the session has no AI result. URL_ONLY snapshots have the
+default title, URL labels and no content. A card without nodes cannot be bookmarked
+because nothing would tie the snapshot to its source session.
+
 Verification: InteractionTest covers JWT, ownership, idempotent counts/activity,
 validation, snapshot independence, relations, revoked/deleted sources, and removal.
 H2 integration coverage does not substitute for PostgreSQL load/deadlock testing.
