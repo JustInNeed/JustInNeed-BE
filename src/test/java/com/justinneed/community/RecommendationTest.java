@@ -78,11 +78,9 @@ class RecommendationTest extends CommunityTestSupport {
         event(ownerId, TargetType.NODE, node, tag, ActivityKind.EXPLORE, "2026-09-27T14:59:59Z");
         event(ownerId, TargetType.HASHTAG, tag, tag, ActivityKind.EXPLORE, "2026-10-01T03:00:00Z");
         var today = trending.trending(TrendingService.Period.TODAY, 10).hashtags().get(0);
-        assertThat(today.exploreCount()).isEqualTo(1);
-        assertThat(today.bookmarkCount()).isZero();
+        assertThat(today.count()).isEqualTo(1);
         var week = trending.trending(TrendingService.Period.WEEK, 10).hashtags().get(0);
-        assertThat(week.exploreCount()).isEqualTo(2);
-        assertThat(week.bookmarkCount()).isEqualTo(1);
+        assertThat(week.count()).isEqualTo(3);
         assertThat(week.rank()).isEqualTo(1);
     }
 
