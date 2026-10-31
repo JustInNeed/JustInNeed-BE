@@ -14,6 +14,7 @@ public enum ErrorCode {
     // AI 콜백에 대한 응답. 5xx 면 AI 가 재시도하므로 4xx 로 둔다
     ANALYSIS_LLM_FAILED(HttpStatus.UNPROCESSABLE_CONTENT, "AI 요약 생성에 실패했습니다."),
     SESSION_NOT_COLLECTING(HttpStatus.CONFLICT, "수집 중인 세션이 아닙니다."),
+    SESSION_NOT_FAILED(HttpStatus.CONFLICT, "분석에 실패한 세션만 다시 분석할 수 있습니다."),
     ANALYSIS_NOT_IN_PROGRESS(HttpStatus.CONFLICT, "분석 중인 세션이 아닙니다."),
     ANALYSIS_MEMBER_WITHDRAWN(HttpStatus.CONFLICT, "탈퇴한 회원의 세션은 분석 결과를 저장하지 않습니다."),
     INVALID_INTERNAL_TOKEN(HttpStatus.UNAUTHORIZED, "내부 호출 토큰이 올바르지 않습니다."),

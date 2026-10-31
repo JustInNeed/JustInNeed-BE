@@ -15,6 +15,7 @@ import com.justinneed.session.analysis.repository.SessionRawPayloadRepository;
 import com.justinneed.session.analysis.repository.SessionResultRepository;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.domain.SessionStatus;
+import com.justinneed.session.management.dto.SessionDetailResponse;
 import com.justinneed.session.management.repository.BrowsingSessionRepository;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,6 +37,7 @@ import org.springframework.web.client.RestClientException;
  *
  * <pre>
  * 수집 완료 (finishCollection)  COLLECTING → READY, 커밋 뒤 비동기로 아래 실행
+ * 재분석 (reanalyze)            FAILED → READY, 커밋 뒤 비동기로 아래 실행
  * 분석 요청 (requestAnalysis)   READY → ANALYZING 커밋 → POST /analyze (AI 는 202 로 접수만)
  *                               요청이 실패하면 FAILED. 결과 · 실패는 AI 가 콜백으로 보낸다 (AiCallbackController)
  * </pre>
@@ -82,6 +84,22 @@ public class AnalysisRequestService {
         }
         session.markReady();
         eventPublisher.publishEvent(new SessionReadyEvent(sessionId));
+    }
+
+    // 실패한 세션 다시 분석 (S-06). 두 번 눌러도 둘째 요청은 잠금 뒤 READY 를 보고 409 라 AI 요청은 한 번만 나간다
+    @Transactional
+    public SessionDetailResponse reanalyze(Long userId, Long sessionId) {
+        BrowsingSession session = sessionRepository.lockOwned(sessionId, userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        if (session.getStatus() != SessionStatus.FAILED) {
+            throw new CustomException(ErrorCode.SESSION_NOT_FAILED);
+        }
+        if (!rawPayloadRepository.existsById(sessionId)) {
+            throw new CustomException(ErrorCode.RAW_PAYLOAD_NOT_FOUND);
+        }
+        session.markReady();
+        eventPublisher.publishEvent(new SessionReadyEvent(sessionId));
+        return SessionDetailResponse.from(session);
     }
 
     @Async
