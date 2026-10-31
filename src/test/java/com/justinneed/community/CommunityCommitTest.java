@@ -5,6 +5,7 @@ import com.justinneed.auth.domain.*;
 import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.community.bookmark.*;
 import com.justinneed.community.card.CommunityCardSync;
+import com.justinneed.community.catalog.CommunityTags;
 import com.justinneed.community.graph.PublicGraphService;
 import com.justinneed.community.reaction.*;
 import com.justinneed.community.recommend.TrendingService;
@@ -32,6 +33,7 @@ class CommunityCommitTest {
     @Autowired TrendingService trending;
     @Autowired org.springframework.transaction.PlatformTransactionManager manager;
     @Autowired CommunityCardSync cardSync;
+    @Autowired CommunityTags communityTags;
 
     @Test
     void simultaneousWritesAreIdempotentAndSnapshotRoundTripsAcrossTransactions() throws Exception {
@@ -117,6 +119,26 @@ class CommunityCommitTest {
         interactions.exploring(actor, TargetType.NODE, node, true);
         members.deleteById(owner);
         assertThatCode(() -> trending.trending(TrendingService.Period.TODAY, 10)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void simultaneousNewTagFromTwoSessionsLeavesOneRow() throws Exception {
+        var owner = member();
+        var pool = Executors.newFixedThreadPool(4);
+        var start = new CountDownLatch(1);
+        try {
+            var saves = new ArrayList<Future<?>>();
+            for (int i = 0; i < 4; i++) {
+                saves.add(pool.submit(() -> {
+                    start.await();
+                    communityTags.ensure(owner, List.of("Same", "other"));
+                    return null;
+                }));
+            }
+            start.countDown();
+            for (var save : saves) save.get(20, TimeUnit.SECONDS);
+            assertThat(communityTags.index(owner)).containsOnlyKeys("same", "other");
+        } finally { start.countDown(); pool.shutdownNow(); }
     }
 
     private Long member() {
