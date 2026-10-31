@@ -103,7 +103,7 @@ class AnalysisSchemaTest {
         assertThat(found.getUnitFeatures()).singleElement().extracting(f -> f.get("cursor_speed_z")).isEqualTo(0.31);
         assertThat(found.getModelSource()).isEqualTo("global");
         assertThat(found.getCreatedAt()).isNotNull();
-        assertThat(resultRepository.findByUserId(USER_ID)).hasSize(1);
+        assertThat(resultRepository.findActiveByUserId(USER_ID)).hasSize(1);
         assertThat(resultRepository.countByUserId(USER_ID)).isEqualTo(1);
     }
 

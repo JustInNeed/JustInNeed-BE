@@ -11,4 +11,9 @@ public record SessionUpdateRequest(
         Boolean isFavorite,
         List<String> tags
 ) {
+
+    // 즐겨찾기 말고 세션 내용을 바꾸는 필드가 있는지. 분석이 끝나기 전에는 AI 결과에 덮이므로 받지 않는다
+    public boolean changesContent() {
+        return title != null || editedMarkdown != null || isPublic != null || tags != null;
+    }
 }

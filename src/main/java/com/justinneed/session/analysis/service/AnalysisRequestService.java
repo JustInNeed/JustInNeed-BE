@@ -107,15 +107,15 @@ public class AnalysisRequestService {
     // 응답 시간 초과는 AI 가 이미 처리했을 수 있어, 그 사이 콜백으로 끝난 세션은 FAILED 로 덮지 않는다
     private void markRequestFailed(Long sessionId) {
         sessionRepository.lockById(sessionId)
-                .filter(session -> session.getStatus() == SessionStatus.ANALYZING)
+                .filter(session -> session.getStatus() == SessionStatus.ANALYZING && !session.isDeleted())
                 .ifPresent(BrowsingSession::failAnalysis);
     }
 
-    // READY 가 아니면(이미 요청됨 등) 건너뛴다. 원본이 없거나 탈퇴한 회원의 세션은 AI 로 보내지 않고 FAILED
+    // 지웠거나 READY 가 아니면(이미 요청됨 등) 건너뛴다. 원본이 없거나 탈퇴한 회원의 세션은 AI 로 보내지 않고 FAILED
     private AiAnalyzeRequest startAnalysis(Long sessionId) {
         BrowsingSession session = sessionRepository.lockById(sessionId).orElse(null);
-        if (session == null || session.getStatus() != SessionStatus.READY) {
-            log.info("[ai analysis] session {} 는 READY 가 아니라 분석 요청을 건너뜀", sessionId);
+        if (session == null || session.isDeleted() || session.getStatus() != SessionStatus.READY) {
+            log.info("[ai analysis] session {} 는 분석 대기 중이 아니라 분석 요청을 건너뜀", sessionId);
             return null;
         }
         Long userId = session.getUserId();
@@ -142,7 +142,7 @@ public class AnalysisRequestService {
 
     // 같은 사용자의 이전 세션 유닛 피처 (AI 가 개인 정규화 · 개인 군집 재학습에 쓴다)
     private List<Map<String, Object>> history(Long userId, Long sessionId) {
-        return resultRepository.findByUserId(userId).stream()
+        return resultRepository.findActiveByUserId(userId).stream()
                 .filter(result -> !result.getSessionId().equals(sessionId))
                 .flatMap(result -> result.getUnitFeatures().stream())
                 .toList();

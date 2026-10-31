@@ -117,6 +117,7 @@ class CommunityCommitTest {
     }
     private Long session(Long owner) {
         var s = new BrowsingSession(owner, "private", LocalDateTime.now());
+        s.complete(LocalDateTime.now(), 1);
         s.update(null, null, true, null, List.of("Java"));
         s.replaceSources(List.of(new Source("private", "https://example.com", "private")));
         return sessions.saveAndFlush(s).getId();

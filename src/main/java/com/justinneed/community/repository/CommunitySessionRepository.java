@@ -22,7 +22,8 @@ public interface CommunitySessionRepository extends Repository<BrowsingSession, 
     @EntityGraph(attributePaths = "summary")
     @Query("""
             select s from BrowsingSession s
-            where s.userId = :userId and s.deletedAt is null and s.publicSession = true
+            where s.userId = :userId and
+            """ + PUBLIC_SESSION + """
             order by s.id desc
             """)
     List<BrowsingSession> findPublicSessions(@Param("userId") Long userId);

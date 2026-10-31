@@ -100,6 +100,9 @@ public class SessionService {
     public SessionDetailResponse updateSession(Long userId, Long sessionId, SessionUpdateRequest request) {
         BrowsingSession session = sessionRepository.lockOwned(sessionId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        if (request.changesContent() && session.getStatus() != SessionStatus.COMPLETED) {
+            throw new CustomException(ErrorCode.SESSION_NOT_COMPLETED);
+        }
 
         validateTitle(request.title());
         List<String> tags = HashtagValidator.normalizeAndValidate(request.tags());
