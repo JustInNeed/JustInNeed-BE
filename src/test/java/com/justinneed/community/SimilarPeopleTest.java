@@ -307,6 +307,8 @@ class SimilarPeopleTest extends CommunityTestSupport {
         session(ownerId, true, ALPHA);
         entities.flush();
         entities.clear();
+        Integer hashtagsBefore = jdbc.queryForObject("select count(*) from community_hashtags where owner_id in (?, ?)",
+                Integer.class, viewerId, ownerId);
 
         similar(viewerId).andExpect(jsonPath("$.data.people[*].userId").value(contains(ints(ownerId))));
 
@@ -315,6 +317,6 @@ class SimilarPeopleTest extends CommunityTestSupport {
         assertThat(jdbc.queryForObject("select count(*) from community_profiles where user_id in (?, ?)",
                 Integer.class, viewerId, ownerId)).isZero();
         assertThat(jdbc.queryForObject("select count(*) from community_hashtags where owner_id in (?, ?)",
-                Integer.class, viewerId, ownerId)).isZero();
+                Integer.class, viewerId, ownerId)).isEqualTo(hashtagsBefore);
     }
 }
