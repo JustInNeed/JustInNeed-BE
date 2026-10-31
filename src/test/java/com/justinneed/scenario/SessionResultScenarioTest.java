@@ -1,5 +1,6 @@
 package com.justinneed.scenario;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
@@ -118,5 +119,19 @@ class SessionResultScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.sources[0].visitedAt").value("2026-10-04T18:30:00"))
                 .andExpect(jsonPath("$.data.sources[1].title").value("원문 기사"))
                 .andExpect(jsonPath("$.data.sources[1].excerpt").value("대표 문단"));
+    }
+
+    @Test
+    @DisplayName("AI 가 만든 긴 이모지 제목도 고치지 않고 그대로 다시 저장할 수 있다")
+    void longEmojiTitleCanBeSavedAgain() throws Exception {
+        callback("😀".repeat(60));
+
+        String title = read(mvc.perform(get("/sessions/{id}", session.getId()).with(as(me))), "$.data.title");
+        assertThat(title.length()).isLessThanOrEqualTo(100);
+
+        mvc.perform(patch("/sessions/{id}", session.getId()).with(as(me))
+                        .with(json(Map.of("title", title, "editedMarkdown", "본문"))))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.title").value(title));
     }
 }

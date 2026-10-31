@@ -74,12 +74,13 @@ public final class EssayMarkdownConverter {
         return text.replace("\r\n", "\n").trim();
     }
 
-    // 서로게이트 쌍(이모지 등)이 반으로 잘리지 않도록 코드포인트 기준으로 자른다.
+    // 제목 검증(SessionUpdateRequest @Size)과 같은 UTF-16 길이로 잘라, 만든 제목을 그대로 다시 저장할 수 있게 한다.
+    // 서로게이트 쌍(이모지 등)이 끝에 걸리면 쌍째로 뺀다.
     private static String truncate(String text, int maxLength) {
-        if (text.codePointCount(0, text.length()) <= maxLength) {
+        if (text.length() <= maxLength) {
             return text;
         }
-        int end = text.offsetByCodePoints(0, maxLength);
+        int end = Character.isHighSurrogate(text.charAt(maxLength - 1)) ? maxLength - 1 : maxLength;
         return text.substring(0, end).trim();
     }
 }

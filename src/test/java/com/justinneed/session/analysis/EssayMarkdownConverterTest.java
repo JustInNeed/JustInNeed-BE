@@ -86,13 +86,21 @@ class EssayMarkdownConverterTest {
 
     @Test
     void doesNotSplitSurrogatePairWhenTruncating() {
-        // 이모지(서로게이트 쌍)가 100번째 글자에 걸려도 반쪽 문자가 남지 않는다.
+        // 이모지(서로게이트 쌍)가 100번째 글자에 걸리면 쌍째로 빠지고 반쪽 문자가 남지 않는다.
         String title = "가".repeat(99) + "😀" + "끝";
 
         String truncated = EssayMarkdownConverter.toSessionTitle(new AiEssay(title, null, null));
 
-        assertThat(truncated).isEqualTo("가".repeat(99) + "😀");
-        assertThat(truncated.codePointCount(0, truncated.length())).isEqualTo(100);
+        assertThat(truncated).isEqualTo("가".repeat(99));
+    }
+
+    @Test
+    void truncatesByUtf16LengthLikeTheTitleValidator() {
+        // 이모지는 UTF-16 2자라 100자 제한에 50개까지 들어간다.
+        String truncated = EssayMarkdownConverter.toSessionTitle(new AiEssay("😀".repeat(60), null, null));
+
+        assertThat(truncated).isEqualTo("😀".repeat(50));
+        assertThat(truncated).hasSize(EssayMarkdownConverter.MAX_TITLE_LENGTH);
     }
 
     @Test
