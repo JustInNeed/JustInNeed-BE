@@ -11,6 +11,7 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
@@ -48,8 +49,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.ResourceAccessException;
 
 /**
@@ -90,6 +93,9 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
 
     private Member me;
 
@@ -277,6 +283,105 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
         requests.requestAnalysis(id);
 
         assertThat(status(id)).isEqualTo(SessionStatus.COMPLETED);
+    }
+
+    @Test
+    @DisplayName("즐겨찾기 저장 뒤에 줄 선 재분석도 최신 행을 읽어 즐겨찾기를 덮지 않는다")
+    void favouriteThenReanalyze() throws Exception {
+        Long id = session(SessionStatus.FAILED, true);
+
+        favouriteThen(id, () -> reanalyze(id, me).andExpect(okEnvelope()));
+
+        verify(aiClient, timeout(3000)).requestAnalysis(any());
+        await().atMost(3, TimeUnit.SECONDS).until(() -> status(id) == SessionStatus.ANALYZING);
+        assertThat(sessions.findById(id).orElseThrow().isFavorite()).isTrue();
+    }
+
+    @Test
+    @DisplayName("즐겨찾기 저장 뒤에 줄 선 수집 완료도 최신 행을 읽어 즐겨찾기를 덮지 않는다")
+    void favouriteThenFinishCollection() throws Exception {
+        Long id = session(SessionStatus.COLLECTING, true);
+
+        favouriteThen(id, () -> {
+            requests.finishCollection(id);
+            return null;
+        });
+
+        await().atMost(3, TimeUnit.SECONDS).until(() -> status(id) == SessionStatus.ANALYZING);
+        assertThat(sessions.findById(id).orElseThrow().isFavorite()).isTrue();
+    }
+
+    @Test
+    @DisplayName("즐겨찾기 저장 뒤에 줄 선 분석 시작도 최신 행을 읽어 즐겨찾기를 덮지 않는다")
+    void favouriteThenStartAnalysis() throws Exception {
+        Long id = session(SessionStatus.READY, true);
+
+        favouriteThen(id, () -> {
+            requests.requestAnalysis(id);
+            return null;
+        });
+
+        assertThat(status(id)).isEqualTo(SessionStatus.ANALYZING);
+        assertThat(sessions.findById(id).orElseThrow().isFavorite()).isTrue();
+    }
+
+    @Test
+    @DisplayName("즐겨찾기 저장 뒤에 줄 선 AI 요청 실패 처리도 최신 행을 읽어 즐겨찾기를 덮지 않는다")
+    void favouriteThenRequestFailure() throws Exception {
+        Long id = session(SessionStatus.READY, true);
+        CountDownLatch analyzing = new CountDownLatch(1);
+        CountDownLatch fail = new CountDownLatch(1);
+        doAnswer(invocation -> {
+            analyzing.countDown();
+            fail.await(10, TimeUnit.SECONDS);
+            throw new ResourceAccessException("connection refused");
+        }).when(aiClient).requestAnalysis(any());
+        ExecutorService requester = Executors.newSingleThreadExecutor();
+
+        try {
+            Future<?> request = requester.submit(() -> requests.requestAnalysis(id));
+            assertThat(analyzing.await(5, TimeUnit.SECONDS)).isTrue();
+            favouriteThen(id, () -> {
+                fail.countDown();
+                request.get(20, TimeUnit.SECONDS);
+                return null;
+            });
+        } finally {
+            fail.countDown();
+            requester.shutdownNow();
+        }
+
+        assertThat(status(id)).isEqualTo(SessionStatus.FAILED);
+        assertThat(sessions.findById(id).orElseThrow().isFavorite()).isTrue();
+    }
+
+    // 다른 트랜잭션이 행을 잡은 동안 즐겨찾기 저장을 먼저, writer 를 그 뒤에 세운 뒤 놓는다. 잠금 없이 옛 행을 읽은 writer 는 즐겨찾기를 덮는다
+    private void favouriteThen(Long id, Callable<?> writer) throws Exception {
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            List<Future<?>> done = new ArrayList<>();
+            new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+                jdbc.queryForObject("select id from sessions where id = ? for update", Long.class, id);
+                done.add(pool.submit(() -> mvc.perform(patch("/sessions/{id}", id).with(as(me))
+                        .with(json(Map.of("isFavorite", true)))).andExpect(okEnvelope())));
+                pause();
+                done.add(pool.submit(writer));
+                pause();
+            });
+            for (Future<?> response : done) {
+                response.get(20, TimeUnit.SECONDS);
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    private static void pause() {
+        try {
+            Thread.sleep(300);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     private void result(Long sessionId, Map<String, Object> feature) {

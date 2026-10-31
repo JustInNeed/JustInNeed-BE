@@ -91,6 +91,34 @@ class SessionLockScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
+    @DisplayName("즐겨찾기 저장 뒤에 줄 선 AI 결과도 최신 행을 읽어 즐겨찾기를 덮지 않는다")
+    void favouriteThenCallback() throws Exception {
+        Member me = member("sprout");
+        Long id = analyzing(me);
+
+        race(id, favourite(id, me), callback(id));
+
+        BrowsingSession session = reload(id);
+        assertThat(session.getStatus()).isEqualTo(SessionStatus.COMPLETED);
+        assertThat(session.isFavorite()).isTrue();
+    }
+
+    @Test
+    @DisplayName("즐겨찾기 저장 뒤에 줄 선 분석 실패도 최신 행을 읽어 즐겨찾기를 덮지 않는다")
+    void favouriteThenFailure() throws Exception {
+        Member me = member("sprout");
+        Long id = analyzing(me);
+
+        race(id, favourite(id, me), post("/internal/ai/sessions/{id}/failure", id)
+                .header(AiInternalToken.HEADER, internalToken.value())
+                .with(json("{\"reason\": \"x\"}")));
+
+        BrowsingSession session = reload(id);
+        assertThat(session.getStatus()).isEqualTo(SessionStatus.FAILED);
+        assertThat(session.isFavorite()).isTrue();
+    }
+
+    @Test
     @DisplayName("삭제와 즐겨찾기 저장이 겹쳐도 삭제가 되살아나지 않는다")
     void deleteAndFavourite() throws Exception {
         Member me = member("sprout");
@@ -99,6 +127,18 @@ class SessionLockScenarioTest extends ScenarioTestSupport {
         race(id, delete("/sessions/{id}", id).with(as(me)), favourite(id, me));
 
         assertThat(isDeleted(id)).isTrue();
+    }
+
+    @Test
+    @DisplayName("즐겨찾기 저장 뒤에 줄 선 삭제도 최신 행을 읽어 즐겨찾기를 덮지 않는다")
+    void favouriteThenDelete() throws Exception {
+        Member me = member("sprout");
+        Long id = completed(me);
+
+        race(id, favourite(id, me), delete("/sessions/{id}", id).with(as(me)));
+
+        assertThat(isDeleted(id)).isTrue();
+        assertThat(reload(id).isFavorite()).isTrue();
     }
 
     @Test
