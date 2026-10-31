@@ -10,9 +10,9 @@ public record SharedSessionView(
         Long id, List<String> tags, List<String> urls,
         String title, String markdown, List<Source> sources
 ) {
-    public static SharedSessionView from(BrowsingSession session, boolean includeContent) {
+    public static SharedSessionView from(BrowsingSession session, List<String> tags, boolean includeContent) {
         return new SharedSessionView(
-                session.getId(), session.getTags(),
+                session.getId(), tags,
                 session.getSources().stream().map(Source::url).distinct().toList(),
                 includeContent ? session.getTitle() : null,
                 includeContent && session.getSummary() != null ? session.getSummary().getMarkdown() : null,

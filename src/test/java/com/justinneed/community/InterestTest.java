@@ -68,6 +68,7 @@ class InterestTest extends CommunityTestSupport {
         profile.replaceInterests(List.of("Java", "Secret"));
         profile.replaceHiddenHashtags(List.of("secret"));
         profiles.saveAndFlush(profile);
+        syncProfileTags(profile);
         mvc.perform(get("/community/profiles/{id}/interests", ownerId).header("Authorization", auth(viewerId)))
                 .andExpect(jsonPath("$.data.length()").value(1))
                 .andExpect(jsonPath("$.data[0]").value("Java"));

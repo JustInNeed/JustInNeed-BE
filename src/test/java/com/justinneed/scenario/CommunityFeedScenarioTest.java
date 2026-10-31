@@ -83,7 +83,7 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.profiles[0].userId").value(wanderer.id()))
                 .andExpect(jsonPath("$.data.profiles[0].nickname").value("wanderer"))
                 .andExpect(jsonPath("$.data.profiles[0].matchedHashtags").value(contains("프라하")))
-                .andExpect(jsonPath("$.data.profiles[0].totalNodeCount").value(6))
+                .andExpect(jsonPath("$.data.profiles[0].totalNodeCount").value(7))
                 .andExpect(jsonPath("$.data.hasNext").value(false));
     }
 
@@ -333,12 +333,11 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
             mvc.perform(get(path).with(as(me)))
                     .andExpect(okEnvelope())
                     .andExpect(jsonPath("$.data.mindmaps[*].matchedHashtags[*]").value(not(hasItem("카페"))))
-                    .andExpect(jsonPath("$.data.mindmaps[*].matchedHashtags[*]").value(not(hasItem("슬로우트래블"))))
-                    .andExpect(jsonPath("$.data.mindmaps[*].relatedUrls[*]").value(not(hasItem(CAFE_URL))));
+                    .andExpect(jsonPath("$.data.mindmaps[*].matchedHashtags[*]").value(not(hasItem("슬로우트래블"))));
         }
 
         @Test
-        @DisplayName("관심 해시태그 기반(COM-6-1): 내 관심이 남의 비공개 태그와만 겹치면 그 마인드맵은 추천되지 않고, 공개 태그로 추천돼도 카드에 비공개 태그 · 그 노드 URL 이 없다")
+        @DisplayName("관심 해시태그 기반(COM-6-1): 내 관심이 남의 비공개 태그와만 겹치면 그 마인드맵은 추천되지 않고, 공개 태그로 추천돼도 카드에 비공개 태그가 없다")
         void interestRecommendationIgnoresPrivateHashtags() throws Exception {
             addInterest(me, "카페");
             addInterest(me, "슬로우트래블");
@@ -354,13 +353,14 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
             mvc.perform(get(BY_INTERESTS).with(as(me)))
                     .andExpect(jsonPath("$.data.mindmaps[*].ownerId").value(contains(ids(wanderer.id()))))
                     .andExpect(jsonPath("$.data.mindmaps[0].matchedHashtags").value(contains("비엔나")))
+                    // 카페 태그가 섞인 세션도 비엔나로 보이는 세션이라 URL 이 나온다
                     .andExpect(jsonPath("$.data.mindmaps[0].relatedUrls").value(containsInAnyOrder(
-                            "https://www.wien.info/en", "https://www.belvedere.at/en")));
+                            "https://www.wien.info/en", "https://www.belvedere.at/en", CAFE_URL)));
             noCardMentionsPrivateHashtags(BY_INTERESTS);
         }
 
         @Test
-        @DisplayName("최근 저장 기반(COM-6-2): 저장한 뒤 작성자가 비공개로 돌린 해시태그로는 마인드맵이 추천되지 않고, 카드에도 그 태그 · 노드 URL 이 없다")
+        @DisplayName("최근 저장 기반(COM-6-2): 저장한 뒤 작성자가 비공개로 돌린 해시태그로는 마인드맵이 추천되지 않고, 카드에도 그 태그가 없다")
         void recentBookmarkRecommendationIgnoresPrivateHashtags() throws Exception {
             setWandererHashtagPublic("카페", true);
             bookmarkHashtag(me, wanderer.member(), "카페");
@@ -380,7 +380,7 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
                     .andExpect(jsonPath("$.data.mindmaps[*].ownerId").value(contains(ids(wanderer.id()))))
                     .andExpect(jsonPath("$.data.mindmaps[0].matchedHashtags").value(contains("비엔나")))
                     .andExpect(jsonPath("$.data.mindmaps[0].relatedUrls").value(containsInAnyOrder(
-                            "https://www.wien.info/en", "https://www.belvedere.at/en")));
+                            "https://www.wien.info/en", "https://www.belvedere.at/en", CAFE_URL)));
             noCardMentionsPrivateHashtags(BY_RECENT_BOOKMARKS);
         }
 
@@ -423,9 +423,8 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
             for (String period : List.of("TODAY", "WEEK")) {
                 mvc.perform(get(TRENDING).param("period", period).with(as(me)))
                         .andExpect(okEnvelope())
-                        // 카페 세션 노드 활동으로 붙은 비엔나 집계도 같이 빠지고, 공개 태그 활동만 남는다
-                        .andExpect(jsonPath("$.data.hashtags[*].name").value(contains("프라하")))
-                        .andExpect(jsonPath("$.data.hashtags[0].exploreCount").value(1));
+                        // 카페는 빠지고, 세션은 보이므로 카페 세션 노드 활동으로 붙은 비엔나 집계는 남는다
+                        .andExpect(jsonPath("$.data.hashtags[*].name").value(containsInAnyOrder("프라하", "비엔나")));
             }
         }
     }

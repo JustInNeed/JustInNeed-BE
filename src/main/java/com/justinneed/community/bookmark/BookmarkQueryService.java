@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <pre>
  * 노드     = 원본 세션(community_nodes.session_id)이 지금 공개가 아니면 숨긴다 (CommunitySharing 의 공개 규칙)
  * 미니맵   = 숨긴 노드 · 그 연결선 · 그 노드에만 달린 태그를 빼고, 남은 노드가 없으면 카드를 숨긴다
+ *            비공개 해시태그는 태그만 뺀다. 노드는 원본 세션이 공개면 남는다
  * 묶음     = 노드를 골라 저장했으면 대상 노드가 모두 숨겨질 때 숨긴다
  *            해시태그를 골라 저장한 묶음은 세션과 이어진 값이 없어 해시태그 규칙만 따른다
  * 해시태그 = 지금 비공개거나 없는 해시태그는 숨긴다
@@ -125,15 +126,11 @@ public class BookmarkQueryService {
         // 원본이 숨겨져 노드를 모두 잃은 태그는 뺀다. 처음부터 연결선이 없던 태그는 그대로 둔다
         var shown = s.hashtags().stream().filter(t -> visible.hashtagIds().contains(t.hashtagId()))
                 .filter(t -> hasEdge(liveEdges, t) || !hasEdge(s.edges(), t)).toList();
-        if (shown.isEmpty() && !s.hashtags().isEmpty()) return null;
+        if (live.isEmpty() && shown.isEmpty() && !s.hashtags().isEmpty()) return null;
         var hidden = new HashSet<String>();
         s.hashtags().stream().filter(t -> !shown.contains(t)).forEach(t -> hidden.add("tag:" + t.hashtagId()));
         var edges = liveEdges.stream().filter(e -> !hidden.contains(e.from())).toList();
-        var orphaned = new HashSet<String>();
-        liveEdges.stream().filter(e -> hidden.contains(e.from())).forEach(e -> orphaned.add(e.to()));
-        edges.forEach(e -> orphaned.remove(e.to()));
-        var kept = live.stream().filter(n -> !orphaned.contains("node:" + n.nodeId())).toList();
-        return new Mindmap(b.getId(), b.getSourceMindmapId(), s.title(), shown, kept, edges, b.getSavedAt());
+        return new Mindmap(b.getId(), b.getSourceMindmapId(), s.title(), shown, live, edges, b.getSavedAt());
     }
     private static boolean hasEdge(List<BookmarkSnapshot.Edge> edges, BookmarkSnapshot.Tag tag) {
         return edges.stream().anyMatch(e -> e.from().equals("tag:" + tag.hashtagId()));

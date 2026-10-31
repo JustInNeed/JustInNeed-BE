@@ -125,7 +125,7 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 | --- | --- | --- |
 | GET | `/sessions` | 세션 목록 조회 (무한 스크롤). `page`(기본 0) · `size`(기본 10, 1~50) · `favorite`(기본 false, true 면 즐겨찾기만). `{ sessions, hasNext, totalCount, favoriteCount }` 반환 — `totalCount` · `favoriteCount` 는 필터 · 페이지와 상관없는 내 전체 세션 수 / 즐겨찾기 수. 음수 page · 범위 밖 size 는 400. 정렬: 진행 중(완료 · 실패가 아닌) 세션이 맨 위(시작 시각 최신순), 나머지는 종료 시각 최신순(종료 시각 없으면 뒤) → 시작 시각 최신순 → id 역순 |
 | GET | `/sessions/hashtags` | 그룹 만들기 해시태그 후보. 내 세션 전체(삭제 제외, 모든 상태)의 태그를 목록과 같은 순서로 훑어 처음 나온 순서대로, 대소문자 무시 중복 제거(처음 나온 표기 유지). `data` 는 문자열 배열, 세션이 없으면 `[]` |
-| GET | `/sessions/{id}` | 세션 상세 조회. 요약 본문과 출처를 함께 반환. 없거나 삭제한 세션은 404. 소유자는 어떤 상태든 전체(`isOwner: true`). 다른 사용자는 공개 세션(공개 · 분석 완료 · 비공개 해시태그 없음 · 작성자 탈퇴 전)만 읽기 전용으로 보고(`isOwner: false`, `isFavorite: false`), 작성자의 노드 공개 범위가 `URL_ONLY` 면 제목 · 본문 · 출처 내용 없이 링크만 받는다. 그 밖에는 403 |
+| GET | `/sessions/{id}` | 세션 상세 조회. 요약 본문과 출처를 함께 반환. 없거나 삭제한 세션은 404. 소유자는 어떤 상태든 전체(`isOwner: true`). 다른 사용자는 공개 세션(공개 · 분석 완료 · 작성자 탈퇴 전)만 읽기 전용으로 보고(`isOwner: false`, `isFavorite: false`, 작성자가 비공개로 둔 해시태그는 `tags` 에서 빠진다), 작성자의 노드 공개 범위가 `URL_ONLY` 면 제목 · 본문 · 출처 내용 없이 링크만 받는다. 그 밖에는 403 |
 | GET | `/sessions/{id}/mindmap` | 세션 마인드맵. 접근 규칙은 상세와 같다. `{ nodes: [{ id, type(root/topic/unit), keyword, score, childCount, citation }], edges: [{ from, to, type(hierarchy/related), primary }] }`. `citation`(`title`, `url`, `excerpt`, `visitedAt`)은 컷오프 유닛 노드에만 온다. 분석이 끝나지 않았거나 결과가 없으면 빈 그래프, `URL_ONLY` 작성자의 세션은 다른 사용자에게 빈 그래프 |
 | PATCH | `/sessions/{id}` | 세션 편집. `title`, `editedMarkdown`, `isPublic`, `isFavorite`, `tags` 중 보낸 필드만 수정. 분석이 끝나기 전에는 `isFavorite` 만 바꿀 수 있고 나머지는 409. 소유자가 아니면 404 |
 | POST | `/sessions/{id}/reanalyze` | 실패한 세션 다시 분석. 소유자만(아니면 404), `FAILED` 가 아니면 409, 원본이 없으면 404. `READY` 상태의 세션 상세를 반환하고 AI 요청은 커밋 뒤 비동기로 보낸다 |
@@ -180,6 +180,8 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 
 이슈 #35~#40의 프로필 편집, 비공개 저장 목록, 공개 마인드맵 조회, 인터랙션, 검색, 추천 기능을 구현했습니다.
 API, 데이터 모델, 공개 범위 처리, 테스트 및 PR 병합 순서는 [커뮤니티 개발 문서](docs/community/README.md)를 참고하세요.
+
+커뮤니티 GET 은 읽기만 합니다 (쓰기 · 행 잠금 없음). 공개 세션 1개 = 카드 1장이고, `community_cards` · `community_nodes` · `community_hashtags` 는 세션이 바뀌는 쓰기 트랜잭션에서 `CommunityCardSync` 가 맞춥니다 (세션 수정 · 삭제, 공유 핀 · 해제, AI 결과 저장, 재분석). 앱 시작 때 `CommunityCardBackfill` 이 기존 공개 세션의 빠진 행을 채웁니다. 공개 범위 · 비공개 해시태그는 저장하지 않고 읽을 때 적용합니다: 공개 그래프는 `CONTENT` 면 AI 마인드맵(hierarchy), `URL_ONLY` 면 태그 → URL 이고, 비공개 해시태그가 섞인 공개 세션은 그 태그만 빠진 채 보입니다.
 
 ## 환경 변수
 

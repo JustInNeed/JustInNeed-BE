@@ -1,5 +1,6 @@
 package com.justinneed.community.interest;
 
+import com.justinneed.community.catalog.CommunityTags;
 import com.justinneed.community.service.CommunityProfiles;
 import com.justinneed.community.service.CommunitySharing;
 import com.justinneed.global.common.HashtagValidator;
@@ -15,10 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class InterestService {
     private final CommunityProfiles profiles;
     private final CommunitySharing sharing;
+    private final CommunityTags tags;
 
-    public InterestService(CommunityProfiles profiles, CommunitySharing sharing) {
+    public InterestService(CommunityProfiles profiles, CommunitySharing sharing, CommunityTags tags) {
         this.profiles = profiles;
         this.sharing = sharing;
+        this.tags = tags;
     }
 
     public List<String> get(Long userId, Long viewerId) {
@@ -37,6 +40,7 @@ public class InterestService {
         }
         interests.add(normalized);
         profile.replaceInterests(HashtagValidator.normalizeAndValidate(interests));
+        tags.ensure(userId, List.of(normalized));
         return profile.getInterests();
     }
 }

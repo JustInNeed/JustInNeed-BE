@@ -151,7 +151,7 @@ class ProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("해시태그별 공개 설정(COM-1-2): 목록에 hashtagId · 공개 여부가 오고, 비공개로 바꾸면 다른 사람 마인드맵에서 그 태그와 노드가 빠진다")
+    @DisplayName("해시태그별 공개 설정(COM-1-2): 목록에 hashtagId · 공개 여부가 오고, 비공개로 바꾸면 다른 사람 마인드맵에서 그 태그만 빠진다")
     void hashtagVisibility() throws Exception {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
@@ -176,10 +176,10 @@ class ProfileScenarioTest extends ScenarioTestSupport {
 
         mvc.perform(get("/community/me/hashtags").with(as(me)))
                 .andExpect(jsonPath("$.data[?(@.hashtag == '로마')].isPublic").value(contains(false)));
-        // 로마 세션의 노드는 다른 태그(콜로세움 등)와도 이어져 있어 세션 전체가 빠진다
+        // 로마 세션은 다른 태그(콜로세움 등)로 계속 보인다
         mvc.perform(get("/community/profiles/{id}/mindmap", me.getId()).with(as(viewer)))
                 .andExpect(jsonPath("$.data.hashtags[*].name").value(not(hasItem("로마"))))
-                .andExpect(jsonPath("$.data.nodes", hasSize(0)));
+                .andExpect(jsonPath("$.data.nodes", hasSize(4)));
     }
 
     @Test

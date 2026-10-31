@@ -3,6 +3,7 @@ package com.justinneed.settings.account.service;
 import com.justinneed.auth.domain.Member;
 import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.auth.service.AuthTokenService;
+import com.justinneed.community.card.CommunityCardSync;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
 import com.justinneed.settings.account.dto.request.AccountWithdrawRequest;
@@ -19,10 +20,13 @@ public class AccountSettingsService {
 
     private final MemberRepository memberRepository;
     private final AuthTokenService authTokenService;
+    private final CommunityCardSync cards;
 
-    public AccountSettingsService(MemberRepository memberRepository, AuthTokenService authTokenService) {
+    public AccountSettingsService(MemberRepository memberRepository, AuthTokenService authTokenService,
+            CommunityCardSync cards) {
         this.memberRepository = memberRepository;
         this.authTokenService = authTokenService;
+        this.cards = cards;
     }
 
     @Transactional
@@ -34,6 +38,7 @@ public class AccountSettingsService {
         Member member = findActiveMember(memberId);
         LocalDateTime withdrawnAt = LocalDateTime.now();
         member.withdraw(request.reason(), withdrawnAt);
+        cards.removeOwner(memberId);
         authTokenService.revokeAll(memberId, accessToken);
 
         return new AccountWithdrawResponse(200, memberId, true, false, withdrawnAt);

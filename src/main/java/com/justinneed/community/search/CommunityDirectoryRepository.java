@@ -1,7 +1,6 @@
 package com.justinneed.community.search;
 
 import com.justinneed.auth.domain.Member;
-import com.justinneed.community.repository.CommunitySessionRepository;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
@@ -12,9 +11,7 @@ public interface CommunityDirectoryRepository extends Repository<Member, Long> {
     @Query("""
         select m.id from Member m where m.id > :after and m.withdrawnAt is null
         and (exists (select p.userId from CommunityProfile p where p.userId = m.id)
-          or exists (select s.id from BrowsingSession s where s.userId = m.id and
-        """ + CommunitySessionRepository.PUBLIC_SESSION + """
-          ))
+          or exists (select c.sessionId from CommunityCardRow c where c.ownerId = m.id))
         order by m.id
         """)
     List<Long> candidates(@Param("after") Long after, Pageable page);

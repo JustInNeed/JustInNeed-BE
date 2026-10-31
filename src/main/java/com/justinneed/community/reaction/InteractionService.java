@@ -48,8 +48,8 @@ public class InteractionService {
         explorations.flush();
         return new ExploringView(200, type, id, exploring, explorations.countByTargetTypeAndTargetId(type, id));
     }
+    @Transactional(readOnly = true)
     public ExploringView status(Long actor, TargetType type, Long id) {
-        locks.acquire(actor, List.of(targets.owner(type, id)));
         targets.resolve(type, id);
         return new ExploringView(200, type, id,
                 explorations.findByActorIdAndTargetTypeAndTargetId(actor, type, id).isPresent(),

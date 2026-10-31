@@ -36,8 +36,9 @@ public class ProfileEditService {
         this.unpin = unpin; this.sessions = sessions; this.members = members;
     }
 
+    @Transactional(readOnly = true)
     public List<TagView> hashtags(Long userId) {
-        var profile = profiles.lock(userId);
+        var profile = profiles.read(userId);
         return tags.owned(userId).stream().map(t -> new TagView(200, t.getId(), t.getName(),
                 profile.getHiddenHashtags().stream().noneMatch(h -> h.equalsIgnoreCase(t.getName())))).toList();
     }
@@ -56,6 +57,7 @@ public class ProfileEditService {
         return new InterestView(201, tag.getId(), tag.getName(), values.size());
     }
 
+    @Transactional(readOnly = true)
     public List<InterestView> myInterests(Long userId) {
         var values = interests.get(userId, userId);
         return tags.owned(userId).stream().filter(t -> values.stream().anyMatch(v -> v.equalsIgnoreCase(t.getName())))
@@ -81,6 +83,7 @@ public class ProfileEditService {
         pins.reorder(userId, ids);
         return new OrderView(200, ids);
     }
+    @Transactional(readOnly = true)
     public SessionView session(Long viewerId, Long id) {
         var session = sessions.findById(id).orElseThrow(CommunityErrors::missing);
         var view = pins.detail(session.getUserId(), viewerId, id);

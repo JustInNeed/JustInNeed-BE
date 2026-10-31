@@ -1,5 +1,6 @@
 package com.justinneed.community.pin;
 
+import com.justinneed.community.card.CommunityCardSync;
 import com.justinneed.community.domain.CommunityProfile;
 import com.justinneed.community.dto.SharedSessionView;
 import com.justinneed.community.repository.CommunitySessionRepository;
@@ -24,12 +25,14 @@ public class SharedSessionService {
     private final CommunityProfiles profiles;
     private final CommunitySharing sharing;
     private final CommunitySessionRepository sessions;
+    private final CommunityCardSync cards;
 
     public SharedSessionService(CommunityProfiles profiles, CommunitySharing sharing,
-            CommunitySessionRepository sessions) {
+            CommunitySessionRepository sessions, CommunityCardSync cards) {
         this.profiles = profiles;
         this.sharing = sharing;
         this.sessions = sessions;
+        this.cards = cards;
     }
 
     @Transactional
@@ -40,24 +43,25 @@ public class SharedSessionService {
         if (session.getStatus() != SessionStatus.COMPLETED) {
             throw new CustomException(ErrorCode.SESSION_NOT_COMPLETED);
         }
-        List<Long> pins = new ArrayList<>(livePins(profile, userId).stream().map(BrowsingSession::getId).toList());
+        List<Long> pins = new ArrayList<>(livePins(profile).stream().map(BrowsingSession::getId).toList());
         if (!pins.contains(sessionId)) {
             pins.add(sessionId);
         }
         session.update(null, null, true, null, null);
+        cards.sync(session);
         profile.replacePinnedSessionIds(pins);
         return sharing.project(profile, userId, session);
     }
 
     public List<SharedSessionView> list(Long userId, Long viewerId) {
         CommunityProfile profile = profiles.read(userId);
-        return livePins(profile, viewerId).stream()
+        return livePins(profile).stream()
                 .map(session -> sharing.project(profile, viewerId, session)).toList();
     }
 
     public SharedSessionView detail(Long userId, Long viewerId, Long sessionId) {
         CommunityProfile profile = profiles.read(userId);
-        BrowsingSession session = livePins(profile, viewerId).stream()
+        BrowsingSession session = livePins(profile).stream()
                 .filter(candidate -> candidate.getId().equals(sessionId)).findFirst()
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         return sharing.project(profile, viewerId, session);
@@ -66,7 +70,7 @@ public class SharedSessionService {
     @Transactional
     public List<SharedSessionView> reorder(Long userId, List<Long> sessionIds) {
         CommunityProfile profile = profiles.lock(userId);
-        List<Long> current = livePins(profile, userId).stream().map(BrowsingSession::getId).toList();
+        List<Long> current = livePins(profile).stream().map(BrowsingSession::getId).toList();
         if (current.size() != sessionIds.size()
                 || !new HashSet<>(current).equals(new HashSet<>(sessionIds))) {
             throw new CustomException(ErrorCode.INVALID_ORDER_REQUEST);
@@ -75,8 +79,8 @@ public class SharedSessionService {
         return list(userId, userId);
     }
 
-    private List<BrowsingSession> livePins(CommunityProfile profile, Long viewerId) {
-        Map<Long, BrowsingSession> visible = sharing.visibleSessions(profile, viewerId).stream()
+    private List<BrowsingSession> livePins(CommunityProfile profile) {
+        Map<Long, BrowsingSession> visible = sharing.visibleSessions(profile).stream()
                 .collect(Collectors.toMap(BrowsingSession::getId, Function.identity()));
         // Session edits/deletions can revoke sharing without going through this controller.
         return profile.getPinnedSessionIds().stream().filter(visible::containsKey).map(visible::get).toList();

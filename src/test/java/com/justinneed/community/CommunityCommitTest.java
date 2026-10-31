@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 import com.justinneed.auth.domain.*;
 import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.community.bookmark.*;
+import com.justinneed.community.card.CommunityCardSync;
 import com.justinneed.community.graph.PublicGraphService;
 import com.justinneed.community.reaction.*;
 import com.justinneed.community.recommend.TrendingService;
@@ -30,6 +31,7 @@ class CommunityCommitTest {
     @Autowired InteractionService interactions;
     @Autowired TrendingService trending;
     @Autowired org.springframework.transaction.PlatformTransactionManager manager;
+    @Autowired CommunityCardSync cardSync;
 
     @Test
     void simultaneousWritesAreIdempotentAndSnapshotRoundTripsAcrossTransactions() throws Exception {
@@ -127,6 +129,8 @@ class CommunityCommitTest {
         s.complete(LocalDateTime.now(), 1);
         s.update(null, null, true, null, List.of("Java"));
         s.replaceSources(List.of(new Source("private", "https://example.com", "private")));
-        return sessions.saveAndFlush(s).getId();
+        var saved = sessions.saveAndFlush(s);
+        cardSync.sync(saved);
+        return saved.getId();
     }
 }

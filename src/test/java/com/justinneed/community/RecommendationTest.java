@@ -46,12 +46,13 @@ class RecommendationTest extends CommunityTestSupport {
         assertThat(recommendations.recent(viewerId, 3).mindmaps()).hasSize(1);
         assertThat(recommendations.recent(ownerId, 3).basisHashtags()).isEmpty();
         publicSession.update(null, null, false, null, null);
+        cardSync.sync(publicSession);
         assertThat(recommendations.interests(viewerId, 3).mindmaps()).isEmpty();
         assertThat(recommendations.recent(viewerId, 3).mindmaps()).isEmpty();
     }
 
     @Test
-    void hiddenInterestsWithoutPublicLeavesDoNotProduceRecommendations() {
+    void hiddenTagsDoNotProduceRecommendationsButMixedSessionStays() {
         var owner = new CommunityProfile(ownerId);
         owner.replaceInterests(List.of("Java"));
         owner = profiles.saveAndFlush(owner);
@@ -60,9 +61,14 @@ class RecommendationTest extends CommunityTestSupport {
         profiles.saveAndFlush(viewer);
         session(ownerId, true, "Unrelated");
         assertThat(recommendations.interests(viewerId, 3).mindmaps()).isEmpty();
-        session(ownerId, true, "Java", "Secret");
+        session(ownerId, true, "Other", "Secret");
         owner.replaceHiddenHashtags(List.of("Secret"));
+        profiles.saveAndFlush(owner);
+        var viewerProfile = profiles.findById(viewerId).orElseThrow();
+        viewerProfile.replaceInterests(List.of("Secret"));
         assertThat(recommendations.interests(viewerId, 3).mindmaps()).isEmpty();
+        viewerProfile.replaceInterests(List.of("Other"));
+        assertThat(recommendations.interests(viewerId, 3).mindmaps().get(0).matchedHashtags()).containsExactly("Other");
     }
 
     @Test

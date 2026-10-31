@@ -1,6 +1,7 @@
 package com.justinneed.community.repository;
 
-import com.justinneed.community.dto.PublicSessionRow;
+import com.justinneed.community.domain.CommunityProfile;
+import com.justinneed.community.dto.SessionTagsRow;
 import com.justinneed.session.management.domain.BrowsingSession;
 import jakarta.persistence.LockModeType;
 import java.util.Collection;
@@ -29,11 +30,33 @@ public interface CommunitySessionRepository extends Repository<BrowsingSession, 
     List<BrowsingSession> findPublicSessions(@Param("userId") Long userId);
 
     @Query("""
-            select new com.justinneed.community.dto.PublicSessionRow(s.id, s.userId, s.tags)
-            from BrowsingSession s, Member m
+            select s.id from BrowsingSession s, Member m
             where m.id = s.userId and m.withdrawnAt is null and s.id in :ids and
             """ + PUBLIC_SESSION)
-    List<PublicSessionRow> findPublicRows(@Param("ids") Collection<Long> ids);
+    List<Long> findPublicIds(@Param("ids") Collection<Long> ids);
+
+    // 아래 셋은 CommunityCardBackfill 용
+    @Query("""
+            select s.id from BrowsingSession s, Member m
+            where m.id = s.userId and m.withdrawnAt is null and
+            """ + PUBLIC_SESSION + """
+            and not exists (select c.sessionId from CommunityCardRow c where c.sessionId = s.id)
+            order by s.id
+            """)
+    List<Long> findPublicIdsWithoutCard();
+
+    @Query("""
+            select new com.justinneed.community.dto.SessionTagsRow(s.userId, s.tags)
+            from BrowsingSession s, Member m
+            where m.id = s.userId and m.withdrawnAt is null and s.deletedAt is null
+            """)
+    List<SessionTagsRow> findLiveSessionTags();
+
+    @Query("""
+            select p from CommunityProfile p, Member m
+            where m.id = p.userId and m.withdrawnAt is null
+            """)
+    List<CommunityProfile> findLiveProfiles();
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""

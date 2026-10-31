@@ -3,6 +3,7 @@ package com.justinneed.session.analysis.service;
 import tools.jackson.databind.ObjectMapper;
 import com.justinneed.auth.domain.Member;
 import com.justinneed.auth.repository.MemberRepository;
+import com.justinneed.community.card.CommunityCardSync;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
 import com.justinneed.session.analysis.EssayMarkdownConverter;
@@ -67,6 +68,7 @@ public class AnalysisResultService {
     private final SessionRawPayloadRepository rawPayloadRepository;
     private final AiClusterModelRepository clusterModelRepository;
     private final MemberRepository memberRepository;
+    private final CommunityCardSync cards;
     private final ObjectMapper objectMapper;
 
     public AnalysisResultService(BrowsingSessionRepository sessionRepository,
@@ -74,12 +76,14 @@ public class AnalysisResultService {
             SessionRawPayloadRepository rawPayloadRepository,
             AiClusterModelRepository clusterModelRepository,
             MemberRepository memberRepository,
+            CommunityCardSync cards,
             ObjectMapper objectMapper) {
         this.sessionRepository = sessionRepository;
         this.resultRepository = resultRepository;
         this.rawPayloadRepository = rawPayloadRepository;
         this.clusterModelRepository = clusterModelRepository;
         this.memberRepository = memberRepository;
+        this.cards = cards;
         this.objectMapper = objectMapper;
     }
 
@@ -117,6 +121,7 @@ public class AnalysisResultService {
                 toSources(listOrEmpty(result.selected()), linkVisits),
                 linkVisits.linkCount());
         rawPayload.markAnalyzed(LocalDateTime.now());
+        cards.sync(session);
     }
 
     // AI 가 분석 중 오류를 알려 오면 FAILED 로 둔다 (원본은 남아 있어 다시 요청할 수 있다)
