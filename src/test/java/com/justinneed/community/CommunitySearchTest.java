@@ -137,6 +137,19 @@ class CommunitySearchTest extends CommunityTestSupport {
     }
 
     @Test
+    void withdrawnOwnersDoNotTakeAPageSlot() throws Exception {
+        var kept = card(viewerId, "a", 0, "태그");
+        card(ownerId, "b", 1, "태그");
+        var gone = members.findById(ownerId).orElseThrow();
+        gone.withdraw("이유", LocalDateTime.now());
+        members.saveAndFlush(gone);
+
+        search(MINDMAPS, "태그", "size", "1")
+                .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(kept.getId().intValue())))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
+    }
+
+    @Test
     void mindmapsComeByRecencyThenNewestIdAndIncludeMyOwn() throws Exception {
         var older = card(ownerId, "a", 0, "태그");
         var mine = card(viewerId, "b", 5, "태그");
@@ -234,6 +247,13 @@ class CommunitySearchTest extends CommunityTestSupport {
                 .andExpect(jsonPath("$.data.hashtags[*].tag").value(contains("Java", "JavaBean", "JavaSpring")))
                 .andExpect(jsonPath("$.data.hashtags[*].count").value(contains(3, 2, 1)));
         search(HASHTAGS, "자바").andExpect(jsonPath("$.data.hashtags", hasSize(0)));
+    }
+
+    @Test
+    void hashtagsCountACardOnceEvenIfItRepeatsATag() throws Exception {
+        card(ownerId, "a", 0, "Dup", "dup");
+
+        search(HASHTAGS, "dup").andExpect(jsonPath("$.data.hashtags[*].count").value(contains(1)));
     }
 
     @Test
