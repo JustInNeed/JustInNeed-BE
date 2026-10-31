@@ -58,6 +58,7 @@ class CommunityErrorMessageTest extends CommunityTestSupport {
                 // 필수 값 누락
                 "/community/search/profiles",
                 "/community/search/mindmaps",
+                "/community/search/hashtags",
                 "/community/exploring",
                 "/community/exploring?targetType=HASHTAG",
                 "/community/exploring?targetId=1",
@@ -74,7 +75,8 @@ class CommunityErrorMessageTest extends CommunityTestSupport {
                 "/community/recommendations/mindmaps/recent-bookmarks?limit=abc",
                 "/community/me/bookmarks/mindmaps?page=abc",
                 "/community/me/bookmarks/hashtag-bundles?size=abc",
-                "/community/search/profiles?hashtag=java&page=abc",
+                "/community/search/profiles?q=java&page=abc",
+                "/community/search/hashtags?q=java&limit=abc",
                 "/community/profiles/abc",
                 "/community/profiles/1/mindmap?hashtagId=abc",
                 // 범위 밖
@@ -84,7 +86,8 @@ class CommunityErrorMessageTest extends CommunityTestSupport {
                 "/community/recommendations/hashtags/trending?limit=0",
                 "/community/me/bookmarks/mindmaps?page=-1",
                 "/community/me/bookmarks/hashtag-bundles?size=101",
-                "/community/search/profiles?hashtag=java&size=0");
+                "/community/search/profiles?q=java&size=0",
+                "/community/search/hashtags?q=java&limit=21");
     }
 
     @ParameterizedTest
