@@ -62,21 +62,33 @@ class TrendingTest extends CommunityTestSupport {
     void todayAndYesterdayFollowKoreanMidnightWhenUtcDateDiffers() {
         clock.set("2026-09-30T16:00:00Z");
         explore(member(), "2026-09-30T15:00:00Z");    // 오늘 00:00 KST
-        explore(member(), "2026-09-30T14:59:59Z");    // 어제 23:59:59 KST (UTC 로는 오늘)
+        explore(member(), "2026-09-29T15:59:59Z");    // 어제 00:59:59 KST
         explore(member(), "2026-09-29T15:00:00Z");    // 어제 00:00 KST
         explore(member(), "2026-09-29T14:59:59Z");    // 그제 (어느 기간도 아니다)
 
         assertThat(row("today", "Java")).isEqualTo(new Row(1, 1, -1));
     }
 
-    // 2026-10-05(월) 01:00 KST. UTC 로는 아직 일요일이라 UTC 주간이면 앞 주에 머문다
+    // 하루가 덜 지났을 때 어제 하루 전체와 비교하면 증감이 음수로 치우친다
     @Test
-    void weekIsCalendarWeekFromKoreanMondayComparedWithTheSevenDaysBefore() {
+    void todayComparesWithYesterdayUpToTheSameTime() {
+        clock.set("2026-09-30T16:00:00Z");            // 10월 1일 01:00 KST
+        explore(member(), "2026-09-30T15:30:00Z");    // 오늘 00:30 KST
+        explore(member(), "2026-09-29T15:30:00Z");    // 어제 00:30 KST
+        explore(member(), "2026-09-29T16:00:01Z");    // 어제 01:00:01 KST (같은 시각을 넘었다)
+        explore(member(), "2026-09-30T14:00:00Z");    // 어제 23:00 KST
+
+        assertThat(row("today", "Java")).isEqualTo(new Row(1, 1, 0));
+    }
+
+    // 달력 주가 아니라 최근 7일이라, 언제 봐도 두 기간의 길이가 같다
+    @Test
+    void weekIsLastSevenDaysComparedWithTheSevenDaysBefore() {
         clock.set("2026-10-04T16:00:00Z");
-        explore(member(), "2026-10-04T15:00:00Z");    // 이번 주 월요일 00:00 KST
-        explore(member(), "2026-10-04T14:59:59Z");    // 지난 일요일 23:59:59 KST
-        explore(member(), "2026-09-27T15:00:00Z");    // 지난 월요일 00:00 KST
-        explore(member(), "2026-09-27T14:59:59Z");    // 그 앞 주 (어느 기간도 아니다)
+        explore(member(), "2026-09-27T16:00:00Z");    // 최근 7일의 시작
+        explore(member(), "2026-09-27T15:59:59Z");    // 직전 7일의 끝
+        explore(member(), "2026-09-20T16:00:00Z");    // 직전 7일의 시작
+        explore(member(), "2026-09-20T15:59:59Z");    // 어느 기간도 아니다
 
         assertThat(row("week", "Java")).isEqualTo(new Row(1, 1, -1));
     }

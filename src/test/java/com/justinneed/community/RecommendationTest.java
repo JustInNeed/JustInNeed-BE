@@ -72,7 +72,7 @@ class RecommendationTest extends CommunityTestSupport {
     }
 
     @Test
-    void trendBoundariesUseKoreanMidnightMondayAndExcludeFutureEvents() {
+    void trendBoundariesUseKoreanMidnightAndRollingWeekAndExcludeFutureEvents() {
         session(ownerId, true, "Java");
         var graph = graphs.graph(ownerId, null);
         Long tag = graph.hashtags().get(0).hashtagId();
@@ -86,7 +86,7 @@ class RecommendationTest extends CommunityTestSupport {
         var today = trending.trending(TrendingService.Period.TODAY, 10).hashtags().get(0);
         assertThat(today.count()).isEqualTo(1);
         var week = trending.trending(TrendingService.Period.WEEK, 10).hashtags().get(0);
-        assertThat(week.count()).isEqualTo(3);
+        assertThat(week.count()).isEqualTo(4);
         assertThat(week.rank()).isEqualTo(1);
     }
 

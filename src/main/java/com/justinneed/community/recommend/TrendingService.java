@@ -6,18 +6,17 @@ import com.justinneed.community.catalog.CommunityTags;
 import com.justinneed.community.domain.CommunityProfile;
 import com.justinneed.community.service.CommunitySharing;
 import java.time.*;
-import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 떠오르는 해시태그. 기간은 모두 KST 달력 기준이다.
+ * 떠오르는 해시태그. 직전 기간은 지금 기간과 길이가 같다. 날짜는 KST 기준이다.
  *
  * <pre>
- * 오늘     = 오늘 00:00 ~ 지금, 직전 기간은 어제 하루
- * 이번 주  = 이번 주 월요일 00:00 ~ 지금, 직전 기간은 그 앞 7일 (지난주 월 ~ 일)
+ * 오늘     = 오늘 00:00 ~ 지금, 직전 기간은 어제 00:00 ~ 어제 같은 시각
+ * 이번 주  = 지금부터 최근 7일, 직전 기간은 그 앞 7일
  * count    = 기간 안의 나도 탐색중 + 북마크. 사람 · 태그 · 종류 · 날짜마다 1 (대상이 여러 개여도, 취소해도 그대로)
  * trend    = count - 직전 기간 count. 같은 규칙으로 세고, 직전 기간에 없던 태그는 count 와 같다
  * </pre>
@@ -27,9 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TrendingService {
     public enum Period {
-        TODAY(1), WEEK(7);
-        private final int days;
-        Period(int days) { this.days = days; }
+        TODAY, WEEK;
         public static Period parse(String value) {
             return Arrays.stream(values()).filter(p -> p.name().equalsIgnoreCase(value)).findFirst()
                     .orElseThrow(() -> CommunityErrors.invalid("기간은 today 또는 week 만 쓸 수 있습니다"));
@@ -37,6 +34,7 @@ public class TrendingService {
     }
     private final CommunityActivityRepository activities;
     private final CommunitySharing sharing;
+    private static final Duration WEEK = Duration.ofDays(7);
     private final Clock clock;
     public TrendingService(CommunityActivityRepository activities, CommunitySharing sharing, Clock clock) {
         this.activities = activities; this.sharing = sharing; this.clock = clock;
@@ -45,10 +43,15 @@ public class TrendingService {
     public Trends trending(Period period, int limit) {
         RecommendationService.checkLimit(limit);
         Instant now = clock.instant();
-        var day = now.atZone(ActivityRecorder.ZONE).toLocalDate();
-        var first = period == Period.TODAY ? day : day.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-        Instant start = first.atStartOfDay(ActivityRecorder.ZONE).toInstant();
-        Instant previousStart = first.minusDays(period.days).atStartOfDay(ActivityRecorder.ZONE).toInstant();
+        var today = now.atZone(ActivityRecorder.ZONE).toLocalDate();
+        Instant start = period == Period.TODAY
+                ? today.atStartOfDay(ActivityRecorder.ZONE).toInstant()
+                : now.minus(WEEK);
+        Duration length = Duration.between(start, now);
+        Instant previousStart = period == Period.TODAY
+                ? today.minusDays(1).atStartOfDay(ActivityRecorder.ZONE).toInstant()
+                : start.minus(length);
+        Instant previousEnd = previousStart.plus(length);
         var shown = shown(previousStart, now);
         var groups = new HashMap<String, Counts>();
         for (var event : activities.findTrending(previousStart, now)) {
@@ -56,8 +59,8 @@ public class TrendingService {
             var count = groups.computeIfAbsent(CommunityTags.key(event.tagName()), Counts::new);
             // Count one person per tag/kind/day, even across different nodes or profiles.
             var person = new Person(event.actorId(), event.kind(), event.activityDay());
-            if (event.occurredAt().isBefore(start)) count.previous.add(person);
-            else count.current(person, event);
+            if (!event.occurredAt().isBefore(start)) count.current(person, event);
+            else if (event.occurredAt().isBefore(previousEnd)) count.previous.add(person);
         }
         var ranked = groups.values().stream().filter(c -> !c.current.isEmpty())
                 .sorted(Comparator.comparingInt((Counts c) -> c.current.size()).reversed().thenComparing(c -> c.key))
