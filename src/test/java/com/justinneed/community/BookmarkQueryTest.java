@@ -41,6 +41,16 @@ class BookmarkQueryTest extends CommunityTestSupport {
                 .andExpect(status().isBadRequest());
     }
     @Test
+    void hidesMiniMindmapWhoseNodeRowNoLongerExists() throws Exception {
+        var gone = new BookmarkSnapshot("Saved", List.of(),
+                List.of(new BookmarkSnapshot.Node(Long.MAX_VALUE, "Saved node", "https://example.com", null, NodeVisibility.URL_ONLY)),
+                List.of());
+        bookmarks.saveAndFlush(new CommunityBookmark(viewerId, SaveType.MINI_MINDMAP, TargetType.NODE, "gone-node",
+                ownerId, List.of(Long.MAX_VALUE), gone, Instant.now()));
+        mvc.perform(get("/community/me/bookmarks/mindmaps").header("Authorization", auth(viewerId)))
+                .andExpect(jsonPath("$.data.mindmaps.length()").value(0)).andExpect(jsonPath("$.data.hasNext").value(false));
+    }
+    @Test
     void hidesSnapshotHashtagsWhoseHashtagNoLongerExists() throws Exception {
         var gone = new BookmarkSnapshot("Saved", List.of(new BookmarkSnapshot.Tag(Long.MAX_VALUE, ownerId, "Gone")),
                 List.of(), List.of());
