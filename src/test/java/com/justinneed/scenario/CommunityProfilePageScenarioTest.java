@@ -263,35 +263,106 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("노드 수는 카드 nodeCount 의 합이다: 같은 URL 이 두 세션에 있으면 카드마다 세고, CONTENT 면 URL 이 아니라 AI 노드를 센다")
-    void totalNodeCountIsSumOfCards() throws Exception {
+    @DisplayName("노드 수는 보이는 그래프의 고유 노드 수다: URL 만 공개면 같은 URL 은 세션이 달라도 하나고 카드 nodeCount 는 그대로다")
+    void totalNodeCountCountsDistinctUrls() throws Exception {
         Member traveler = member("traveler");
-        BrowsingSession first = session(traveler, "첫 세션", "2026-04-20T10:00:00", "2026-04-20T11:00:00", 2, false, true,
-                List.of("여행"), List.of(LINK, new Source("둘째", "https://prague.example.com/b", "발췌")), "# 본문");
+        Source second = new Source("둘째", "https://prague.example.com/b", "발췌");
+        session(traveler, "첫 세션", "2026-04-20T10:00:00", "2026-04-20T11:00:00", 2, false, true,
+                List.of("여행", "체코"), List.of(LINK, second), "# 본문");
         session(traveler, "둘째 세션", "2026-04-21T10:00:00", "2026-04-21T11:00:00", 1, false, true,
                 List.of("여행"), List.of(LINK), "# 본문");
 
+        // 고유 URL = a, b → 2. 여행 = {a, b} ∪ {a} → 2, 체코 = {a, b} → 2
         mvc.perform(get("/community/profiles/{id}", traveler.getId()).with(as(me)))
-                .andExpect(jsonPath("$.data.totalNodeCount").value(3));
+                .andExpect(jsonPath("$.data.totalNodeCount").value(2))
+                .andExpect(jsonPath("$.data.topHashtags[*].name").value(contains("여행", "체코")))
+                .andExpect(jsonPath("$.data.topHashtags[*].nodeCount").value(contains(2, 2)));
+        mvc.perform(get(MINDMAPS, traveler.getId()).with(as(me)))
+                .andExpect(jsonPath("$.data.mindmaps[*].nodeCount").value(contains(1, 2)));
+    }
 
-        saveMindmap(first, 5);
+    @Test
+    @DisplayName("내용까지 공개면 노드 수는 AI 노드를 홈과 같은 키로 합친 수다: 공백 · 대소문자만 다르면 하나고 AI 결과 없는 세션은 0 이다")
+    void totalNodeCountMergesAiKeywords() throws Exception {
+        Member traveler = member("traveler");
+        BrowsingSession first = session(traveler, "첫 세션", "2026-04-20T10:00:00", "2026-04-20T11:00:00", 2, false, true,
+                List.of("여행"), List.of(LINK), "# 본문");
+        BrowsingSession second = session(traveler, "둘째 세션", "2026-04-21T10:00:00", "2026-04-21T11:00:00", 1, false, true,
+                List.of("여행", "맛집"), List.of(LINK), "# 본문");
+        session(traveler, "결과 없는 세션", "2026-04-22T10:00:00", "2026-04-22T11:00:00", 1, false, true,
+                List.of("여행"), List.of(new Source("셋째", "https://prague.example.com/c", "발췌")), "# 본문");
+        saveKeywords(first, "프라하 성", "카를교");
+        saveKeywords(second, "프라하성", "카를 교", "맛집 지도");
         cardSync.sync(first);
+        cardSync.sync(second);
         mvc.perform(patch("/community/me/visibility").with(as(traveler)).with(json(Map.of("visibility", "CONTENT"))))
                 .andExpect(okEnvelope());
 
-        mvc.perform(get(MINDMAPS, traveler.getId()).with(as(me)))
-                .andExpect(jsonPath("$.data.mindmaps[*].nodeCount").value(contains(0, 5)));
+        // 고유 키 = 프라하성, 카를교, 맛집지도 → 3. 여행 = 3, 맛집 = 3. 카드는 0 + 3 + 2 = 5 라 합과 다르다
         mvc.perform(get("/community/profiles/{id}", traveler.getId()).with(as(me)))
-                .andExpect(jsonPath("$.data.totalNodeCount").value(5));
+                .andExpect(jsonPath("$.data.totalNodeCount").value(3))
+                .andExpect(jsonPath("$.data.topHashtags[*].name").value(contains("맛집", "여행")))
+                .andExpect(jsonPath("$.data.topHashtags[*].nodeCount").value(contains(3, 3)));
+        mvc.perform(get(MINDMAPS, traveler.getId()).with(as(me)))
+                .andExpect(jsonPath("$.data.mindmaps[*].nodeCount").value(contains(0, 3, 2)));
     }
 
-    // 뿌리 하나 + 자식 size-1 개짜리 AI 마인드맵
-    private void saveMindmap(BrowsingSession session, int size) {
+    @Test
+    @DisplayName("비공개 세션이 있으면 방문자의 노드 수가 작성자 본인의 노드 수보다 많을 수 없다")
+    void visitorNeverSeesMoreNodesThanOwner() throws Exception {
+        Member traveler = member("traveler");
+        BrowsingSession open = session(traveler, "공개 세션", "2026-04-20T10:00:00", "2026-04-20T11:00:00", 2, false, true,
+                List.of("여행"), List.of(LINK), "# 본문");
+        BrowsingSession alsoOpen = session(traveler, "또 공개 세션", "2026-04-21T10:00:00", "2026-04-21T11:00:00", 1, false, true,
+                List.of("여행"), List.of(LINK), "# 본문");
+        BrowsingSession closed = session(traveler, "비공개 세션", "2026-04-22T10:00:00", "2026-04-22T11:00:00", 1, false, false,
+                List.of("여행"), List.of(LINK), "# 본문");
+        saveKeywords(open, "프라하 성", "카를교");
+        saveKeywords(alsoOpen, "프라하성", "카를교");
+        saveKeywords(closed, "프라하성", "맛집");
+        cardSync.sync(open);
+        cardSync.sync(alsoOpen);
+        mvc.perform(patch("/community/me/visibility").with(as(traveler)).with(json(Map.of("visibility", "CONTENT"))))
+                .andExpect(okEnvelope());
+
+        // 본인 = 프라하성, 카를교, 맛집 → 3. 방문자 = 공개 두 세션의 프라하성, 카를교 → 2 (카드 합이면 4 로 본인보다 많다)
+        mvc.perform(get("/community/me/profile").with(as(traveler)))
+                .andExpect(jsonPath("$.data.totalNodeCount").value(3));
+        mvc.perform(get("/community/profiles/{id}", traveler.getId()).with(as(me)))
+                .andExpect(jsonPath("$.data.totalNodeCount").value(2))
+                .andExpect(jsonPath("$.data.topHashtags[0].nodeCount").value(2));
+    }
+
+    @Test
+    @DisplayName("상위 해시태그는 고유 노드 수 많은 순 → 이름 순 → id 순이고 다섯 개까지다. 대소문자만 다른 표기도 순서 비교는 소문자로 한다")
+    void topHashtagOrderUsesDistinctCounts() throws Exception {
+        Member traveler = member("traveler");
+        Source b = new Source("b", "https://prague.example.com/b", "발췌");
+        Source c = new Source("c", "https://prague.example.com/c", "발췌");
+        Source d = new Source("d", "https://prague.example.com/d", "발췌");
+        Source e = new Source("e", "https://prague.example.com/e", "발췌");
+        session(traveler, "하나", "2026-04-20T10:00:00", "2026-04-20T11:00:00", 1, false, true,
+                List.of("겹침"), List.of(LINK, b), "# 본문");
+        session(traveler, "둘", "2026-04-21T10:00:00", "2026-04-21T11:00:00", 1, false, true,
+                List.of("겹침"), List.of(LINK, b), "# 본문");
+        session(traveler, "셋", "2026-04-22T10:00:00", "2026-04-22T11:00:00", 1, false, true,
+                List.of("넓음"), List.of(c, d, e), "# 본문");
+        session(traveler, "넷", "2026-04-23T10:00:00", "2026-04-23T11:00:00", 1, false, true,
+                List.of("Beta", "alpha", "다", "라"), List.of(LINK), "# 본문");
+
+        // 넓음 = c, d, e → 3 / 겹침 = a, b → 2 (세션마다 더하면 4 로 1등이 된다)
+        // alpha · Beta · 다 · 라 = a → 1. 소문자 이름 순이고 라 는 여섯째라 빠진다
+        mvc.perform(get("/community/profiles/{id}", traveler.getId()).with(as(me)))
+                .andExpect(jsonPath("$.data.topHashtags[*].name").value(contains("넓음", "겹침", "alpha", "Beta", "다")))
+                .andExpect(jsonPath("$.data.topHashtags[*].nodeCount").value(contains(3, 2, 1, 1, 1)));
+    }
+
+    // 키워드만 있는 AI 마인드맵. 노드 id 는 세션 안에서만 쓴다
+    private void saveKeywords(BrowsingSession session, String... keywords) {
         List<String> nodes = new ArrayList<>();
-        nodes.add("{\"id\": \"root\", \"type\": \"root\", \"keyword\": \"뿌리\", \"score\": 1.0, \"childCount\": 0}");
-        for (int i = 1; i < size; i++) {
-            nodes.add("{\"id\": \"topic:%d\", \"type\": \"topic\", \"keyword\": \"주제%d\", \"score\": 0.5, \"childCount\": 0}"
-                    .formatted(i, i));
+        for (int i = 0; i < keywords.length; i++) {
+            nodes.add("{\"id\": \"topic:%d\", \"type\": \"topic\", \"keyword\": \"%s\", \"score\": 0.5, \"childCount\": 0}"
+                    .formatted(i, keywords[i]));
         }
         String mindmap = "{\"structureSource\": \"llm\", \"nodes\": [%s], \"edges\": []}"
                 .formatted(String.join(",", nodes));
