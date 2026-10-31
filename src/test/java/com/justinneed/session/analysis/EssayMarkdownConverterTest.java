@@ -12,15 +12,13 @@ import org.junit.jupiter.api.Test;
 class EssayMarkdownConverterTest {
 
     @Test
-    void convertsTitleAndSectionsToMarkdown() {
+    void convertsSectionsToMarkdownWithoutTitle() {
         AiEssay essay = new AiEssay("대제목", List.of(
                 new AiEssaySection("소제목1", "본문1", List.of("u1")),
                 new AiEssaySection("소제목2", "본문2", List.of("u2"))
         ), "llm");
 
         assertThat(EssayMarkdownConverter.toMarkdown(essay)).isEqualTo("""
-                # 대제목
-
                 ## 소제목1
 
                 본문1
@@ -37,8 +35,6 @@ class EssayMarkdownConverterTest {
         ), "llm");
 
         assertThat(EssayMarkdownConverter.toMarkdown(essay)).isEqualTo("""
-                # 대제목
-
                 ## 소제목 이어짐
 
                 첫 문단
@@ -66,6 +62,8 @@ class EssayMarkdownConverterTest {
         assertThat(EssayMarkdownConverter.toMarkdown(null)).isEmpty();
         assertThat(EssayMarkdownConverter.toMarkdown(new AiEssay(null, null, null))).isEmpty();
         assertThat(EssayMarkdownConverter.toMarkdown(new AiEssay("", List.of(), "llm"))).isEmpty();
+        // 소제목 · 본문이 없으면 대제목만 있어도 본문은 비어 있다
+        assertThat(EssayMarkdownConverter.toMarkdown(new AiEssay("대제목", List.of(), "llm"))).isEmpty();
     }
 
     @Test
@@ -109,6 +107,6 @@ class EssayMarkdownConverterTest {
         assertThat(essay.title()).isEqualTo("대제목");
         assertThat(essay.source()).isEqualTo("llm");
         assertThat(essay.sections()).containsExactly(new AiEssaySection("소제목", "본문", List.of("u1", "u2")));
-        assertThat(EssayMarkdownConverter.toMarkdown(essay)).isEqualTo("# 대제목\n\n## 소제목\n\n본문");
+        assertThat(EssayMarkdownConverter.toMarkdown(essay)).isEqualTo("## 소제목\n\n본문");
     }
 }
