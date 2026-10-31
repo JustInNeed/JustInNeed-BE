@@ -269,15 +269,15 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @Disabled("API 미구현: 피드 마인드맵 카드 좋아요 (C표 '좋아요 대상: 프로필 + 피드 마인드맵 카드' 결정) — "
-            + "PATCH /community/mindmaps/{mindmapId}/like {liked} 는 제안(프로필 좋아요와 같은 모양), 구현되면 켠다")
     @DisplayName("피드 카드에서 마인드맵 좋아요를 누르면 수가 오르고 다시 누르면 내려간다")
     void mindmapLike() throws Exception {
-        mvc.perform(patch("/community/mindmaps/{id}/like", wanderer.id()).with(as(me)).with(json(Map.of("liked", true))))
+        Long mindmapId = wanderer.prague().getId();
+        mvc.perform(patch("/community/mindmaps/{id}/like", mindmapId).with(as(me)).with(json(Map.of("liked", true))))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.liked").value(true))
+                .andExpect(jsonPath("$.data.likedByMe").value(true))
                 .andExpect(jsonPath("$.data.likeCount").value(1));
-        mvc.perform(patch("/community/mindmaps/{id}/like", wanderer.id()).with(as(me)).with(json(Map.of("liked", false))))
+        mvc.perform(patch("/community/mindmaps/{id}/like", mindmapId).with(as(me)).with(json(Map.of("liked", false))))
+                .andExpect(jsonPath("$.data.likedByMe").value(false))
                 .andExpect(jsonPath("$.data.likeCount").value(0));
     }
 
