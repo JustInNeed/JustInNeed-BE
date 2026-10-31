@@ -38,5 +38,5 @@ public class ProfileEditController {
     public ApiResponse<ProfileEditService.SessionView> session(@AuthenticationPrincipal Long viewerId, @PathVariable Long sessionId) {
         return ApiResponse.ok(service.session(viewerId, sessionId));
     }
-    public record PublicRequest(@NotNull Boolean isPublic) { }
+    public record PublicRequest(@NotNull(message = "공개 여부를 입력해 주세요.") Boolean isPublic) { }
 }

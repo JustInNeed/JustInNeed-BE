@@ -1,10 +1,11 @@
 package com.justinneed.community.recommend;
 
-import com.justinneed.community.api.CommunityErrors;
 import com.justinneed.community.bookmark.BookmarkQueryService;
 import com.justinneed.community.catalog.CommunityTags;
 import com.justinneed.community.search.PublicDirectory;
 import com.justinneed.community.service.CommunityProfiles;
+import com.justinneed.global.exception.CustomException;
+import com.justinneed.global.exception.ErrorCode;
 import java.util.*;
 import org.springframework.stereotype.Service;
 
@@ -51,7 +52,7 @@ public class RecommendationService {
         return new Recommendations(200, List.copyOf(unique.values()), List.copyOf(found));
     }
     public static void checkLimit(int limit) {
-        if (limit < 1 || limit > 100) throw CommunityErrors.invalid("limit must be between 1 and 100");
+        if (limit < 1 || limit > 100) throw new CustomException(ErrorCode.INVALID_LIMIT_REQUEST);
     }
     public record Mindmap(Long mindmapId, String title, Long ownerId, List<String> matchedHashtags, List<String> relatedUrls) { }
     public record Recommendations(int code, List<String> basisHashtags, List<Mindmap> mindmaps) { }

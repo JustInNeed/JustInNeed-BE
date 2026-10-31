@@ -11,6 +11,8 @@ import com.justinneed.community.pin.SharedSessionService;
 import com.justinneed.community.reaction.ProfileLikeRepository;
 import com.justinneed.community.service.CommunityProfiles;
 import com.justinneed.community.service.CommunitySharing;
+import com.justinneed.global.exception.CustomException;
+import com.justinneed.global.exception.ErrorCode;
 import java.net.URI;
 import java.util.*;
 import org.springframework.stereotype.Service;
@@ -80,7 +82,7 @@ public class PublicGraphService {
                 .sorted(Comparator.comparingLong(TopTag::nodeCount).reversed()
                         .thenComparing(t -> CommunityTags.key(t.name())).thenComparing(TopTag::hashtagId))
                 .limit(5).toList();
-        return new Graph(200, ownerId, ownerId, owner.getNickname(), "Community mindmap",
+        return new Graph(200, ownerId, ownerId, owner.getNickname(), "커뮤니티 마인드맵",
                 List.copyOf(visibleTags.values()), List.copyOf(leaves), List.copyOf(edges), ranked);
     }
 
@@ -95,7 +97,7 @@ public class PublicGraphService {
 
     public Original original(Long viewerId, Long bookmarkId) {
         var bookmark = bookmarks.owned(viewerId, bookmarkId);
-        if (bookmark.getSaveType() != SaveType.MINI_MINDMAP) throw CommunityErrors.invalid("Mini mindmap required");
+        if (bookmark.getSaveType() != SaveType.MINI_MINDMAP) throw new CustomException(ErrorCode.MINI_MINDMAP_REQUIRED);
         Long ownerId = bookmark.getSourceMindmapId();
         // 목록에서 숨겨진 북마크는 원본도 열리지 않는다
         var current = bookmarks.currentMindmap(bookmark);

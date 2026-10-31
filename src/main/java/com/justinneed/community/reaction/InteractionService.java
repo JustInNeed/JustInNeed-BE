@@ -1,8 +1,9 @@
 package com.justinneed.community.reaction;
 
 import com.justinneed.community.activity.*;
-import com.justinneed.community.api.CommunityErrors;
 import com.justinneed.community.bookmark.TargetType;
+import com.justinneed.global.exception.CustomException;
+import com.justinneed.global.exception.ErrorCode;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +23,7 @@ public class InteractionService {
         this.targets = targets; this.activity = activity;
     }
     public LikeView like(Long actor, Long profileId, boolean liked) {
-        if (actor.equals(profileId)) throw CommunityErrors.invalid("Cannot like your own profile");
+        if (actor.equals(profileId)) throw new CustomException(ErrorCode.SELF_LIKE_NOT_ALLOWED);
         locks.acquire(actor, List.of(profileId));
         var existing = likes.findByActorIdAndProfileId(actor, profileId);
         if (liked && existing.isEmpty()) likes.save(new ProfileLike(actor, profileId));

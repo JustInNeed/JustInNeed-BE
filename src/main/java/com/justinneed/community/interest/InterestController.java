@@ -39,7 +39,7 @@ public class InterestController {
     }
 
     public record Request(
-            @NotBlank
+            @NotBlank(message = "해시태그를 입력해 주세요.")
             @Pattern(regexp = "^[가-힣a-zA-Z0-9]{1,10}$",
                     message = "해시태그는 한글, 영문, 숫자만 사용할 수 있으며 최대 10자까지 입력 가능합니다.")
             String hashtag
