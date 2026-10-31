@@ -1,12 +1,16 @@
 package com.justinneed.community;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 
 import com.justinneed.auth.domain.Member;
 import com.justinneed.auth.domain.SocialProvider;
 import com.justinneed.auth.jwt.JwtTokenProvider;
 import com.justinneed.auth.repository.MemberRepository;
+import com.justinneed.community.domain.CommunityProfile;
+import com.justinneed.community.repository.CommunityMemberRepository;
+import com.justinneed.community.repository.CommunityProfileRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -21,6 +25,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 // 트랜잭션을 실제로 커밋해야 재현되는 동시 요청 · 행 잠금 규칙
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:community_follow_committed;MODE=PostgreSQL;LOCK_TIMEOUT=10000")
@@ -28,8 +34,11 @@ import org.springframework.test.web.servlet.MockMvc;
 class FollowCommitTest {
     @Autowired MockMvc mvc;
     @Autowired MemberRepository members;
+    @Autowired CommunityMemberRepository memberLocks;
+    @Autowired CommunityProfileRepository profiles;
     @Autowired JwtTokenProvider tokens;
     @Autowired JdbcTemplate jdbc;
+    @Autowired PlatformTransactionManager manager;
 
     private Long member() {
         return members.saveAndFlush(new Member(SocialProvider.KAKAO, "follow-" + UUID.randomUUID(), null, null)).getId();
@@ -73,6 +82,34 @@ class FollowCommitTest {
             assertThat(rows(actor, target)).isEqualTo(1);
             assertThat(clickTogether(actor, target, false, 6)).containsOnly(200);
             assertThat(rows(actor, target)).isZero();
+        }
+    }
+
+    @Test
+    void similarPeopleDoesNotWaitForRowLocks() throws Exception {
+        Long viewer = member();
+        Long other = member();
+        for (Long id : List.of(viewer, other)) {
+            var profile = new CommunityProfile(id);
+            profile.replaceInterests(List.of("잠금태그"));
+            profiles.saveAndFlush(profile);
+        }
+        var pool = Executors.newSingleThreadExecutor();
+        try {
+            new TransactionTemplate(manager).executeWithoutResult(status -> {
+                memberLocks.lockById(viewer).orElseThrow();
+                memberLocks.lockById(other).orElseThrow();
+                var answer = pool.submit(() -> mvc.perform(get("/community/recommendations/profiles/similar")
+                                .header("Authorization", "Bearer " + tokens.createAccessToken(viewer)))
+                        .andReturn().getResponse().getStatus());
+                try {
+                    assertThat(answer.get(5, TimeUnit.SECONDS)).isEqualTo(200);
+                } catch (Exception error) {
+                    throw new AssertionError("GET waited for a row lock", error);
+                }
+            });
+        } finally {
+            pool.shutdownNow();
         }
     }
 }

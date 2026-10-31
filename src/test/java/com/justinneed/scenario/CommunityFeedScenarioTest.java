@@ -287,18 +287,25 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @Disabled("API 미구현: 관심사가 비슷한 사람 (A표 반영 결정) — GET /community/recommendations/profiles/similar 와 "
-            + "응답 profiles[].userId · nickname · matchedHashtags 는 제안, 구현되면 켠다")
-    @DisplayName("관심사가 비슷한 사람: 내 관심 해시태그와 겹치는 사람이 겹친 태그와 함께 온다 (나는 빠진다)")
+    @DisplayName("관심사가 비슷한 사람: 내 관심 해시태그와 겹치는 사람이 겹친 태그 · 팔로우 상태와 함께 온다 (나는 빠진다)")
     void similarPeople() throws Exception {
         addInterest(me, "파리");
         addInterest(foodtrip, "파리");
 
         mvc.perform(get("/community/recommendations/profiles/similar").with(as(me)))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.profiles[*].userId").value(contains(ids(foodtrip.getId()))))
-                .andExpect(jsonPath("$.data.profiles[0].nickname").value("foodtrip"))
-                .andExpect(jsonPath("$.data.profiles[0].matchedHashtags").value(contains("파리")));
+                .andExpect(jsonPath("$.data.people[*].userId").value(contains(ids(foodtrip.getId()))))
+                .andExpect(jsonPath("$.data.people[0].nickname").value("foodtrip"))
+                .andExpect(jsonPath("$.data.people[0].matchedHashtags").value(contains("파리")))
+                .andExpect(jsonPath("$.data.people[0].following").value(false));
+
+        mvc.perform(patch("/community/profiles/{userId}/follow", foodtrip.getId()).with(as(me))
+                        .with(json(Map.of("following", true))))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.following").value(true));
+
+        mvc.perform(get("/community/recommendations/profiles/similar").with(as(me)))
+                .andExpect(jsonPath("$.data.people[0].following").value(true));
     }
 
     @Test
