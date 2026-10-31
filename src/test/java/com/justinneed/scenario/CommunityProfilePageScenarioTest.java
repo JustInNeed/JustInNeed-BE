@@ -76,8 +76,6 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     void relatedSessionsOrder() throws Exception {
         BrowsingSession newest = publicSession(wanderer.member(), "새 글", "2026-04-22T10:00:00", "2026-04-22T11:00:00",
                 false, List.of("프라하"));
-        // 시작은 늦지만 끝난 시각이 더 이르다: 최신순은 끝난 시각 기준이다
-        publicSession(wanderer.member(), "밀리는 글", "2026-04-19T22:00:00", "2026-04-19T22:10:00", false, List.of("체코"));
 
         mvc.perform(get(RELATED, wanderer.nightjet().getId()).with(as(me)))
                 .andExpect(okEnvelope())
@@ -87,6 +85,18 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.sessions", hasSize(3)))
                 .andExpect(jsonPath("$.data.sessions[0].id").value(wanderer.prague().getId()))
                 .andExpect(jsonPath("$.data.sessions[1].id").value(newest.getId()));
+    }
+
+    @Test
+    @DisplayName("관련 세션의 최신순은 끝난 시각 기준이다: 늦게 시작했어도 먼저 끝난 세션이 뒤로 간다")
+    void relatedSessionsOrderByEndTime() throws Exception {
+        BrowsingSession longRun = publicSession(wanderer.member(), "오래 본 글", "2026-04-21T08:00:00",
+                "2026-04-21T12:00:00", false, List.of("체코"));
+        BrowsingSession shortRun = publicSession(wanderer.member(), "잠깐 본 글", "2026-04-21T09:00:00",
+                "2026-04-21T09:10:00", false, List.of("체코"));
+
+        mvc.perform(get(RELATED, wanderer.prague().getId()).with(as(me)))
+                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(wanderer.prague(), longRun, shortRun))));
     }
 
     @Test
