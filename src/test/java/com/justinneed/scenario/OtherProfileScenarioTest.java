@@ -1,5 +1,6 @@
 package com.justinneed.scenario;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.everyItem;
@@ -16,14 +17,23 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.jayway.jsonpath.JsonPath;
 import com.justinneed.auth.domain.Member;
+import com.justinneed.community.domain.CommunityProfile;
+import com.justinneed.community.reaction.ProfileLikeRepository;
 import com.justinneed.session.management.domain.BrowsingSession;
+import com.justinneed.session.management.domain.Source;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.ResultActions;
 
@@ -35,8 +45,11 @@ import org.springframework.test.web.servlet.ResultActions;
 class OtherProfileScenarioTest extends ScenarioTestSupport {
 
     private static final String SESSION_NOT_FOUND = "세션을 찾을 수 없습니다.";
+    private static final String MEMBER_NOT_FOUND = "회원을 찾을 수 없습니다.";
     private static final String PRAGUE_CASTLE = "https://www.hrad.cz/en/prague-castle-for-visitors";
     private static final String CAFE_URL = "https://www.cafecentral.wien/en/";
+
+    @Autowired private ProfileLikeRepository likes;
 
     private Member me;
     private Member foodtrip;
@@ -394,6 +407,161 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.sessions[*].id").value(contains(
                         ids(wanderer.prague(), wanderer.cafe(), wanderer.nightjet(), wanderer.vienna()))))
                 .andExpect(jsonPath("$.data.sessions[1].tags").value(contains("비엔나")));
+    }
+
+    // ---------- 점검: 트래킹표 11 · A-10 ----------
+
+    private BrowsingSession publicSession(Member owner, String title, List<String> tags, String url) {
+        return session(owner, title, "2026-04-21T10:00:00", "2026-04-21T11:00:00", 1, false, true, tags,
+                List.of(new Source("글", url, "발췌")), "# 본문");
+    }
+
+    private void withdraw(Member member) {
+        members.findById(member.getId()).orElseThrow().withdraw(null, LocalDateTime.now());
+        members.flush();
+    }
+
+    private Long hashtagInGraph(Member owner, String name) throws Exception {
+        String body = mvc.perform(get("/community/profiles/{id}/mindmap", owner.getId()).with(as(me)))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        List<Number> found = JsonPath.read(body, "$.data.hashtags[?(@.name == '" + name + "')].hashtagId");
+        return found.get(0).longValue();
+    }
+
+    @Test
+    @DisplayName("태그가 전부 비공개인 공개 세션: 세션 · 카드 · 노드는 남아 노드 수에 들고, 태그 없이 보이며 태그 연결선 · 상위 해시태그에는 없다")
+    void sessionWithOnlyHiddenTags() throws Exception {
+        String url = "https://locked.example.com/a";
+        BrowsingSession locked = publicSession(wanderer.member(), "잠긴 세션", List.of("카페"), url);
+        Long node = nodeId(me, wanderer.member(), url);
+
+        mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me)))
+                .andExpect(jsonPath("$.data.totalNodeCount").value(8))
+                .andExpect(jsonPath("$.data.sharedSessionCount").value(5))
+                .andExpect(jsonPath("$.data.topHashtags[*].name").value(not(hasItem("카페"))));
+        mvc.perform(get("/community/profiles/{id}/mindmap", wanderer.id()).with(as(me)))
+                .andExpect(jsonPath("$.data.nodes", hasSize(8)))
+                .andExpect(jsonPath("$.data.edges[?(@.to == 'node:" + node + "')]", hasSize(0)))
+                .andExpect(jsonPath("$.data.hashtags[*].name").value(not(hasItem("카페"))));
+        mvc.perform(get("/community/profiles/{id}/shared-sessions", wanderer.id()).with(as(me)))
+                .andExpect(jsonPath("$.data.sessions[?(@.id == " + locked.getId() + ")].tags[*]", hasSize(0)));
+        mvc.perform(get("/community/profiles/{id}/mindmaps", wanderer.id()).with(as(me)))
+                .andExpect(jsonPath("$.data.mindmaps[?(@.mindmapId == " + locked.getId() + ")].hashtags[*]", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("대표 해시태그(COM-3-4): 비공개를 뺀 뒤 앞에서 10개까지다")
+    void interestsAreCappedAfterHiddenAreRemoved() throws Exception {
+        List<String> shown = IntStream.rangeClosed(1, 10).mapToObj(i -> "태그" + i).toList();
+        List<String> saved = new ArrayList<>(List.of("카페"));
+        saved.addAll(shown);
+        saved.addAll(List.of("슬로우트래블", "태그11"));
+        CommunityProfile profile = communityProfiles.findById(wanderer.id()).orElseThrow();
+        profile.replaceInterests(saved);
+        communityProfiles.saveAndFlush(profile);
+
+        mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me)))
+                .andExpect(jsonPath("$.data.interests").value(contains(shown.toArray())));
+    }
+
+    @Test
+    @DisplayName("마인드맵 해시태그 거르기: 상위 해시태그도 걸러진 세션으로 세고, 노드 없는 관심 태그는 빈 그래프다. 남의 · 없는 태그는 404, 숫자가 아니면 400")
+    void mindmapFilterEdges() throws Exception {
+        Long vienna = hashtagId(wanderer.member(), "비엔나");
+        Long interestOnly = hashtagInGraph(wanderer.member(), "카페투어");
+        publicSession(foodtrip, "남의 세션", List.of("맛집"), "https://food.example.com/a");
+        Long others = hashtagId(foodtrip, "맛집");
+        String path = "/community/profiles/{id}/mindmap";
+
+        mvc.perform(get(path, wanderer.id()).param("hashtagId", vienna.toString()).with(as(me)))
+                .andExpect(jsonPath("$.data.topHashtags[*].name").value(contains("비엔나")))
+                .andExpect(jsonPath("$.data.topHashtags[0].nodeCount").value(3));
+        mvc.perform(get(path, wanderer.id()).param("hashtagId", interestOnly.toString()).with(as(me)))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.nodes", hasSize(0)))
+                .andExpect(jsonPath("$.data.hashtags[*].name").value(contains("카페투어")))
+                .andExpect(jsonPath("$.data.topHashtags", hasSize(0)));
+        mvc.perform(get(path, wanderer.id()).param("hashtagId", others.toString()).with(as(me)))
+                .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, "요청한 정보를 찾을 수 없습니다."));
+        mvc.perform(get(path, wanderer.id()).param("hashtagId", "999999").with(as(me)))
+                .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, "요청한 정보를 찾을 수 없습니다."));
+        mvc.perform(get(path, wanderer.id()).param("hashtagId", "abc").with(as(me)))
+                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "요청 형식이 올바르지 않습니다."));
+    }
+
+    @Test
+    @DisplayName("주소의 id: 0 · 음수 · 없는 id 는 404 라 FE 가 '프로필을 찾을 수 없어요' 를 띄우고, 숫자가 아니거나 Long 을 넘으면 400 이다")
+    void profileIdTypes() throws Exception {
+        for (String id : List.of("0", "-1", "999999")) {
+            mvc.perform(get("/community/profiles/" + id).with(as(me)))
+                    .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, MEMBER_NOT_FOUND));
+        }
+        for (String id : List.of("abc", "1.5", "99999999999999999999")) {
+            mvc.perform(get("/community/profiles/" + id).with(as(me)))
+                    .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "요청 형식이 올바르지 않습니다."));
+        }
+        mvc.perform(patch("/community/profiles/0/like").with(as(me)).with(json(Map.of("liked", true))))
+                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다."));
+        mvc.perform(patch("/community/profiles/-1/follow").with(as(me)).with(json(Map.of("following", true))))
+                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다."));
+    }
+
+    @Test
+    @DisplayName("좋아요 대상: 나는 400 한글, 없거나 탈퇴한 회원은 등록 · 해제 모두 404 이고 눌러 둔 행은 남는다")
+    void likeTargets() throws Exception {
+        String like = "/community/profiles/{id}/like";
+        mvc.perform(patch(like, me.getId()).with(as(me)).with(json(Map.of("liked", true))))
+                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "내 프로필과 마인드맵에는 좋아요를 누를 수 없습니다."));
+        mvc.perform(patch(like, wanderer.id()).with(as(foodtrip)).with(json(Map.of("liked", true))))
+                .andExpect(okEnvelope());
+        withdraw(wanderer.member());
+
+        for (boolean liked : List.of(true, false)) {
+            mvc.perform(patch(like, 999_999).with(as(me)).with(json(Map.of("liked", liked))))
+                    .andExpect(status().isNotFound());
+            mvc.perform(patch(like, wanderer.id()).with(as(foodtrip)).with(json(Map.of("liked", liked))))
+                    .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, "요청한 정보를 찾을 수 없습니다."));
+        }
+        assertThat(likes.existsByActorIdAndProfileId(foodtrip.getId(), wanderer.id())).isTrue();
+    }
+
+    @Test
+    @DisplayName("프로필 나도 탐색중 수는 카드별 수의 합이고, 탈퇴한 사람의 탐색은 빠진다 (A-10)")
+    void profileExploringCountExcludesWithdrawnActors() throws Exception {
+        String card = "/community/mindmaps/{id}/exploring";
+        for (var pair : List.of(Map.entry(me, wanderer.prague()), Map.entry(foodtrip, wanderer.prague()),
+                Map.entry(me, wanderer.vienna()))) {
+            mvc.perform(patch(card, pair.getValue().getId()).with(as(pair.getKey())).with(json(Map.of("exploring", true))))
+                    .andExpect(okEnvelope());
+        }
+        mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me)))
+                .andExpect(jsonPath("$.data.exploringCount").value(3));
+
+        withdraw(foodtrip);
+
+        mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me)))
+                .andExpect(jsonPath("$.data.exploringCount").value(2));
+    }
+
+    @Test
+    @DisplayName("FE 의 태그 선택 저장: 전체 마인드맵의 id 로 상위 태그와 노드 없는 관심 태그를 묶음 · 미니 마인드맵으로 저장한다 (COM-4-3 · 4-4)")
+    void bookmarkSelectedChips() throws Exception {
+        List<Long> chips = List.of(hashtagInGraph(wanderer.member(), "프라하"), hashtagInGraph(wanderer.member(), "카페투어"));
+        Map<String, Object> bundle = new HashMap<>(Map.of("targetType", "HASHTAG", "targetIds", chips,
+                "saveType", "HASHTAG_BUNDLE", "sourceMindmapId", wanderer.id(), "name", "여행 묶음"));
+
+        mvc.perform(post("/community/bookmarks").with(as(me)).with(json(bundle)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.name").value("여행 묶음"));
+        bookmark(me, "HASHTAG", chips, "MINI_MINDMAP", wanderer.id()).andExpect(status().isCreated());
+
+        mvc.perform(get("/community/me/bookmarks/hashtag-bundles").with(as(me)))
+                .andExpect(jsonPath("$.data.bundles[0].name").value("여행 묶음"))
+                .andExpect(jsonPath("$.data.bundles[0].hashtags").value(contains("프라하", "카페투어")));
+        // 프라하 태그의 URL 노드 4개
+        mvc.perform(get("/community/me/bookmarks/mindmaps").with(as(me)))
+                .andExpect(jsonPath("$.data.mindmaps[0].nodes", hasSize(4)))
+                .andExpect(jsonPath("$.data.mindmaps[0].owner.userId").value(wanderer.id()));
     }
 
     @Test
