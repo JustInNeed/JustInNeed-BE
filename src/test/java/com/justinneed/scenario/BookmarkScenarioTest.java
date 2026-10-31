@@ -592,4 +592,19 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
         mvc.perform(get(BUNDLES).with(as(me)))
                 .andExpect(jsonPath("$.data.bundles[0].name").value("동유럽 자료"));
     }
+
+    @Test
+    @DisplayName("내용까지로 바꾸기 전에 저장한 URL 노드가 AI 그래프에 없으면 원래 마인드맵은 URL 그래프로 그 노드를 강조한다")
+    void originalFallsBackToUrlGraph() throws Exception {
+        List<Long> saved = pragueNodes();
+        Long bookmarkId = saveMiniMindmap(saved);
+
+        mvc.perform(patch("/community/me/visibility").with(as(wanderer.member()))
+                .with(json(Map.of("visibility", "CONTENT")))).andExpect(okEnvelope());
+
+        mvc.perform(get("/community/me/bookmarks/{id}/original", bookmarkId).with(as(me)))
+                .andExpect(jsonPath("$.data.sourceAvailable").value(true))
+                .andExpect(jsonPath("$.data.mindmap.nodes[*].nodeId").value(hasItem(saved.get(0).intValue())))
+                .andExpect(jsonPath("$.data.highlightedNodeIds").value(containsInAnyOrder(ids(saved.toArray(Long[]::new)))));
+    }
 }

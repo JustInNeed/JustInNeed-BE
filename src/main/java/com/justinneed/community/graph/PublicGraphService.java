@@ -168,18 +168,32 @@ public class PublicGraphService {
         if (bookmark.getSaveType() != SaveType.MINI_MINDMAP) throw new CustomException(ErrorCode.MINI_MINDMAP_REQUIRED);
         Long ownerId = bookmark.getSourceMindmapId();
         // 목록에서 숨겨진 북마크는 원본도 열리지 않는다
-        var current = bookmarks.currentMindmap(bookmark);
-        if (ownerId == null || current == null || !members.existsByIdAndWithdrawnAtIsNull(ownerId)) {
+        var saved = bookmarks.currentSources(bookmark);
+        if (ownerId == null || saved == null || !members.existsByIdAndWithdrawnAtIsNull(ownerId)) {
             return new Original(200, false, null, List.of());
         }
-        var saved = current.nodes().stream().map(BookmarkSnapshot.Node::nodeId).toList();
+        var sessionOf = new HashMap<Long, Long>();
+        nodes.findByOwnerId(ownerId).forEach(n -> sessionOf.put(n.getId(), n.getSessionId()));
         var graph = graph(ownerId, null);
-        // 공개 범위를 내용까지로 바꾸기 전에 URL 노드로 저장한 북마크는 URL 그래프에서 원본을 보여준다
-        if (!saved.isEmpty() && graph.nodes().stream().map(BookmarkSnapshot.Node::nodeId).noneMatch(saved::contains)) {
-            graph = urlGraph(ownerId);
+        if (!saved.nodeIds().isEmpty() && !hasAny(graph, saved.nodeIds())) {
+            // 공개 범위를 내용까지로 바꾸기 전에 URL 노드로 저장했거나 세션에 AI 결과가 없으면 URL 그래프에서 원본을 보여준다
+            var urls = urlGraph(ownerId);
+            if (hasAny(urls, saved.nodeIds()) || highlights(graph, saved, sessionOf).isEmpty()) graph = urls;
         }
-        return new Original(200, !graph.nodes().isEmpty(), graph,
-                graph.nodes().stream().map(BookmarkSnapshot.Node::nodeId).filter(saved::contains).toList());
+        return new Original(200, !graph.nodes().isEmpty(), graph, highlights(graph, saved, sessionOf));
+    }
+
+    private static boolean hasAny(Graph graph, Set<Long> nodeIds) {
+        return graph.nodes().stream().map(BookmarkSnapshot.Node::nodeId).anyMatch(nodeIds::contains);
+    }
+
+    // 저장한 id 가 그래프에 있으면 그 노드, 한 세션의 id 가 하나도 없으면(공개 범위 변경 · 재분석) 그 세션의 그래프 노드 전부
+    private static List<Long> highlights(Graph graph, BookmarkQueryService.Sources saved, Map<Long, Long> sessionOf) {
+        var ids = graph.nodes().stream().map(BookmarkSnapshot.Node::nodeId).toList();
+        var matched = new HashSet<Long>();
+        ids.stream().filter(saved.nodeIds()::contains).forEach(id -> matched.add(sessionOf.get(id)));
+        return ids.stream().filter(id -> saved.nodeIds().contains(id)
+                || saved.sessionIds().contains(sessionOf.get(id)) && !matched.contains(sessionOf.get(id))).toList();
     }
 
     private record GraphPart(List<BookmarkSnapshot.Node> nodes, List<BookmarkSnapshot.Edge> edges, List<Long> entries) { }

@@ -79,9 +79,13 @@ public class BookmarkQueryService {
         var found = page(userId, SaveType.MINI_MINDMAP, page, size, this::mindmap);
         return new Mindmaps(found.items(), found.hasNext());
     }
-    /** 목록에 보이는 그대로의 미니 마인드맵. 숨겨진 북마크면 null. */
-    public Mindmap currentMindmap(CommunityBookmark bookmark) {
-        return mindmap(bookmark, visible(bookmark.getUserId(), List.of(bookmark)));
+    /** 원본 보기의 강조 기준: 저장한 노드 중 지금 보이는 것과 그 세션. 숨겨진 북마크면 null. */
+    public Sources currentSources(CommunityBookmark bookmark) {
+        var visible = visible(bookmark.getUserId(), List.of(bookmark));
+        if (mindmap(bookmark, visible) == null) return null;
+        var live = bookmark.getSnapshot().nodes().stream().map(BookmarkSnapshot.Node::nodeId)
+                .filter(visible.nodeIds()::contains).collect(Collectors.toSet());
+        return new Sources(live, live.stream().map(visible.sessionOf()::get).collect(Collectors.toSet()));
     }
     /** 최근 저장 기반 추천의 기준 해시태그. 보이는 북마크만 최근 20개를 세고, 저장한 순서 그대로 돌려준다. */
     public List<String> recentHashtags(Long userId) {
@@ -243,6 +247,7 @@ public class BookmarkQueryService {
             Map<Long, CommunityCard> cards, Map<Long, Map<String, CommunityHashtag>> tagIndex,
             Map<Long, String> nicknames, Set<Long> contentOwners) { }
     private record VisiblePage<T>(List<T> items, boolean hasNext) { }
+    public record Sources(Set<Long> nodeIds, Set<Long> sessionIds) { }
     public record Bundle(Long bookmarkId, String name, List<String> hashtags, Instant savedAt, SaveType saveType,
             TargetType targetType, List<Long> targetIds, Long sourceMindmapId) { }
     public record Bundles(int code, List<Bundle> bundles, boolean hasNext) { }
