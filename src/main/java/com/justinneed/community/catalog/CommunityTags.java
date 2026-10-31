@@ -49,6 +49,16 @@ public class CommunityTags {
         return indexed;
     }
 
+    /** 작성자별 index. 작성자 수와 상관없이 한 번만 조회한다. */
+    @Transactional(readOnly = true)
+    public Map<Long, Map<String, CommunityHashtag>> indexes(Collection<Long> ownerIds) {
+        Map<Long, Map<String, CommunityHashtag>> indexed = new HashMap<>();
+        if (ownerIds.isEmpty()) return indexed;
+        tags.findByOwnerIdInOrderByIdAsc(ownerIds).forEach(t ->
+                indexed.computeIfAbsent(t.getOwnerId(), id -> new LinkedHashMap<>()).put(t.getNormalizedName(), t));
+        return indexed;
+    }
+
     /** 없는 태그 행만 만든다. 동시에 들어와도 교착이 없도록 정렬한 순서로 넣는다. */
     @Transactional
     public void ensure(Long ownerId, Collection<String> names) {

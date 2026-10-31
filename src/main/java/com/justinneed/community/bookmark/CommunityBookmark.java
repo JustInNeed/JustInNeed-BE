@@ -53,6 +53,7 @@ public class CommunityBookmark {
     public SaveType getSaveType() { return saveType; }
     public TargetType getTargetType() { return targetType; }
     public Long getSourceMindmapId() { return sourceMindmapId; }
+    public Long getCardSessionId() { return cardSessionId; }
     public List<Long> getTargetIds() { return List.copyOf(targetIds); }
     public BookmarkSnapshot getSnapshot() { return snapshot; }
     public Instant getSavedAt() { return savedAt; }
