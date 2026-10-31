@@ -301,8 +301,6 @@ class ProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @Disabled("API 미구현: 프로필 소개(bio) 필드 + 수정 API (A표 '소개(bio)' 반영 결정) — PATCH /community/me/profile {bio} 와 "
-            + "GET /community/profiles/{userId} 의 data.bio 는 제안, 구현되면 켠다")
     @DisplayName("소개(bio) 수정: 120자까지 저장돼 프로필 헤더에 보이고, 120자를 넘으면 400")
     void updateBio() throws Exception {
         Member me = member("sprout");

@@ -36,6 +36,11 @@ public class ProfileEditService {
         this.unpin = unpin; this.sessions = sessions; this.members = members;
     }
 
+    public BioView bio(Long userId, String bio) {
+        profiles.lock(userId).changeBio(bio.strip());
+        return new BioView(bio.strip());
+    }
+
     @Transactional(readOnly = true)
     public List<TagView> hashtags(Long userId) {
         var profile = profiles.read(userId);
@@ -92,6 +97,7 @@ public class ProfileEditService {
                 view.tags(), view.urls(), view.markdown(), profiles.read(member.getId()).getVisibility());
     }
 
+    public record BioView(String bio) { }
     public record TagView(int code, Long hashtagId, String hashtag, boolean isPublic) { }
     public record InterestView(int code, Long interestId, String hashtag, int interestCount) { }
     public record DeletedInterest(int code, Long interestId) { }

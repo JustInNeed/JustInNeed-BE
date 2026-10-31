@@ -11,6 +11,7 @@ import com.justinneed.auth.domain.SocialProvider;
 import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.auth.service.AuthTokenService;
 import com.justinneed.community.card.CommunityCardSync;
+import com.justinneed.community.repository.CommunityProfileRepository;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
 import com.justinneed.settings.account.dto.request.AccountWithdrawRequest;
@@ -35,7 +36,8 @@ class AccountSettingsServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AccountSettingsService(memberRepository, authTokenService, mock(CommunityCardSync.class));
+        service = new AccountSettingsService(memberRepository, authTokenService, mock(CommunityCardSync.class),
+                mock(CommunityProfileRepository.class));
         member = new Member(SocialProvider.KAKAO, "provider-id", "before", "user@example.com");
     }
 
