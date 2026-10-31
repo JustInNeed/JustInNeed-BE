@@ -82,7 +82,7 @@ public final class SessionHashtagSelector {
     }
 
     // 띄어쓰기 붙이기: 일반 공백뿐 아니라 줄바꿈, NBSP 같은 유니코드 공백도 모두 제거
-    private static String removeWhitespace(String keyword) {
+    public static String removeWhitespace(String keyword) {
         StringBuilder builder = new StringBuilder(keyword.length());
         keyword.codePoints()
                 .filter(c -> !Character.isWhitespace(c) && !Character.isSpaceChar(c))

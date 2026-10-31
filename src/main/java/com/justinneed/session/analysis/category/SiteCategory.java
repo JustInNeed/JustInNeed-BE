@@ -59,7 +59,7 @@ public enum SiteCategory {
     /**
      * URL 에서 비교용 host 를 꺼낸다. (소문자, {@code www.} / 포트 / 끝의 점 제거) 파싱할 수 없으면 empty.
      */
-    static Optional<String> extractHost(String url) {
+    public static Optional<String> extractHost(String url) {
         if (url == null || url.isBlank()) {
             return Optional.empty();
         }
