@@ -181,6 +181,10 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 이슈 #35~#40의 프로필 편집, 비공개 저장 목록, 공개 마인드맵 조회, 인터랙션, 검색, 추천 기능을 구현했습니다.
 API, 데이터 모델, 공개 범위 처리, 테스트 및 PR 병합 순서는 [커뮤니티 개발 문서](docs/community/README.md)를 참고하세요.
 
+| Method | Path | 설명 |
+| --- | --- | --- |
+| GET | `/community/recommendations/hashtags/trending` | 떠오르는 해시태그 `{period, hashtags: [{rank, name, count, trend}]}`. `period` 는 `today`(기본) · `week`, 대소문자 무시, 응답은 `TODAY` · `WEEK`. `limit` 기본 10, 1~100. `count` = 기간 안의 나도 탐색중 + 북마크(내 행동 포함, 탈퇴 회원 제외, 사람 · 태그 · 종류 · 날짜마다 1, 취소해도 유지). `trend` = `count` - 직전 기간 값. 기간은 KST 달력 기준: 오늘(직전은 어제 하루), 월요일부터 지금까지(직전은 그 앞 7일) |
+
 ## 환경 변수
 
 | 변수 | 설명 |
