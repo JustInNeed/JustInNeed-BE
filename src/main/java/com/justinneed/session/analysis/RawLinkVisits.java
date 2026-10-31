@@ -18,6 +18,7 @@ import java.util.Optional;
  *
  * <pre>
  * 링크      = pages[].meta.url (없으면 meta.pageId)
+ * 글 제목   = meta.title
  * 방문 시각 = meta.enteredAt, 같은 링크가 여러 page 로 나뉘어 있으면 가장 이른 시각
  * 카테고리  = SiteCategory.classify(링크)
  * </pre>
@@ -29,17 +30,20 @@ public final class RawLinkVisits {
     private static final ZoneId KST = ZoneId.of(JustInNeedApplication.TIME_ZONE);
 
     private final Map<String, LinkVisit> visits;
+    private final Map<String, String> linkByPageId;
 
-    private RawLinkVisits(Map<String, LinkVisit> visits) {
+    private RawLinkVisits(Map<String, LinkVisit> visits, Map<String, String> linkByPageId) {
         this.visits = visits;
+        this.linkByPageId = linkByPageId;
     }
 
     @SuppressWarnings("unchecked")
     public static RawLinkVisits from(Map<String, Object> payload) {
         Map<String, LinkVisit> visits = new LinkedHashMap<>();
+        Map<String, String> linkByPageId = new LinkedHashMap<>();
         Object pages = payload == null ? null : payload.get("pages");
         if (!(pages instanceof List<?> pageList)) {
-            return new RawLinkVisits(visits);
+            return new RawLinkVisits(visits, linkByPageId);
         }
 
         for (Object page : pageList) {
@@ -51,9 +55,13 @@ public final class RawLinkVisits {
                 continue;
             }
             LocalDateTime enteredAt = toKst(meta.get("enteredAt"));
-            visits.merge(url, new LinkVisit(url, enteredAt, SiteCategory.classify(url)), RawLinkVisits::earlier);
+            String title = firstText((Map<String, Object>) meta, "title");
+            visits.merge(url, new LinkVisit(url, title, enteredAt, SiteCategory.classify(url)), RawLinkVisits::earlier);
+            if (meta.get("pageId") instanceof String pageId) {
+                linkByPageId.put(pageId, url);
+            }
         }
-        return new RawLinkVisits(visits);
+        return new RawLinkVisits(visits, linkByPageId);
     }
 
     // 세션 종료 시각(KST). session.endedAt, 없으면(비정상 종료) 페이지별 meta.endedAt 중 가장 늦은 값
@@ -84,6 +92,11 @@ public final class RawLinkVisits {
 
     public Optional<LinkVisit> find(String url) {
         return Optional.ofNullable(visits.get(url));
+    }
+
+    // AI 의 unitKey 는 "pageId#pid" 라 유닛에서 링크를 찾을 때는 pageId 로 찾는다
+    public Optional<LinkVisit> findByPageId(String pageId) {
+        return Optional.ofNullable(linkByPageId.get(pageId)).flatMap(this::find);
     }
 
     // stepC · AI 시각은 UTC ISO 문자열(…Z / …+00:00). 세션 시각과 같이 KST LocalDateTime 으로 바꾼다. 읽을 수 없으면 null
@@ -119,6 +132,7 @@ public final class RawLinkVisits {
 
     public record LinkVisit(
             String url,
+            String title,
             LocalDateTime firstVisitedAt,
             SiteCategory category
     ) {

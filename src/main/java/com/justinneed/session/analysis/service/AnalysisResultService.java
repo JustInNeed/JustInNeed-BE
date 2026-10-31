@@ -28,10 +28,13 @@ import com.justinneed.session.summary.domain.Summary;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -45,7 +48,7 @@ import org.springframework.transaction.annotation.Transactional;
  * state.userModel (재학습했을 때만)                         → ai_cluster_models (USER)
  * essay    → summaries.essay · summaries.markdown, sessions.title
  * mindmap  → sessions.tags (최대 5개)
- * selected → sessions.sources (링크당 1개, 방문 시각은 원본 기준)
+ * selected → sessions.sources (링크당 1개, 방문 시각은 원본 기준, 병합된 유닛의 링크 포함)
  * 원본     → sessions.page_count (방문 링크 수), markAnalyzed (21일 뒤 삭제)
  * </pre>
  *
@@ -214,8 +217,38 @@ public class AnalysisResultService {
                     .orElseGet(() -> earliestSeenAt(units));
             sources.add(new Source(text(units.get(0).get("pageTitle")), url, text(best.get("text")), visitedAt));
         });
+        addMergedLinks(selected, linkVisits, sources);
         sources.sort(Comparator.comparing(Source::visitedAt, Comparator.nullsLast(Comparator.naturalOrder())));
         return sources;
+    }
+
+    // 내용이 같아 대표 유닛에 합쳐진 유닛은 selected 에 없고 대표의 mergedFrom("pageId#pid")에만 남는다.
+    // 그 링크가 아직 출처에 없으면 출처로 더한다. 글이 같은 내용이므로 발췌는 점수가 높은 대표의 문단을 쓴다
+    private static void addMergedLinks(List<Map<String, Object>> selected, RawLinkVisits linkVisits,
+            List<Source> sources) {
+        Set<String> links = new HashSet<>(sources.stream().map(Source::url).toList());
+        selected.stream()
+                .sorted(Comparator.comparingDouble(AnalysisResultService::score).reversed())
+                .forEach(unit -> {
+                    for (Object merged : listOf(unit.get("mergedFrom"))) {
+                        if (merged instanceof String unitKey) {
+                            String pageId = pageIdOf(unitKey);
+                            Optional<LinkVisit> visit = linkVisits.findByPageId(pageId);
+                            String url = visit.map(LinkVisit::url).orElse(pageId);
+                            if (!url.isBlank() && links.add(url)) {
+                                sources.add(new Source(visit.map(LinkVisit::title).orElse(""), url,
+                                        text(unit.get("text")),
+                                        visit.map(LinkVisit::firstVisitedAt)
+                                                .orElseGet(() -> earliestSeenAt(List.of(unit)))));
+                            }
+                        }
+                    }
+                });
+    }
+
+    private static String pageIdOf(String unitKey) {
+        int separator = unitKey.lastIndexOf('#');
+        return separator < 0 ? unitKey : unitKey.substring(0, separator);
     }
 
     // 원본에 없는 링크면 유닛을 처음 본 시각 중 가장 이른 값으로 대신한다

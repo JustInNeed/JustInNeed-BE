@@ -1,5 +1,7 @@
 package com.justinneed.scenario;
 
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -100,5 +102,21 @@ class SessionResultScenarioTest extends ScenarioTestSupport {
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.title").value("내가 고친 제목"))
                 .andExpect(jsonPath("$.data.summary.markdown").value(startsWith("## 첫 소제목")));
+    }
+
+    @Test
+    @DisplayName("병합된 링크는 대표 문단을 발췌로 출처에 더해지고 같은 링크는 한 번만 나온다 (원본의 제목 · 방문 시각 사용, 방문순 정렬)")
+    void mergedLinksBecomeSources() throws Exception {
+        callback("AI 대제목");
+
+        mvc.perform(get("/sessions/{id}", session.getId()).with(as(me)))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.sources", hasSize(2)))
+                .andExpect(jsonPath("$.data.sources[*].url").value(contains(COPY, MAIN)))
+                .andExpect(jsonPath("$.data.sources[0].title").value("옮겨 실은 기사"))
+                .andExpect(jsonPath("$.data.sources[0].excerpt").value("대표 문단"))
+                .andExpect(jsonPath("$.data.sources[0].visitedAt").value("2026-10-04T18:30:00"))
+                .andExpect(jsonPath("$.data.sources[1].title").value("원문 기사"))
+                .andExpect(jsonPath("$.data.sources[1].excerpt").value("대표 문단"));
     }
 }
