@@ -133,8 +133,9 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 | PATCH | `/tag-groups/{id}` | 그룹 이름과 해시태그 수정. 보낸 필드만 수정, 이름을 보낼 때 빈 값 · 공백만은 400, `hashtags` 를 빈 배열로 보내면 400 |
 | DELETE | `/tag-groups/{id}` | 그룹 삭제 |
 | PATCH | `/tag-groups/order` | 그룹 표시 순서 변경 |
+| GET | `/home` | 홈 대시보드 한 번에 조회. 내 완료 · 미삭제 세션 기준이고 날짜는 시작 시각(KST), 이번 주는 오늘 포함 최근 7일 · 지난주는 그 앞 7일. `{ graph, stats, weekActivity, topTags, todayTimeline, weekSessions, sessions }` 반환 — `graph` 는 세션별 마인드맵을 키워드(공백 · 대소문자 무시)로 합친 그래프(`nodes` · `edges`, 중심 노드 `core` 포함 최대 150개)와 `nodeMeta` · `tagGroups` · `filterTags`, `sessions` 는 시작 시각 최신순 최대 300개. 세션이 없으면 0 · 빈 목록 |
 
-인증이 필요한 API(`/sessions/**`, `/tag-groups/**`, `/members/**`)는 `Authorization: Bearer {accessToken}` 헤더가 필수입니다. 토큰이 없거나 · 잘못됐거나 · 만료 · 무효화됐거나 · refresh 토큰이거나 · 탈퇴한 회원의 토큰이면 401 과 함께 `{"success":false,"data":null,"message":"로그인이 만료되었습니다. 다시 로그인해 주세요."}` 를 반환합니다 (`/auth/refresh` 실패는 "유효하지 않은 리프레시 토큰입니다."). 사용자 식별은 access 토큰의 memberId 로 합니다.
+인증이 필요한 API(`/sessions/**`, `/tag-groups/**`, `/home`, `/members/**`)는 `Authorization: Bearer {accessToken}` 헤더가 필수입니다. 토큰이 없거나 · 잘못됐거나 · 만료 · 무효화됐거나 · refresh 토큰이거나 · 탈퇴한 회원의 토큰이면 401 과 함께 `{"success":false,"data":null,"message":"로그인이 만료되었습니다. 다시 로그인해 주세요."}` 를 반환합니다 (`/auth/refresh` 실패는 "유효하지 않은 리프레시 토큰입니다."). 사용자 식별은 access 토큰의 memberId 로 합니다.
 
 모든 응답은 `{ success, data, message }` 형식입니다. 에러도 같은 형식으로 내려가며 `success=false`, `message`에 사유가 담깁니다.
 
