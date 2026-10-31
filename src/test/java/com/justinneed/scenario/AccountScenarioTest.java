@@ -1,7 +1,6 @@
 package com.justinneed.scenario;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
@@ -131,7 +130,7 @@ class AccountScenarioTest extends ScenarioTestSupport {
         mvc.perform(patch("/members/me/nickname").with(as(signedUp)).with(json(Map.of("nickname", ""))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.message").value(containsString("닉네임을 입력해 주세요.")));
+                .andExpect(jsonPath("$.message").value("닉네임을 입력해 주세요."));
     }
 
     @Test
