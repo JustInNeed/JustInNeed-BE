@@ -139,11 +139,10 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
                     .andExpect(jsonPath("$.data.period").value(period))
                     .andExpect(jsonPath("$.data.hashtags[*].name").value(contains("프라하", "야간열차")))
                     .andExpect(jsonPath("$.data.hashtags[*].rank").value(contains(1, 2)))
-                    .andExpect(jsonPath("$.data.hashtags[0].hashtagId").isNumber())
-                    .andExpect(jsonPath("$.data.hashtags[0].exploreCount").value(2))
-                    .andExpect(jsonPath("$.data.hashtags[0].bookmarkCount").value(0))
-                    .andExpect(jsonPath("$.data.hashtags[1].exploreCount").value(0))
-                    .andExpect(jsonPath("$.data.hashtags[1].bookmarkCount").value(1));
+                    .andExpect(jsonPath("$.data.hashtags[0].count").value(2))
+                    .andExpect(jsonPath("$.data.hashtags[0].trend").value(2))
+                    .andExpect(jsonPath("$.data.hashtags[1].count").value(1))
+                    .andExpect(jsonPath("$.data.hashtags[1].trend").value(1));
         }
     }
 
@@ -208,7 +207,7 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("추천 개수(limit)는 1~100, 기간은 TODAY · WEEK 만 받고 그 밖이면 400")
+    @DisplayName("추천 개수(limit)는 1~100, 기간은 today · week(대소문자 무시)만 받고 그 밖이면 400")
     void recommendationParameterValidation() throws Exception {
         mvc.perform(get(BY_INTERESTS).param("limit", "0").with(as(me))).andExpect(status().isBadRequest());
         mvc.perform(get(BY_RECENT_BOOKMARKS).param("limit", "101").with(as(me))).andExpect(status().isBadRequest());
@@ -225,8 +224,6 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @Disabled("FE 기대와 다름: FE CommunityView 의 기간 탭 값은 'today' | 'week' 인데 BE 는 대문자 TODAY | WEEK 만 받고 소문자는 400 — "
-            + "FE 가 대문자로 보낼지 BE 가 대소문자를 무시할지 결정 후 켠다")
     @DisplayName("FE 탭 값 그대로 period=today / week 로 보내도 떠오르는 해시태그가 온다")
     void trendingAcceptsLowercasePeriod() throws Exception {
         mvc.perform(get(TRENDING).param("period", "today").with(as(me))).andExpect(okEnvelope());
@@ -234,15 +231,13 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @Disabled("API 미구현: 떠오르는 해시태그 카드의 합계 · 증감(FE TrendingHashtag{tag, count, trend}) — 응답엔 exploreCount · bookmarkCount 만 있고 "
-            + "이전 기간 대비 증감이 없음 (필드명 count · trend 는 제안), 구현되면 켠다")
     @DisplayName("떠오르는 해시태그마다 합계(count)와 이전 기간 대비 증감(trend)이 온다")
     void trendingHasCountAndTrend() throws Exception {
         exploreHashtag(me, wanderer.member(), "프라하");
 
         mvc.perform(get(TRENDING).param("period", "TODAY").with(as(me)))
                 .andExpect(jsonPath("$.data.hashtags[0].count").value(1))
-                .andExpect(jsonPath("$.data.hashtags[0].trend").isNumber());
+                .andExpect(jsonPath("$.data.hashtags[0].trend").value(1));
     }
 
     @Test
@@ -428,8 +423,9 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
             for (String period : List.of("TODAY", "WEEK")) {
                 mvc.perform(get(TRENDING).param("period", period).with(as(me)))
                         .andExpect(okEnvelope())
-                        // 카페는 빠지고, 세션은 보이므로 카페 세션 노드 활동으로 붙은 비엔나 집계는 남는다
-                        .andExpect(jsonPath("$.data.hashtags[*].name").value(containsInAnyOrder("프라하", "비엔나")));
+                        // 카페만 빠진다. 같은 노드 활동으로 붙은 비엔나는 공개 태그라 남는다
+                        .andExpect(jsonPath("$.data.hashtags[*].name").value(contains("비엔나", "프라하")))
+                        .andExpect(jsonPath("$.data.hashtags[0].count").value(1));
             }
         }
     }

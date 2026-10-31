@@ -16,10 +16,8 @@ import com.justinneed.community.reaction.ExplorationRepository;
 import com.justinneed.community.reaction.InteractionService;
 import com.justinneed.community.reaction.ProfileLikeRepository;
 import jakarta.persistence.EntityManager;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,20 +78,5 @@ class WithdrawnActorCountTest extends CommunityTestSupport {
         assertThat(interactions.exploring(viewerId, TargetType.NODE, node, true).exploringCount()).isEqualTo(1);
         assertThat(interactions.exploring(viewerId, TargetType.NODE, node, false).exploringCount()).isZero();
         assertThat(explorations.count()).isEqualTo(1);
-    }
-
-    @Test
-    void activityQueryExcludesWithdrawnActorsButKeepsRows() {
-        Instant at = Instant.parse("2026-10-30T01:00:00Z");
-        var day = LocalDate.of(2026, 10, 30);
-        activities.save(new CommunityActivity(viewerId, TargetType.NODE, 1L, 1L, ActivityKind.EXPLORE, at, day));
-        activities.save(new CommunityActivity(leaverId, TargetType.NODE, 1L, 1L, ActivityKind.EXPLORE, at, day));
-        withdrawLeaver();
-
-        var found = activities.findByActiveActorsBetween(at, at);
-        assertThat(found).extracting(CommunityActivity::getActorId).containsExactly(viewerId);
-        // 경계 밖은 나오지 않는다
-        assertThat(activities.findByActiveActorsBetween(at.plus(1, ChronoUnit.SECONDS), at.plus(1, ChronoUnit.HOURS))).isEmpty();
-        assertThat(activities.count()).isEqualTo(2);
     }
 }

@@ -189,6 +189,7 @@ API, 데이터 모델, 공개 범위 처리, 테스트 및 PR 병합 순서는 [
 | --- | --- | --- |
 | PATCH | `/community/profiles/{userId}/follow` | 팔로우 설정 `{following}` → `{following}`. 같은 값을 다시 보내거나 동시에 보내도 200. 자기 자신은 400, 없거나 탈퇴한 회원은 404. 탈퇴해도 팔로우 행은 남고 읽을 때 뺀다 |
 | GET | `/community/recommendations/profiles/similar` | 관심사가 비슷한 사람 `{people: [{userId, nickname, matchedHashtags, following}]}`. `limit` 기본 3, 1~20(밖이면 400). 태그 = 공개 · 완료 · 미삭제 세션의 태그 + 관심 해시태그에서 각자의 비공개 해시태그를 뺀 것(대소문자 무시). 겹치는 태그 수가 많은 순 → 최근 공개 활동(세션 종료 시각, 없으면 시작 시각) 순, 활동이 없으면 뒤 → id 순. 나 · 탈퇴 회원 · 겹치는 태그가 없는 사람은 빠진다. 닉네임을 정하지 않은 사람은 `nickname: null` 로 온다. 조회는 쓰기 · 잠금을 하지 않는다 |
+| GET | `/community/recommendations/hashtags/trending` | 떠오르는 해시태그 `{period, hashtags: [{rank, name, count, trend}]}`. `period` 는 `today`(기본) · `week`, 대소문자 무시, 응답은 `TODAY` · `WEEK`. `limit` 기본 10, 1~100. `count` = 기간 안의 나도 탐색중 + 북마크(내 행동 포함, 탈퇴 회원 제외, 사람 · 태그 · 종류 · 날짜마다 1, 취소해도 유지). `trend` = `count` - 직전 기간 값. 직전 기간은 길이가 같다: 오늘(직전은 어제 같은 시각까지, KST), 최근 7일(직전은 그 앞 7일) |
 
 ### 카드 반응
 
