@@ -65,8 +65,9 @@ class CommunityReadOnlyScenarioTest extends ScenarioTestSupport {
             "/community/profiles/{owner}/nodes",
             "/community/profiles/{owner}/interests",
             "/community/profiles/{owner}/shared-sessions",
-            "/community/search/profiles?hashtag=프라하",
-            "/community/search/mindmaps?hashtag=프라하",
+            "/community/search/profiles?q=프라하",
+            "/community/search/mindmaps?q=프라하",
+            "/community/search/hashtags?q=프라하",
             "/community/recommendations/mindmaps/interests",
             "/community/recommendations/mindmaps/recent-bookmarks",
             "/community/recommendations/hashtags/trending",
@@ -135,22 +136,30 @@ class CommunityReadOnlyScenarioTest extends ScenarioTestSupport {
 
         BulkQueries many = measure();
 
-        assertThat(many.search()).isEqualTo(first.search());
-        assertThat(many.reader()).isEqualTo(first.reader());
+        assertThat(many).isEqualTo(first);
     }
 
     private BulkQueries measure() throws Exception {
         SqlCapture.clear();
-        mvc.perform(get("/community/search/mindmaps?hashtag=프라하&size=100").with(as(viewer))).andExpect(okEnvelope());
-        int search = SqlCapture.all().size();
+        int search = queriesOf("/community/search/mindmaps?q=프라하&size=100");
+        int profiles = queriesOf("/community/search/profiles?q=프라하&size=100");
+        int hashtags = queriesOf("/community/search/hashtags?q=프라하");
+        int recommendations = queriesOf("/community/recommendations/mindmaps/interests?limit=100");
         var ids = cards.findAll().stream().map(card -> card.getSessionId()).toList();
         entityManager.clear();
         SqlCapture.clear();
         reader.cards(ids, viewer.getId());
-        return new BulkQueries(search, SqlCapture.all().size());
+        return new BulkQueries(search, profiles, hashtags, recommendations, SqlCapture.all().size());
     }
 
-    private record BulkQueries(int search, int reader) {
+    private int queriesOf(String path) throws Exception {
+        entityManager.clear();
+        SqlCapture.clear();
+        mvc.perform(get(path).with(as(viewer))).andExpect(okEnvelope());
+        return SqlCapture.all().size();
+    }
+
+    private record BulkQueries(int search, int profiles, int hashtags, int recommendations, int reader) {
     }
 
     @Test

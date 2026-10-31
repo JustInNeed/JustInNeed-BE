@@ -199,7 +199,7 @@ class SessionStatusScenarioTest extends ScenarioTestSupport {
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.nodes", hasSize(0)))
                 .andExpect(jsonPath("$.data.hashtags", hasSize(0)));
-        mvc.perform(get("/community/search/mindmaps").param("hashtag", "로마").with(as(viewer)))
+        mvc.perform(get("/community/search/mindmaps").param("q", "로마").with(as(viewer)))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.mindmaps", hasSize(0)));
     }

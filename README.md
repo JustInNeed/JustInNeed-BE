@@ -201,6 +201,20 @@ API, 데이터 모델, 공개 범위 처리, 테스트 및 PR 병합 순서는 [
 | PATCH | `/community/mindmaps/{mindmapId}/exploring` | 나도 탐색중 `{exploring}` → `{exploringCount, exploringByMe}`. 새로 켜면 공개 해시태그마다 활동을 남깁니다 |
 | PATCH | `/community/mindmaps/{mindmapId}/bookmark` | 북마크 `{bookmarked}` → `{bookmarkCount, bookmarkId}`. 켜면 카드의 노드를 미니 마인드맵으로 저장(이미 있으면 그 id), 끄면 삭제. 노드가 없는 카드는 400 |
 
+### 추천 / 검색
+
+카드 응답은 공개 세션 1개 = 1장이고, `mindmapId` 는 세션 id 입니다. URL 만 공개한 작성자의 카드는 `title` · `snippet` · `relatedUrls[].title` 이 `null` 입니다.
+
+| Method | Path | 설명 |
+| --- | --- | --- |
+| GET | `/community/recommendations/mindmaps/interests` | 관심 해시태그 기반 추천 `{basisHashtags, mindmaps: [카드]}`. `limit` 기본 3, 1~100. 내 카드는 빠진다. 기준 태그는 중복을 뺀 앞 10개까지다. 카드의 공개 태그와 온전히(대소문자 무시) 겹치는 수가 많은 순 → 최근 활동순 → id 큰 순 |
+| GET | `/community/recommendations/mindmaps/recent-bookmarks` | 최근 저장 기반 추천. 응답 · 순위는 위와 같고, 기준은 보이는 북마크 최근 20개의 태그다. 이미 저장한 카드도 나온다 |
+| GET | `/community/search/mindmaps` | `q`, `page`, `size` → `{mindmaps: [카드], hasNext}`. 해시태그 · 작성자 닉네임, 내용까지 공개한 작성자는 제목도 찾는다. 최근 활동순 → id 큰 순. 내 카드도 나온다 |
+| GET | `/community/search/profiles` | `q`, `page`, `size` → `{profiles: [{userId, nickname, hashtags, mindmapCount}], hasNext}`. 공개 카드가 있는 회원 중 해시태그 · 닉네임이 맞는 사람, id 순. `hashtags` 는 공개 태그 많은 순 5개. 나도 나온다 |
+| GET | `/community/search/hashtags` | `q`, `limit` → `{hashtags: [{tag, count}]}`. 검색어가 든 공개 태그와 그 태그를 단 카드 수. `limit` 기본 5, 1~20. 많은 순 → 이름 순 |
+
+`q` 는 앞 `#` · 앞뒤 공백을 떼고 대소문자 무시 포함 검색합니다. 비공개 해시태그로는 찾을 수 없고, 비면 400 입니다. `page` 기본 0, `size` 기본 10 · 1~100 입니다.
+
 ## 환경 변수
 
 | 변수 | 설명 |

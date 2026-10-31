@@ -2,8 +2,10 @@ package com.justinneed.scenario;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -164,18 +166,18 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
     void withdrawnMemberIsHiddenFromSearchAndRecommendations() throws Exception {
         mvc.perform(post("/community/me/interests").with(as(me)).with(json(Map.of("hashtag", "프라하"))))
                 .andExpect(status().isCreated());
-        mvc.perform(get("/community/search/profiles").param("hashtag", "프라하").with(as(me)))
+        mvc.perform(get("/community/search/profiles").param("q", "프라하").with(as(me)))
                 .andExpect(jsonPath("$.data.profiles[*].userId").value(hasItem(wanderer.id().intValue())));
         mvc.perform(get("/community/recommendations/mindmaps/interests").with(as(me)))
-                .andExpect(jsonPath("$.data.mindmaps[*].ownerId").value(contains(ids(wanderer.id()))));
+                .andExpect(jsonPath("$.data.mindmaps[*].owner.userId").value(everyItem(is(wanderer.id().intValue()))))
+                .andExpect(jsonPath("$.data.mindmaps", hasSize(2)));
 
         withdraw(wanderer.member());
 
-        // 관심 해시태그로 프라하를 단 나(sprout)만 남는다
-        mvc.perform(get("/community/search/profiles").param("hashtag", "프라하").with(as(me)))
+        mvc.perform(get("/community/search/profiles").param("q", "프라하").with(as(me)))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.profiles[*].userId").value(contains(ids(me.getId()))));
-        mvc.perform(get("/community/search/mindmaps").param("hashtag", "프라하").with(as(me)))
+                .andExpect(jsonPath("$.data.profiles", hasSize(0)));
+        mvc.perform(get("/community/search/mindmaps").param("q", "프라하").with(as(me)))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.mindmaps", hasSize(0)));
         mvc.perform(get("/community/recommendations/mindmaps/interests").with(as(me)))
@@ -183,7 +185,7 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.basisHashtags").value(contains("프라하")))
                 .andExpect(jsonPath("$.data.mindmaps", hasSize(0)));
         // 다른 회원은 그대로 검색된다
-        mvc.perform(get("/community/search/profiles").param("hashtag", "미슐랭").with(as(me)))
+        mvc.perform(get("/community/search/profiles").param("q", "미슐랭").with(as(me)))
                 .andExpect(jsonPath("$.data.profiles[*].userId").value(contains(ids(foodtrip.getId()))));
     }
 
