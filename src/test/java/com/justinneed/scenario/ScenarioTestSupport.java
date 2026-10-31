@@ -204,10 +204,14 @@ public abstract class ScenarioTestSupport {
             바티칸 박물관은 일요일에 쉬므로 평일 오전에 간다.""";
 
     protected static final List<Source> ROME_SOURCES = List.of(
-            new Source("콜로세움 공식 예약", "https://www.colosseo.it/en/", "입장권은 30분 단위로 예약한다."),
-            new Source("바티칸 박물관", "https://www.museivaticani.va/", "일요일은 휴관, 마지막 주 일요일만 연다."),
-            new Source("트라스테베레 산책", "https://www.turismoroma.it/en/places/trastevere", "저녁 산책 코스로 좋다."),
-            new Source("로마 맛집", "https://www.tripadvisor.co.kr/Restaurants-g187791-Rome_Lazio.html", "카르보나라 맛집 모음."));
+            new Source("콜로세움 공식 예약", "https://www.colosseo.it/en/", "입장권은 30분 단위로 예약한다.",
+                    LocalDateTime.parse("2026-04-26T21:16:00")),
+            new Source("바티칸 박물관", "https://www.museivaticani.va/", "일요일은 휴관, 마지막 주 일요일만 연다.",
+                    LocalDateTime.parse("2026-04-26T21:40:00")),
+            new Source("트라스테베레 산책", "https://www.turismoroma.it/en/places/trastevere", "저녁 산책 코스로 좋다.",
+                    LocalDateTime.parse("2026-04-26T22:05:00")),
+            new Source("로마 맛집", "https://www.tripadvisor.co.kr/Restaurants-g187791-Rome_Lazio.html", "카르보나라 맛집 모음.",
+                    LocalDateTime.parse("2026-04-26T22:31:00")));
 
     /**
      * FE 목 MOCK_SESSIONS(9001~9007)와 같은 제목 · 시각 · 페이지 수 · 즐겨찾기 · 태그. 정렬 확인을 위해 일부러 섞어서 저장한다.

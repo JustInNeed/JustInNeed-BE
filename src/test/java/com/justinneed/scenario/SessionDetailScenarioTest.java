@@ -18,7 +18,6 @@ import com.justinneed.auth.domain.Member;
 import com.justinneed.session.management.domain.BrowsingSession;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -299,7 +298,6 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @Disabled("API 미구현: 세션 상세 sources[].visitedAt (A표 '출처 방문 시각' 반영 결정, 필드명은 제안) — 구현되면 켠다")
     @DisplayName("출처마다 방문 시각(visitedAt)이 오고 방문한 순서대로 정렬돼 FE 가 시간순으로 보여준다")
     void sourcesHaveVisitedAt() throws Exception {
         Member me = member("sprout");
