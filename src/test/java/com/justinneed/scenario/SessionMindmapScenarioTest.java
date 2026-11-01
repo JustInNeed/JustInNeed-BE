@@ -97,6 +97,7 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
         BrowsingSession open = session(me, "공개 세션", "2026-10-04T18:00:00", "2026-10-04T19:00:00", 1, false, true,
                 List.of("로마"), List.of(new Source("글 제목", LINK, "대표 발췌", VISITED_AT)), "## 본문");
         saveResult(open, MINDMAP, SELECTED.replace("\"pageUrl\": \"https://x.example.com/y\"", "\"pageUrl\": \"javascript:alert(1)\""));
+        cardSync.sync(open);
         CommunityProfile profile = new CommunityProfile(me.getId());
         profile.changeVisibility(NodeVisibility.CONTENT);
         communityProfiles.saveAndFlush(profile);
@@ -106,6 +107,8 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.nodes[2].keyword").value("입장권"))
                 .andExpect(jsonPath("$.data.nodes[2].citation").value(nullValue()));
         mindmap(open, me).andExpect(jsonPath("$.data.nodes[2].citation.url").value("javascript:alert(1)"));
+        mvc.perform(get("/community/profiles/{id}/mindmap", me.getId()).with(as(member("visitor2"))))
+                .andExpect(jsonPath("$.data.nodes[?(@.label == '입장권')].sourceUrl", contains(nullValue())));
     }
 
     @Test

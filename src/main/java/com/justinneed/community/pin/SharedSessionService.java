@@ -67,13 +67,6 @@ public class SharedSessionService {
                 .map(id -> sharing.project(profile, viewerId, byId.get(id))).toList(), found.hasNext());
     }
 
-    // 지금 살아 있는 고정만
-    public List<SharedSessionView> pinned(Long userId, Long viewerId) {
-        CommunityProfile profile = profiles.read(userId);
-        return livePins(profile).stream()
-                .map(session -> sharing.project(profile, viewerId, session)).toList();
-    }
-
     public SharedSessionView detail(Long userId, Long viewerId, Long sessionId) {
         CommunityProfile profile = profiles.read(userId);
         BrowsingSession session = sharing.visibleSessions(profile).stream()

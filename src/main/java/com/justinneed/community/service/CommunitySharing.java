@@ -1,10 +1,12 @@
 package com.justinneed.community.service;
 
+import com.justinneed.community.api.HttpUrl;
 import com.justinneed.community.domain.CommunityProfile;
 import com.justinneed.community.domain.NodeVisibility;
 import com.justinneed.community.dto.SharedSessionView;
 import com.justinneed.community.repository.CommunitySessionRepository;
 import com.justinneed.session.management.domain.BrowsingSession;
+import com.justinneed.session.management.domain.Source;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Comparator;
@@ -69,8 +71,11 @@ public class CommunitySharing {
 
     public SharedSessionView project(CommunityProfile profile, Long viewerId, BrowsingSession session) {
         boolean owner = profile.getUserId().equals(viewerId);
+        // 세션 상세(SessionDetailResponse.forViewer)처럼 다른 사용자에게는 http(s) 링크만 준다
+        List<Source> sources = owner ? session.getSources()
+                : session.getSources().stream().filter(source -> HttpUrl.isValid(source.url())).toList();
         return SharedSessionView.from(session, owner ? session.getTags() : visibleTags(profile, session.getTags()),
-                owner || profile.getVisibility() == NodeVisibility.CONTENT,
+                sources, owner || profile.getVisibility() == NodeVisibility.CONTENT,
                 profile.getPinnedSessionIds().contains(session.getId()));
     }
 
