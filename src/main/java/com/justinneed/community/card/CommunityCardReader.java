@@ -77,13 +77,11 @@ public class CommunityCardReader {
         return cards(List.of(sessionId), viewerId).stream().findFirst();
     }
 
-    /** 작성자 카드 전체의 합계. 카드마다 응답하는 nodeCount · exploringCount 를 더한 값이다. */
-    public OwnerTotals totals(CommunityProfile owner, Long viewerId) {
-        boolean content = owner.getVisibility() == NodeVisibility.CONTENT;
+    /** 작성자 카드 전체의 나도 탐색중 합. 프로필의 노드 수는 세션이 겹치면 카드 합과 달라 PublicGraphService 가 센다. */
+    public long exploringCount(CommunityProfile owner, Long viewerId) {
         List<CommunityCardRow> rows = cards.findByOwnerIdInOrderBySessionIdDesc(List.of(owner.getUserId()));
-        long exploringCount = counts.counts(rows.stream().map(CommunityCardRow::getSessionId).toList(), viewerId)
+        return counts.counts(rows.stream().map(CommunityCardRow::getSessionId).toList(), viewerId)
                 .values().stream().mapToLong(CardCounts.Count::exploringCount).sum();
-        return new OwnerTotals(rows.stream().mapToLong(row -> nodeCount(row, content)).sum(), exploringCount);
     }
 
     private static long nodeCount(CommunityCardRow row, boolean content) {
@@ -100,8 +98,5 @@ public class CommunityCardReader {
                 count.likeCount(), count.likedByMe(), count.bookmarkCount(), count.bookmarkId(),
                 count.exploringCount(), count.exploringByMe(), row.getLastActivityAt(),
                 row.getUrls().stream().map(url -> new RelatedUrl(content ? url.title() : null, url.url())).toList());
-    }
-
-    public record OwnerTotals(long nodeCount, long exploringCount) {
     }
 }

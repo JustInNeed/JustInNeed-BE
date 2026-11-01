@@ -13,6 +13,7 @@ import com.justinneed.community.domain.CommunityProfile;
 import com.justinneed.community.domain.NodeVisibility;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.domain.SessionStatus;
+import com.justinneed.session.management.domain.Source;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpStatus;
 
 /**
@@ -102,6 +104,24 @@ class SessionAccessScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.sources[0].url").value("https://www.hrad.cz/en/prague-castle-for-visitors"))
                 .andExpect(jsonPath("$.data.sources[0].title").value(nullValue()))
                 .andExpect(jsonPath("$.data.sources[0].excerpt").value(nullValue()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    @DisplayName("다른 사용자의 세션 출처에는 http(s) 링크만 온다: 화면이 href 로 그대로 쓴다. 소유자에게는 그대로다")
+    void viewerSeesOnlyWebLinks(boolean content) throws Exception {
+        BrowsingSession prague = wanderer.prague();
+        prague.replaceSources(List.of(new Source("글", "https://www.prague.eu/en", "발췌"),
+                new Source("위험", "javascript:alert(1)", "발췌")));
+        sessions.saveAndFlush(prague);
+        if (content) {
+            showContent(wanderer);
+        }
+
+        mvc.perform(get("/sessions/{id}", prague.getId()).with(as(me)))
+                .andExpect(jsonPath("$.data.sources[*].url").value(contains("https://www.prague.eu/en")));
+        mvc.perform(get("/sessions/{id}", prague.getId()).with(as(wanderer.member())))
+                .andExpect(jsonPath("$.data.sources", hasSize(2)));
     }
 
     @Test

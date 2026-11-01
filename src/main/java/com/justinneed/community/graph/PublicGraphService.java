@@ -18,10 +18,12 @@ import com.justinneed.community.service.CommunityProfiles;
 import com.justinneed.community.service.CommunitySharing;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
+import com.justinneed.home.HomeGraphBuilder;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.dto.SessionMindmapResponse;
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,15 +56,15 @@ public class PublicGraphService {
     /** 작성자 공개 범위를 따른다: 내용까지는 AI 마인드맵(hierarchy), URL만은 태그 → URL. */
     public Graph graph(Long ownerId, Long hashtagId) {
         var profile = profiles.read(ownerId);
-        return build(profile, hashtagId, profile.getVisibility() == NodeVisibility.CONTENT);
+        return build(profile, hashtagId, profile.getVisibility() == NodeVisibility.CONTENT).graph();
     }
 
     /** 공개 범위와 상관없이 태그 → URL. AI 노드 전에 저장한 URL 노드 id 를 찾을 때 쓴다. */
     public Graph urlGraph(Long ownerId) {
-        return build(profiles.read(ownerId), null, false);
+        return build(profiles.read(ownerId), null, false).graph();
     }
 
-    private Graph build(CommunityProfile profile, Long hashtagId, boolean aiNodes) {
+    private Built build(CommunityProfile profile, Long hashtagId, boolean aiNodes) {
         Long ownerId = profile.getUserId();
         var owner = members.findByIdAndWithdrawnAtIsNull(ownerId).orElseThrow(CommunityErrors::missing);
         var tagIndex = tags.index(ownerId);
@@ -71,7 +73,9 @@ public class PublicGraphService {
         var visibleTags = new LinkedHashMap<Long, BookmarkSnapshot.Tag>();
         var leaves = new ArrayList<BookmarkSnapshot.Node>();
         var edges = new LinkedHashSet<BookmarkSnapshot.Edge>();
-        var counts = new HashMap<Long, Long>();
+        // 세션마다 노드 행이 따로라 세션이 겹치면 nodes 에 같은 노드가 또 들어간다. 숫자는 키로 합쳐 센다
+        var nodeKeys = new HashSet<String>();
+        var tagNodeKeys = new HashMap<Long, Set<String>>();
         // Public graph endpoints use visitor rules even when the owner requests them.
         var sessions = sharing.visibleSessions(profile);
         var aiMaps = aiNodes ? mindmaps.of(sessions) : Map.<Long, SessionMindmapResponse>of();
@@ -83,11 +87,13 @@ public class PublicGraphService {
                     : urlPart(session, profile, indexedNodes);
             leaves.addAll(part.nodes());
             edges.addAll(part.edges());
+            var partKeys = nodeKeys(part, aiNodes);
+            nodeKeys.addAll(partKeys);
             for (var tag : sessionTags) {
                 if (part.nodes().isEmpty()) break;
                 visibleTags.putIfAbsent(tag.getId(), new BookmarkSnapshot.Tag(tag.getId(), ownerId, tag.getName()));
                 part.entries().forEach(n -> edges.add(new BookmarkSnapshot.Edge("tag:" + tag.getId(), "node:" + n)));
-                counts.merge(tag.getId(), (long) part.nodes().size(), Long::sum);
+                tagNodeKeys.computeIfAbsent(tag.getId(), id -> new HashSet<>()).addAll(partKeys);
             }
         }
         for (String interest : profile.getInterests()) {
@@ -98,13 +104,19 @@ public class PublicGraphService {
             }
         }
         if (hashtagId != null && !visibleTags.containsKey(hashtagId)) throw CommunityErrors.missing();
-        var ranked = visibleTags.values().stream().filter(t -> counts.getOrDefault(t.hashtagId(), 0L) > 0)
-                .map(t -> new TopTag(t.hashtagId(), t.name(), counts.get(t.hashtagId())))
+        var ranked = visibleTags.values().stream().filter(t -> !tagNodeKeys.getOrDefault(t.hashtagId(), Set.of()).isEmpty())
+                .map(t -> new TopTag(t.hashtagId(), t.name(), tagNodeKeys.get(t.hashtagId()).size()))
                 .sorted(Comparator.comparingLong(TopTag::nodeCount).reversed()
                         .thenComparing(t -> CommunityTags.key(t.name())).thenComparing(TopTag::hashtagId))
                 .limit(5).toList();
-        return new Graph(200, ownerId, ownerId, owner.getNickname(), graphTitle(owner.getNickname()),
-                List.copyOf(visibleTags.values()), List.copyOf(leaves), List.copyOf(edges), ranked);
+        return new Built(new Graph(200, ownerId, ownerId, owner.getNickname(), graphTitle(owner.getNickname()),
+                List.copyOf(visibleTags.values()), List.copyOf(leaves), List.copyOf(edges), ranked), nodeKeys.size());
+    }
+
+    // AI 노드는 홈과 같은 키(빈 키는 홈처럼 뺀다), URL 노드는 원문 URL 이 같으면 한 노드다
+    private static Set<String> nodeKeys(GraphPart part, boolean aiNodes) {
+        return part.nodes().stream().map(node -> aiNodes ? HomeGraphBuilder.keyOf(node.label()) : node.sourceUrl())
+                .filter(key -> !key.isEmpty()).collect(Collectors.toSet());
     }
 
     // 작성자 한 사람의 전체 그래프라 카드 제목이 없다
@@ -158,14 +170,14 @@ public class PublicGraphService {
     }
 
     public Profile profile(Long ownerId, Long viewerId) {
-        var graph = graph(ownerId, null);
         var profile = profiles.read(ownerId);
-        var totals = cards.totals(profile, viewerId);
+        var built = build(profile, null, profile.getVisibility() == NodeVisibility.CONTENT);
+        var graph = built.graph();
         return new Profile(200, ownerId, graph.nickname(), profile.getBio(), profile.getVisibility(),
-                totals.nodeCount(), graph.topHashtags(),
+                built.nodeCount(), graph.topHashtags(),
                 profile.getInterests().stream().filter(t -> !sharing.isHidden(profile, t)).limit(10).toList(),
                 likes.countByProfileId(ownerId), likes.existsByActorIdAndProfileId(viewerId, ownerId),
-                follows.existsByActorIdAndTargetId(viewerId, ownerId), totals.exploringCount(),
+                follows.existsByActorIdAndTargetId(viewerId, ownerId), cards.exploringCount(profile, viewerId),
                 sharing.publicSessionCount(profile), pins.pinned(ownerId, -1L));
     }
 
@@ -202,6 +214,7 @@ public class PublicGraphService {
                 || saved.sessionIds().contains(sessionOf.get(id)) && !matched.contains(sessionOf.get(id))).toList();
     }
 
+    private record Built(Graph graph, long nodeCount) { }
     public record GraphPart(List<BookmarkSnapshot.Node> nodes, List<BookmarkSnapshot.Edge> edges, List<Long> entries) { }
     public record TopTag(Long hashtagId, String name, long nodeCount) { }
     public record Graph(int code, Long mindmapId, Long ownerId, String nickname, String title,
