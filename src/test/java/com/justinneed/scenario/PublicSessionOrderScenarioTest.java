@@ -166,8 +166,7 @@ class PublicSessionOrderScenarioTest extends ScenarioTestSupport {
         mvc.perform(get(MINDMAPS, owner.getId()).with(as(viewer)))
                 .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(middle, newest, tie))));
         mvc.perform(get("/community/profiles/{id}", owner.getId()).with(as(viewer)))
-                .andExpect(jsonPath("$.data.sharedSessionCount").value(3))
-                .andExpect(jsonPath("$.data.pinnedSessions[*].id").value(contains(ids(middle))));
+                .andExpect(jsonPath("$.data.sharedSessionCount").value(3));
 
         mvc.perform(patch("/sessions/{id}", hidden.getId()).with(as(owner)).with(json(Map.of("isPublic", true))))
                 .andExpect(okEnvelope());

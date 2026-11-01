@@ -77,8 +77,7 @@ class ProfileScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.interests").value(contains("유럽여행", "HCI", "미술관")))
                 .andExpect(jsonPath("$.data.likeCount").value(0))
                 .andExpect(jsonPath("$.data.likedByMe").value(false))
-                .andExpect(jsonPath("$.data.sharedSessionCount").value(2))
-                .andExpect(jsonPath("$.data.pinnedSessions[*].id").value(contains(ids(mock.rome(), mock.paris()))));
+                .andExpect(jsonPath("$.data.sharedSessionCount").value(2));
     }
 
     @Test
@@ -318,8 +317,6 @@ class ProfileScenarioTest extends ScenarioTestSupport {
         mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(me)))
                 .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(mock.paris(), mock.rome()))))
                 .andExpect(jsonPath("$.data.sessions[1].isPinned").value(false));
-        mvc.perform(get("/community/profiles/{id}", me.getId()).with(as(me)))
-                .andExpect(jsonPath("$.data.pinnedSessions[*].id").value(contains(ids(mock.paris()))));
     }
 
     @Test

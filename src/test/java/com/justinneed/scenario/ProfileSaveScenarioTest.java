@@ -137,8 +137,9 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
 
         mvc.perform(get("/community/profiles/{id}", me.getId()).with(as(viewer)))
                 .andExpect(jsonPath("$.data.bio").value("소개입니다"))
-                .andExpect(jsonPath("$.data.interests").value(contains("유럽여행", "HCI")))
-                .andExpect(jsonPath("$.data.pinnedSessions[*].id").value(contains(ids(paris, rome))));
+                .andExpect(jsonPath("$.data.interests").value(contains("유럽여행", "HCI")));
+        mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(viewer)))
+                .andExpect(jsonPath("$.data.sessions[?(@.isPinned == true)].id").value(contains(ids(paris, rome))));
         mvc.perform(get("/community/me/visibility").with(as(me)))
                 .andExpect(jsonPath("$.data.visibilityScope").value("CONTENT"));
         mvc.perform(get("/community/me/hashtags").with(as(me)))
@@ -162,8 +163,9 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
 
         mvc.perform(get("/community/profiles/{id}", me.getId()).with(as(viewer)))
                 .andExpect(jsonPath("$.data.bio").value("처음"))
-                .andExpect(jsonPath("$.data.interests").value(contains("HCI")))
-                .andExpect(jsonPath("$.data.pinnedSessions[*].id").value(contains(ids(rome))));
+                .andExpect(jsonPath("$.data.interests").value(contains("HCI")));
+        mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(viewer)))
+                .andExpect(jsonPath("$.data.sessions[?(@.isPinned == true)].id").value(contains(ids(rome))));
         mvc.perform(get("/community/me/visibility").with(as(me)))
                 .andExpect(jsonPath("$.data.visibilityScope").value("URL_ONLY"));
         mvc.perform(get("/community/me/hashtags").with(as(me)))
@@ -379,8 +381,8 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
 
         save(me, body("소개", "URL_ONLY", List.of(), List.of(), List.of())).andExpect(okEnvelope());
         expectPublic(me, a, true);
-        mvc.perform(get("/community/profiles/{id}", me.getId()).with(as(me)))
-                .andExpect(jsonPath("$.data.pinnedSessions", empty()));
+        mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(me)))
+                .andExpect(jsonPath("$.data.sessions[?(@.isPinned == true)].id", empty()));
     }
 
     @Test

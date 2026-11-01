@@ -95,8 +95,7 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.topHashtags[1].nodeCount").value(3))
                 .andExpect(jsonPath("$.data.interests").value(contains("프라하", "비엔나", "야간열차", "카페투어")))
                 .andExpect(jsonPath("$.data.sharedSessionCount").value(4))
-                .andExpect(jsonPath("$.data.pinnedSessions[*].id").value(contains(
-                        ids(wanderer.prague(), wanderer.cafe(), wanderer.nightjet()))))
+                .andExpect(jsonPath("$.data.pinnedSessions").doesNotExist())
                 .andExpect(jsonPath("$.data.likeCount").value(0))
                 .andExpect(jsonPath("$.data.likedByMe").value(false));
     }

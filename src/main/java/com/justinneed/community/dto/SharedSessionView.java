@@ -13,15 +13,15 @@ public record SharedSessionView(
         LocalDateTime startedAt, LocalDateTime endedAt, int pageCount, SessionStatus status,
         String title, String markdown, List<Source> sources, boolean isPinned
 ) {
-    public static SharedSessionView from(BrowsingSession session, List<String> tags, boolean includeContent,
-            boolean pinned) {
+    public static SharedSessionView from(BrowsingSession session, List<String> tags, List<Source> sources,
+            boolean includeContent, boolean pinned) {
         return new SharedSessionView(
                 session.getId(), tags,
-                session.getSources().stream().map(Source::url).distinct().toList(),
+                sources.stream().map(Source::url).distinct().toList(),
                 session.getStartedAt(), session.getEndedAt(), session.getPageCount(), session.getStatus(),
                 includeContent ? session.getTitle() : null,
                 includeContent && session.getSummary() != null ? session.getSummary().getMarkdown() : null,
-                includeContent ? session.getSources() : null,
+                includeContent ? sources : null,
                 pinned
         );
     }

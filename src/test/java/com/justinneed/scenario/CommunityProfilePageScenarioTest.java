@@ -424,7 +424,7 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     // ---------- 공유 세션 · 전체 마인드맵 ----------
 
     @Test
-    @DisplayName("공유 세션 카드 필드: URL_ONLY 에서도 시각 · 페이지 수 · 상태가 오고 제목은 빠진다. 프로필의 pinnedSessions 도 같다")
+    @DisplayName("공유 세션 카드 필드: URL_ONLY 에서도 시각 · 페이지 수 · 상태가 오고 제목은 빠진다")
     void sharedSessionCardFieldsUnderUrlOnly() throws Exception {
         mvc.perform(get("/community/profiles/{id}/shared-sessions", wanderer.id()).with(as(me)))
                 .andExpect(jsonPath("$.data.sessions[0].title").doesNotExist())
@@ -436,8 +436,6 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
                         .with(as(me)))
                 .andExpect(jsonPath("$.data.startedAt").value("2026-04-20T23:05:00"))
                 .andExpect(jsonPath("$.data.status").value("COMPLETED"));
-        mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me)))
-                .andExpect(jsonPath("$.data.pinnedSessions[0].pageCount").value(6));
     }
 
     @Test

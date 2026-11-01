@@ -10,9 +10,7 @@ import com.justinneed.community.card.SessionMindmaps;
 import com.justinneed.community.catalog.*;
 import com.justinneed.community.domain.CommunityProfile;
 import com.justinneed.community.domain.NodeVisibility;
-import com.justinneed.community.dto.SharedSessionView;
 import com.justinneed.community.follow.CommunityFollowRepository;
-import com.justinneed.community.pin.SharedSessionService;
 import com.justinneed.community.reaction.ProfileLikeRepository;
 import com.justinneed.community.service.CommunityProfiles;
 import com.justinneed.community.service.CommunitySharing;
@@ -39,17 +37,16 @@ public class PublicGraphService {
     private final SessionMindmaps mindmaps;
     private final MemberRepository members;
     private final ProfileLikeRepository likes;
-    private final SharedSessionService pins;
     private final BookmarkQueryService bookmarks;
     private final CommunityCardReader cards;
     private final CommunityFollowRepository follows;
 
     public PublicGraphService(CommunityProfiles profiles, CommunitySharing sharing, CommunityTags tags,
             CommunityNodeRepository nodes, SessionMindmaps mindmaps, MemberRepository members,
-            ProfileLikeRepository likes, SharedSessionService pins, BookmarkQueryService bookmarks,
+            ProfileLikeRepository likes, BookmarkQueryService bookmarks,
             CommunityCardReader cards, CommunityFollowRepository follows) {
         this.profiles = profiles; this.sharing = sharing; this.tags = tags; this.nodes = nodes;
-        this.mindmaps = mindmaps; this.members = members; this.likes = likes; this.pins = pins; this.bookmarks = bookmarks;
+        this.mindmaps = mindmaps; this.members = members; this.likes = likes; this.bookmarks = bookmarks;
         this.cards = cards; this.follows = follows;
     }
 
@@ -83,7 +80,7 @@ public class PublicGraphService {
             var sessionTags = sharing.visibleTags(profile, session.getTags()).stream().map(CommunityTags::key).distinct()
                     .map(tagIndex::get).filter(Objects::nonNull).toList();
             if (hashtagId != null && sessionTags.stream().noneMatch(t -> t.getId().equals(hashtagId))) continue;
-            var part = aiNodes ? aiPart(aiMaps.get(session.getId()), aiId -> rowId(session, aiId, indexedNodes))
+            var part = aiNodes ? aiPart(aiMaps.get(session.getId()).withWebCitationsOnly(), aiId -> rowId(session, aiId, indexedNodes))
                     : urlPart(session, profile, indexedNodes);
             leaves.addAll(part.nodes());
             edges.addAll(part.edges());
@@ -178,7 +175,7 @@ public class PublicGraphService {
                 profile.getInterests().stream().filter(t -> !sharing.isHidden(profile, t)).limit(10).toList(),
                 likes.countByProfileId(ownerId), likes.existsByActorIdAndProfileId(viewerId, ownerId),
                 follows.existsByActorIdAndTargetId(viewerId, ownerId), cards.exploringCount(profile, viewerId),
-                sharing.publicSessionCount(profile), pins.pinned(ownerId, -1L));
+                sharing.publicSessionCount(profile));
     }
 
     public Original original(Long viewerId, Long bookmarkId) {
@@ -222,6 +219,6 @@ public class PublicGraphService {
             List<BookmarkSnapshot.Edge> edges, List<TopTag> topHashtags) { }
     public record Profile(int code, Long userId, String nickname, String bio, NodeVisibility visibility,
             long totalNodeCount, List<TopTag> topHashtags, List<String> interests, long likeCount, boolean likedByMe,
-            boolean following, long exploringCount, long sharedSessionCount, List<SharedSessionView> pinnedSessions) { }
+            boolean following, long exploringCount, long sharedSessionCount) { }
     public record Original(int code, boolean sourceAvailable, Graph mindmap, List<Long> highlightedNodeIds) { }
 }

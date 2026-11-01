@@ -122,6 +122,14 @@ class SessionAccessScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.sources[*].url").value(contains("https://www.prague.eu/en")));
         mvc.perform(get("/sessions/{id}", prague.getId()).with(as(wanderer.member())))
                 .andExpect(jsonPath("$.data.sources", hasSize(2)));
+        String shared = "/community/profiles/{id}/shared-sessions/{sessionId}";
+        var viewerView = mvc.perform(get(shared, wanderer.id(), prague.getId()).with(as(me)))
+                .andExpect(jsonPath("$.data.urls").value(contains("https://www.prague.eu/en")));
+        if (content) {
+            viewerView.andExpect(jsonPath("$.data.sources[*].url").value(contains("https://www.prague.eu/en")));
+        }
+        mvc.perform(get(shared, wanderer.id(), prague.getId()).with(as(wanderer.member())))
+                .andExpect(jsonPath("$.data.urls", hasSize(2)));
     }
 
     @Test
