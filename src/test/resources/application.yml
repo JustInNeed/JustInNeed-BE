@@ -55,6 +55,7 @@ app:
     failure-redirect-uri: http://localhost:3000/login?error=oauth
   cors:
     allowed-origins: http://localhost:3000
+    extension-origins: chrome-extension://pgmclbgdbaiigahdhpnieemifhgoikpa
   ai:
     base-url: http://localhost:18000
     internal-token: test-ai-internal-token
