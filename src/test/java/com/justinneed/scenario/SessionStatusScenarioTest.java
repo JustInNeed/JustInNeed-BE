@@ -168,7 +168,7 @@ class SessionStatusScenarioTest extends ScenarioTestSupport {
     void pinBeforeCompletion(SessionStatus status) throws Exception {
         BrowsingSession session = unfinished(status);
 
-        mvc.perform(post("/community/me/shared-sessions").with(as(me)).with(json(Map.of("sessionId", session.getId()))))
+        mvc.perform(post("/community/me/pinned-sessions").with(as(me)).with(json(Map.of("sessionId", session.getId()))))
                 .andExpect(errorEnvelope(HttpStatus.CONFLICT, NOT_COMPLETED));
 
         mvc.perform(get("/sessions/{id}", session.getId()).with(as(me)))
@@ -192,7 +192,7 @@ class SessionStatusScenarioTest extends ScenarioTestSupport {
 
         mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(viewer)))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data", hasSize(0)));
+                .andExpect(jsonPath("$.data.sessions", hasSize(0)));
         mvc.perform(get("/community/profiles/{id}/shared-sessions/{sessionId}", me.getId(), bad.getId()).with(as(viewer)))
                 .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, "세션을 찾을 수 없습니다."));
         mvc.perform(get("/community/profiles/{id}/mindmap", me.getId()).with(as(viewer)))

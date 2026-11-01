@@ -200,7 +200,8 @@ public final class HomeGraphBuilder {
         return "all";
     }
 
-    private static String keyOf(String keyword) {
+    /** 노드 키. 해시태그 노드 수도 같은 키로 센다. */
+    public static String keyOf(String keyword) {
         return SessionHashtagSelector.removeWhitespace(keyword).toLowerCase(Locale.ROOT);
     }
 

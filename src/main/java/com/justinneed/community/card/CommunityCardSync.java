@@ -32,7 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
  * community_cards    = 공개 카드 세션만. 그 밖의 세션은 행을 지운다
  * </pre>
  *
- * 부르는 곳: 세션 수정 · 삭제, 공유 핀 · 해제, AI 결과 저장, 재분석.
+ * 부르는 곳: 세션 수정 · 삭제, AI 결과 저장, 재분석. 고정은 세션을 바꾸지 않아 부르지 않는다.
  * 공개 범위 · 비공개 해시태그는 읽을 때 적용하므로 바꿔도 부르지 않는다.
  */
 @Service
@@ -85,6 +85,11 @@ public class CommunityCardSync {
     private boolean isPublicCard(BrowsingSession session) {
         return session.isPublicSession() && !session.isDeleted() && session.getStatus() == SessionStatus.COMPLETED
                 && !members.findById(session.getUserId()).map(Member::isWithdrawn).orElse(true);
+    }
+
+    /** 카드의 relatedUrls: 세션의 http(s) URL 을 중복 없이 앞에서 10개. */
+    public static List<RelatedUrl> relatedUrls(BrowsingSession session) {
+        return relatedUrls(uniqueUrls(session));
     }
 
     private static Map<String, Source> uniqueUrls(BrowsingSession session) {

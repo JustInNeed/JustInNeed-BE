@@ -182,14 +182,19 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("핀을 꽂으면 공개가 되어 카드가 생기고, 빼면 비공개가 되어 사라진다")
-    void pinAndUnpin() throws Exception {
-        mvc.perform(post("/community/me/shared-sessions").with(as(me)).with(json(Map.of("sessionId", rome.getId()))))
-                .andExpect(status().is2xxSuccessful());
+    @DisplayName("고정은 카드를 건드리지 않는다: 비공개 세션은 400 에 카드가 없고, 공개 세션은 해제해도 카드가 남는다")
+    void pinDoesNotTouchCard() throws Exception {
+        mvc.perform(post("/community/me/pinned-sessions").with(as(me)).with(json(Map.of("sessionId", rome.getId()))))
+                .andExpect(status().isBadRequest());
+        assertThat(cards.findById(rome.getId())).isEmpty();
+
+        patchSession(Map.of("isPublic", true));
+        mvc.perform(post("/community/me/pinned-sessions").with(as(me)).with(json(Map.of("sessionId", rome.getId()))))
+                .andExpect(status().isCreated());
         assertThat(cards.findById(rome.getId())).isPresent();
 
-        mvc.perform(delete("/community/me/shared-sessions/{id}", rome.getId()).with(as(me))).andExpect(okEnvelope());
-        assertThat(cards.findById(rome.getId())).isEmpty();
+        mvc.perform(delete("/community/me/pinned-sessions/{id}", rome.getId()).with(as(me))).andExpect(okEnvelope());
+        assertThat(cards.findById(rome.getId())).isPresent();
     }
 
     @Test

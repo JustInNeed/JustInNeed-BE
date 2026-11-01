@@ -27,6 +27,8 @@ public enum ErrorCode {
     TAG_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "해시태그는 최대 10개까지 추가할 수 있습니다."),
     DUPLICATE_HASHTAG(HttpStatus.BAD_REQUEST, "이미 등록된 해시태그입니다."),
     INVALID_ORDER_REQUEST(HttpStatus.BAD_REQUEST, "정렬할 그룹 목록이 올바르지 않습니다."),
+    INVALID_PIN_ORDER(HttpStatus.BAD_REQUEST, "고정할 세션 목록이 올바르지 않습니다."),
+    PIN_REQUIRES_PUBLIC(HttpStatus.BAD_REQUEST, "공개한 세션만 고정할 수 있습니다."),
     DUPLICATE_NICKNAME(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다."),
     INVALID_WITHDRAW_CONFIRMATION(HttpStatus.BAD_REQUEST, "탈퇴 확인 문구가 올바르지 않습니다."),
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다."),

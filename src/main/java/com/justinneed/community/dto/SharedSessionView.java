@@ -11,16 +11,18 @@ import java.util.List;
 public record SharedSessionView(
         Long id, List<String> tags, List<String> urls,
         LocalDateTime startedAt, LocalDateTime endedAt, int pageCount, SessionStatus status,
-        String title, String markdown, List<Source> sources
+        String title, String markdown, List<Source> sources, boolean isPinned
 ) {
-    public static SharedSessionView from(BrowsingSession session, List<String> tags, boolean includeContent) {
+    public static SharedSessionView from(BrowsingSession session, List<String> tags, boolean includeContent,
+            boolean pinned) {
         return new SharedSessionView(
                 session.getId(), tags,
                 session.getSources().stream().map(Source::url).distinct().toList(),
                 session.getStartedAt(), session.getEndedAt(), session.getPageCount(), session.getStatus(),
                 includeContent ? session.getTitle() : null,
                 includeContent && session.getSummary() != null ? session.getSummary().getMarkdown() : null,
-                includeContent ? session.getSources() : null
+                includeContent ? session.getSources() : null,
+                pinned
         );
     }
 }

@@ -11,7 +11,7 @@ class ProfileEditContractTest extends CommunityTestSupport {
     @Autowired ProfileEditService edit;
     @Test
     void supportsDesignedPathsAndOwnerScopedIds() throws Exception {
-        var session = session(ownerId, false, "Java");
+        var session = session(ownerId, true, "Java");
         var tag = edit.hashtags(ownerId).get(0);
         mvc.perform(patch("/community/me/visibility").header("Authorization", auth(ownerId))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"visibilityScope\":\"URL_ONLY\"}"))

@@ -1,5 +1,6 @@
 package com.justinneed.scenario;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.everyItem;
@@ -19,7 +20,6 @@ import com.justinneed.auth.domain.Member;
 import com.justinneed.session.management.domain.BrowsingSession;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -34,9 +34,18 @@ import org.springframework.test.web.servlet.ResultActions;
 class ProfileScenarioTest extends ScenarioTestSupport {
 
     private static final String SESSION_NOT_FOUND = "세션을 찾을 수 없습니다.";
+    private static final String INVALID_PIN_ORDER = "고정할 세션 목록이 올바르지 않습니다.";
 
     private ResultActions pin(Member me, BrowsingSession session) throws Exception {
         return mvc.perform(post("/community/me/pinned-sessions").with(as(me)).with(json(Map.of("sessionId", session.getId()))));
+    }
+
+    // 고정은 공개 세션만 된다. 공개는 세션 상세의 토글로만 한다
+    private void publish(Member me, BrowsingSession... targets) throws Exception {
+        for (BrowsingSession session : targets) {
+            mvc.perform(patch("/sessions/{id}", session.getId()).with(as(me)).with(json(Map.of("isPublic", true))))
+                    .andExpect(okEnvelope());
+        }
     }
 
     private Long addInterest(Member me, String hashtag) throws Exception {
@@ -49,6 +58,7 @@ class ProfileScenarioTest extends ScenarioTestSupport {
     void myProfileHeader() throws Exception {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
+        publish(me, mock.rome(), mock.paris());
         pin(me, mock.rome()).andExpect(status().isCreated());
         pin(me, mock.paris()).andExpect(status().isCreated());
         for (String interest : List.of("유럽여행", "HCI", "미술관")) {
@@ -67,7 +77,7 @@ class ProfileScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.interests").value(contains("유럽여행", "HCI", "미술관")))
                 .andExpect(jsonPath("$.data.likeCount").value(0))
                 .andExpect(jsonPath("$.data.likedByMe").value(false))
-                // 통계 '공유 세션 수' = pinnedSessions 길이
+                .andExpect(jsonPath("$.data.sharedSessionCount").value(2))
                 .andExpect(jsonPath("$.data.pinnedSessions[*].id").value(contains(ids(mock.rome(), mock.paris()))));
     }
 
@@ -183,7 +193,7 @@ class ProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("공유 세션 핀고정(COM-1-3): 201 과 순서(order)가 오고 세션이 공개로 바뀌며, 다른 사람에게 핀 순서대로 보인다")
+    @DisplayName("공개 세션 고정: 201 과 순서(order)가 오고 공개는 그대로이며, 다른 사람에게 핀 순서대로 맨 앞에 보인다")
     void pinSessions() throws Exception {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
@@ -191,6 +201,7 @@ class ProfileScenarioTest extends ScenarioTestSupport {
 
         // FE 목 MY_PROFILE.pinnedSessionIds = [9001 로마, 9003 파리, 9002 항공권, 9005 바르셀로나]
         List<BrowsingSession> pins = List.of(mock.rome(), mock.paris(), mock.flight(), mock.barca());
+        publish(me, pins.toArray(BrowsingSession[]::new));
         for (int order = 0; order < pins.size(); order++) {
             pin(me, pins.get(order))
                     .andExpect(status().isCreated())
@@ -205,7 +216,7 @@ class ProfileScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.isPublic").value(true));
         mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(viewer)))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data[*].id").value(contains(ids(mock.rome(), mock.paris(), mock.flight(), mock.barca()))));
+                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(mock.rome(), mock.paris(), mock.flight(), mock.barca()))));
     }
 
     @Test
@@ -214,6 +225,7 @@ class ProfileScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
         Member viewer = member("foodtrip");
+        publish(me, mock.rome(), mock.paris(), mock.flight(), mock.barca());
         for (BrowsingSession session : List.of(mock.rome(), mock.paris(), mock.flight(), mock.barca())) {
             pin(me, session).andExpect(status().isCreated());
         }
@@ -223,24 +235,30 @@ class ProfileScenarioTest extends ScenarioTestSupport {
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.sessionIds").value(contains(ids(next.toArray(Long[]::new)))));
         mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(viewer)))
-                .andExpect(jsonPath("$.data[*].id").value(contains(ids(next.toArray(Long[]::new)))));
+                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(next.toArray(Long[]::new)))));
 
-        // 오류 문구는 태그 그룹과 같은 '정렬할 그룹 목록이 올바르지 않습니다.' 를 쓴다
         mvc.perform(patch("/community/me/pinned-sessions/order").with(as(me))
                         .with(json(Map.of("sessionIds", List.of(mock.rome().getId(), mock.paris().getId())))))
-                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "정렬할 그룹 목록이 올바르지 않습니다."));
+                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, INVALID_PIN_ORDER));
         mvc.perform(patch("/community/me/pinned-sessions/order").with(as(me)).with(json(Map.of("sessionIds",
                         List.of(mock.flight().getId(), mock.rome().getId(), mock.barca().getId(), mock.paris().getId(),
                                 mock.prague().getId())))))
-                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "정렬할 그룹 목록이 올바르지 않습니다."));
+                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, INVALID_PIN_ORDER));
+        // 개수가 같아도 같은 id 가 두 번이면 400 이고 순서는 그대로다
+        mvc.perform(patch("/community/me/pinned-sessions/order").with(as(me)).with(json(Map.of("sessionIds",
+                        List.of(mock.flight().getId(), mock.flight().getId(), mock.barca().getId(), mock.paris().getId())))))
+                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, INVALID_PIN_ORDER));
+        mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(viewer)))
+                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(next.toArray(Long[]::new)))));
     }
 
     @Test
-    @DisplayName("핀고정 해제(COM-1-4): 세션이 비공개로 바뀌고 공유 목록 · 다른 사람 마인드맵에서 빠지며 나머지 순서는 그대로다")
-    void unpinMakesPrivate() throws Exception {
+    @DisplayName("고정 해제: 공개는 그대로라 공유 목록 · 다른 사람 마인드맵에 남고, 고정만 풀려 뒤로 간다")
+    void unpinKeepsPublic() throws Exception {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
         Member viewer = member("foodtrip");
+        publish(me, mock.rome(), mock.paris(), mock.flight());
         for (BrowsingSession session : List.of(mock.rome(), mock.paris(), mock.flight())) {
             pin(me, session).andExpect(status().isCreated());
         }
@@ -248,20 +266,21 @@ class ProfileScenarioTest extends ScenarioTestSupport {
         mvc.perform(delete("/community/me/pinned-sessions/{id}", mock.rome().getId()).with(as(me)))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.sessionId").value(mock.rome().getId()))
-                .andExpect(jsonPath("$.data.isPublic").value(false))
+                .andExpect(jsonPath("$.data.isPublic").value(true))
                 .andExpect(jsonPath("$.data.isPinned").value(false))
                 .andExpect(jsonPath("$.data.order").value(nullValue()));
 
         mvc.perform(get("/sessions/{id}", mock.rome().getId()).with(as(me)))
-                .andExpect(jsonPath("$.data.isPublic").value(false));
+                .andExpect(jsonPath("$.data.isPublic").value(true));
         mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(viewer)))
-                .andExpect(jsonPath("$.data[*].id").value(contains(ids(mock.paris(), mock.flight()))));
+                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(mock.paris(), mock.flight(), mock.rome()))))
+                .andExpect(jsonPath("$.data.sessions[2].isPinned").value(false));
         mvc.perform(get("/community/profiles/{id}/mindmap", me.getId()).with(as(viewer)))
-                .andExpect(jsonPath("$.data.nodes[*].sourceUrl").value(not(hasItem("https://www.colosseo.it/en/"))));
+                .andExpect(jsonPath("$.data.nodes[*].sourceUrl").value(hasItem("https://www.colosseo.it/en/")));
     }
 
     @Test
-    @DisplayName("핀고정 안 한 세션을 해제하거나 · 남의 세션 · 삭제한 세션을 핀고정하면 404 '세션을 찾을 수 없습니다.'")
+    @DisplayName("고정 안 한 세션을 해제하거나 · 남의 세션 · 삭제한 세션을 고정하면 404, 비공개 세션을 고정하면 400")
     void pinErrors() throws Exception {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
@@ -272,13 +291,17 @@ class ProfileScenarioTest extends ScenarioTestSupport {
                 .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, SESSION_NOT_FOUND));
         pin(me, wanderer.vienna()).andExpect(errorEnvelope(HttpStatus.NOT_FOUND, SESSION_NOT_FOUND));
         pin(me, mock.rail()).andExpect(errorEnvelope(HttpStatus.NOT_FOUND, SESSION_NOT_FOUND));
+        pin(me, mock.prague()).andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "공개한 세션만 고정할 수 있습니다."));
+        mvc.perform(get("/sessions/{id}", mock.prague().getId()).with(as(me)))
+                .andExpect(jsonPath("$.data.isPublic").value(false));
     }
 
     @Test
-    @DisplayName("세션 상세에서 공개를 끄면 핀고정했던 세션도 공유 목록에서 빠진다 (두 공개 경로가 같은 isPublic 을 쓴다)")
-    void privateToggleRemovesPinnedSession() throws Exception {
+    @DisplayName("세션 상세에서 공개를 끄면 고정이 풀리고, 다시 공개해도 고정은 돌아오지 않는다")
+    void privateToggleRemovesPin() throws Exception {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
+        publish(me, mock.rome(), mock.paris());
         pin(me, mock.rome()).andExpect(status().isCreated());
         pin(me, mock.paris()).andExpect(status().isCreated());
 
@@ -286,7 +309,33 @@ class ProfileScenarioTest extends ScenarioTestSupport {
                 .andExpect(okEnvelope());
 
         mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(me)))
-                .andExpect(jsonPath("$.data[*].id").value(contains(ids(mock.paris()))));
+                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(mock.paris()))));
+        assertThat(communityProfiles.findById(me.getId()).orElseThrow().getPinnedSessionIds())
+                .containsExactly(mock.paris().getId());
+
+        publish(me, mock.rome());
+
+        mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(me)))
+                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(mock.paris(), mock.rome()))))
+                .andExpect(jsonPath("$.data.sessions[1].isPinned").value(false));
+        mvc.perform(get("/community/profiles/{id}", me.getId()).with(as(me)))
+                .andExpect(jsonPath("$.data.pinnedSessions[*].id").value(contains(ids(mock.paris()))));
+    }
+
+    @Test
+    @DisplayName("공개 여부를 안 건드리는 수정은 고정을 풀지 않는다")
+    void otherEditsKeepPin() throws Exception {
+        Member me = member("sprout");
+        MockSessions mock = seedMockSessions(me);
+        publish(me, mock.rome());
+        pin(me, mock.rome()).andExpect(status().isCreated());
+
+        mvc.perform(patch("/sessions/{id}", mock.rome().getId()).with(as(me)).with(json(Map.of("isFavorite", false, "title", "새 제목"))))
+                .andExpect(okEnvelope());
+        publish(me, mock.rome());
+
+        assertThat(communityProfiles.findById(me.getId()).orElseThrow().getPinnedSessionIds())
+                .containsExactly(mock.rome().getId());
     }
 
     @Test
@@ -318,19 +367,17 @@ class ProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @Disabled("API 미구현: 프로필 수정 해시태그 목록(GET /community/me/hashtags)에 노드 수가 없음 — FE ProfileHashtag{tag, count, isPublic} "
-            + "(필드명 nodeCount 는 제안, 비공개 태그도 내 화면에선 개수가 보여야 함) — 구현되면 켠다")
     @DisplayName("프로필 수정의 해시태그 목록에 공개 여부와 함께 노드 수가 온다 (비공개 태그 포함)")
     void myHashtagsHaveCounts() throws Exception {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
-        pin(me, mock.rome()).andExpect(status().isCreated());
         mvc.perform(patch("/community/me/hashtags/{id}/visibility", hashtagId(me, "먹거리")).with(as(me))
                 .with(json(Map.of("isPublic", false)))).andExpect(okEnvelope());
 
         mvc.perform(get("/community/me/hashtags").with(as(me)))
-                .andExpect(jsonPath("$.data[?(@.hashtag == '로마')].nodeCount").value(contains(4)))
-                .andExpect(jsonPath("$.data[?(@.hashtag == '먹거리')].nodeCount").value(contains(4)))
+                // 노드 수는 AI 노드 기준이라 분석 결과가 없는 이 세션들은 0 이다 (값이 있는 경우는 MyProfileScenarioTest)
+                .andExpect(jsonPath("$.data[?(@.hashtag == '로마')].nodeCount").value(contains(0)))
+                .andExpect(jsonPath("$.data[?(@.hashtag == '먹거리')].nodeCount").value(contains(0)))
                 .andExpect(jsonPath("$.data[?(@.hashtag == '먹거리')].isPublic").value(contains(false)));
     }
 }

@@ -121,12 +121,10 @@ class CommunityErrorMessageTest extends CommunityTestSupport {
                 Arguments.of(HttpMethod.PATCH, "/community/me/hashtags/visibility", "{}"),
                 Arguments.of(HttpMethod.PATCH, "/community/me/hashtags/1/visibility", "{}"),
                 Arguments.of(HttpMethod.POST, "/community/me/pinned-sessions", "{}"),
+                Arguments.of(HttpMethod.POST, "/community/me/pinned-sessions", "{\"sessionId\":0}"),
                 Arguments.of(HttpMethod.PATCH, "/community/me/pinned-sessions/order", "{}"),
+                Arguments.of(HttpMethod.PATCH, "/community/me/pinned-sessions/order", "{\"sessionIds\":[0]}"),
                 Arguments.of(HttpMethod.POST, "/community/me/interests", "{}"),
-                Arguments.of(HttpMethod.POST, "/community/me/shared-sessions", "{}"),
-                Arguments.of(HttpMethod.POST, "/community/me/shared-sessions", "{\"sessionId\":0}"),
-                Arguments.of(HttpMethod.PATCH, "/community/me/shared-sessions/order", "{}"),
-                Arguments.of(HttpMethod.PATCH, "/community/me/shared-sessions/order", "{\"sessionIds\":[0]}"),
                 Arguments.of(HttpMethod.PATCH, "/community/me/visibility", "{}"));
     }
 

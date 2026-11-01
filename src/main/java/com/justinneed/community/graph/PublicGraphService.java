@@ -21,6 +21,7 @@ import com.justinneed.global.exception.ErrorCode;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.dto.SessionMindmapResponse;
 import java.util.*;
+import java.util.function.Function;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -78,7 +79,7 @@ public class PublicGraphService {
             var sessionTags = sharing.visibleTags(profile, session.getTags()).stream().map(CommunityTags::key).distinct()
                     .map(tagIndex::get).filter(Objects::nonNull).toList();
             if (hashtagId != null && sessionTags.stream().noneMatch(t -> t.getId().equals(hashtagId))) continue;
-            var part = aiNodes ? aiPart(session, aiMaps.get(session.getId()), indexedNodes)
+            var part = aiNodes ? aiPart(aiMaps.get(session.getId()), aiId -> rowId(session, aiId, indexedNodes))
                     : urlPart(session, profile, indexedNodes);
             leaves.addAll(part.nodes());
             edges.addAll(part.edges());
@@ -107,7 +108,7 @@ public class PublicGraphService {
     }
 
     // 작성자 한 사람의 전체 그래프라 카드 제목이 없다
-    private static String graphTitle(String nickname) {
+    public static String graphTitle(String nickname) {
         return nickname == null ? "전체 마인드맵" : nickname + "님의 전체 마인드맵";
     }
 
@@ -127,16 +128,21 @@ public class PublicGraphService {
         return new GraphPart(parts, List.of(), parts.stream().map(BookmarkSnapshot.Node::nodeId).toList());
     }
 
-    // 세션의 AI 마인드맵. 태그는 부모가 없는 노드(뿌리)에 잇는다
-    private GraphPart aiPart(BrowsingSession session, SessionMindmapResponse mindmap, Map<String, CommunityNode> indexed) {
+    private static Long rowId(BrowsingSession session, String aiId, Map<String, CommunityNode> indexed) {
+        var node = indexed.get(session.getId() + ":" + SelectionKey.of("ai:" + aiId));
+        return node == null ? null : node.getId();
+    }
+
+    /** 세션의 AI 마인드맵. 태그는 부모가 없는 노드(뿌리)에 잇는다. idOf 는 AI 노드 id → 응답 nodeId 이고, null 이면 그 노드를 건너뛴다. */
+    public static GraphPart aiPart(SessionMindmapResponse mindmap, Function<String, Long> idOf) {
         var ids = new LinkedHashMap<String, Long>();
         var parts = new ArrayList<BookmarkSnapshot.Node>();
         for (var aiNode : mindmap.nodes()) {
-            var node = indexed.get(session.getId() + ":" + SelectionKey.of("ai:" + aiNode.id()));
-            if (node == null) continue;
-            ids.put(aiNode.id(), node.getId());
+            var nodeId = idOf.apply(aiNode.id());
+            if (nodeId == null) continue;
+            ids.put(aiNode.id(), nodeId);
             var citation = aiNode.citation();
-            parts.add(new BookmarkSnapshot.Node(node.getId(), aiNode.keyword(), citation == null ? null : citation.url(),
+            parts.add(new BookmarkSnapshot.Node(nodeId, aiNode.keyword(), citation == null ? null : citation.url(),
                     citation == null ? null : citation.excerpt(), NodeVisibility.CONTENT));
         }
         var edges = new ArrayList<BookmarkSnapshot.Edge>();
@@ -160,7 +166,7 @@ public class PublicGraphService {
                 profile.getInterests().stream().filter(t -> !sharing.isHidden(profile, t)).limit(10).toList(),
                 likes.countByProfileId(ownerId), likes.existsByActorIdAndProfileId(viewerId, ownerId),
                 follows.existsByActorIdAndTargetId(viewerId, ownerId), totals.exploringCount(),
-                pins.list(ownerId, -1L));
+                sharing.publicSessionCount(profile), pins.pinned(ownerId, -1L));
     }
 
     public Original original(Long viewerId, Long bookmarkId) {
@@ -196,13 +202,13 @@ public class PublicGraphService {
                 || saved.sessionIds().contains(sessionOf.get(id)) && !matched.contains(sessionOf.get(id))).toList();
     }
 
-    private record GraphPart(List<BookmarkSnapshot.Node> nodes, List<BookmarkSnapshot.Edge> edges, List<Long> entries) { }
+    public record GraphPart(List<BookmarkSnapshot.Node> nodes, List<BookmarkSnapshot.Edge> edges, List<Long> entries) { }
     public record TopTag(Long hashtagId, String name, long nodeCount) { }
     public record Graph(int code, Long mindmapId, Long ownerId, String nickname, String title,
             List<BookmarkSnapshot.Tag> hashtags, List<BookmarkSnapshot.Node> nodes,
             List<BookmarkSnapshot.Edge> edges, List<TopTag> topHashtags) { }
     public record Profile(int code, Long userId, String nickname, String bio, NodeVisibility visibility,
             long totalNodeCount, List<TopTag> topHashtags, List<String> interests, long likeCount, boolean likedByMe,
-            boolean following, long exploringCount, List<SharedSessionView> pinnedSessions) { }
+            boolean following, long exploringCount, long sharedSessionCount, List<SharedSessionView> pinnedSessions) { }
     public record Original(int code, boolean sourceAvailable, Graph mindmap, List<Long> highlightedNodeIds) { }
 }

@@ -109,6 +109,8 @@ public class SessionService {
 
     @Transactional
     public SessionDetailResponse updateSession(Long userId, Long sessionId, SessionUpdateRequest request) {
+        // 비공개로 돌리면 고정 목록도 고치므로 공개 여부를 바꿀 때는 고정(SharedSessionService.pin)과 같이 회원 → 세션 순서로 잠근다
+        CommunityProfile profile = request.isPublic() == null ? null : profiles.lock(userId);
         BrowsingSession session = sessionRepository.lockOwned(sessionId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         if (request.changesContent() && session.getStatus() != SessionStatus.COMPLETED) {
@@ -118,6 +120,10 @@ public class SessionService {
         validateTitle(request.title());
         List<String> tags = HashtagValidator.normalizeAndValidate(request.tags());
         session.update(request.title(), request.editedMarkdown(), request.isPublic(), request.isFavorite(), tags);
+        // 고정은 공개 세션 안에서의 자리라, 다시 공개해도 되살아나지 않게 지운다
+        if (Boolean.FALSE.equals(request.isPublic())) {
+            profile.removePinnedSession(sessionId);
+        }
         if (request.changesContent()) {
             cards.sync(session);
         }

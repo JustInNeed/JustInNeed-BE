@@ -5,15 +5,24 @@ import com.justinneed.community.domain.NodeVisibility;
 import com.justinneed.community.dto.SharedSessionView;
 import com.justinneed.community.repository.CommunitySessionRepository;
 import com.justinneed.session.management.domain.BrowsingSession;
+import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional(readOnly = true)
 public class CommunitySharing {
+    public static final Comparator<BrowsingSession> NEWEST_SESSION_FIRST = Comparator
+            .comparing(CommunitySharing::lastActivityAt, Comparator.reverseOrder())
+            .thenComparing(BrowsingSession::getId, Comparator.reverseOrder());
+
     private final CommunitySessionRepository sessions;
 
     public CommunitySharing(CommunitySessionRepository sessions) {
@@ -25,6 +34,11 @@ public class CommunitySharing {
         return sessions.findPublicSessions(profile.getUserId());
     }
 
+    // visibleSessions 의 개수
+    public long publicSessionCount(CommunityProfile profile) {
+        return sessions.countPublicSessions(profile.getUserId());
+    }
+
     // 세션 id 중 지금 다른 사용자에게 보이는 것. visibleSessions 와 같은 규칙이고,
     // 프로필 화면에서는 CommunityProfiles.read 가 막는 탈퇴 회원의 세션도 여기서 뺀다
     public Set<Long> publicSessionIds(Collection<Long> sessionIds) {
@@ -32,6 +46,16 @@ public class CommunitySharing {
             return Set.of();
         }
         return Set.copyOf(sessions.findPublicIds(sessionIds));
+    }
+
+    // 공개 세션 id 한 페이지: 고정한 세션을 고정 순서대로 앞에, 나머지는 넘긴 순서대로.
+    // 고정은 공개 세션 안에서의 자리라, ids 에 없는 고정(지운 세션 등)은 빠진다
+    public PinnedPage pinnedFirst(CommunityProfile profile, List<Long> ids, Pageable paging) {
+        Set<Long> ordered = new LinkedHashSet<>(profile.getPinnedSessionIds());
+        ordered.retainAll(new HashSet<>(ids));
+        ordered.addAll(ids);
+        List<Long> found = ordered.stream().skip(paging.getOffset()).limit(paging.getPageSize() + 1L).toList();
+        return new PinnedPage(found.stream().limit(paging.getPageSize()).toList(), found.size() > paging.getPageSize());
     }
 
     // 방문자에게 보이는 태그
@@ -46,6 +70,15 @@ public class CommunitySharing {
     public SharedSessionView project(CommunityProfile profile, Long viewerId, BrowsingSession session) {
         boolean owner = profile.getUserId().equals(viewerId);
         return SharedSessionView.from(session, owner ? session.getTags() : visibleTags(profile, session.getTags()),
-                owner || profile.getVisibility() == NodeVisibility.CONTENT);
+                owner || profile.getVisibility() == NodeVisibility.CONTENT,
+                profile.getPinnedSessionIds().contains(session.getId()));
+    }
+
+    // community_cards.last_activity_at 과 같은 값
+    public static LocalDateTime lastActivityAt(BrowsingSession session) {
+        return session.getEndedAt() != null ? session.getEndedAt() : session.getStartedAt();
+    }
+
+    public record PinnedPage(List<Long> ids, boolean hasNext) {
     }
 }

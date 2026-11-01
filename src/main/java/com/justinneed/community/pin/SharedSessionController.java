@@ -2,7 +2,6 @@ package com.justinneed.community.pin;
 
 import com.justinneed.community.dto.SharedSessionView;
 import com.justinneed.global.common.ApiResponse;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import java.util.List;
@@ -18,22 +17,11 @@ public class SharedSessionController {
         this.service = service;
     }
 
-    @PostMapping("/me/shared-sessions")
-    public ApiResponse<SharedSessionView> pin(
-            @AuthenticationPrincipal Long userId, @Valid @RequestBody PinRequest request) {
-        return ApiResponse.ok(service.pin(userId, request.sessionId()));
-    }
-
-    @PatchMapping("/me/shared-sessions/order")
-    public ApiResponse<List<SharedSessionView>> reorder(
-            @AuthenticationPrincipal Long userId, @Valid @RequestBody OrderRequest request) {
-        return ApiResponse.ok(service.reorder(userId, request.sessionIds()));
-    }
-
     @GetMapping("/profiles/{userId}/shared-sessions")
-    public ApiResponse<List<SharedSessionView>> list(
-            @PathVariable Long userId, @AuthenticationPrincipal Long viewerId) {
-        return ApiResponse.ok(service.list(userId, viewerId));
+    public ApiResponse<SharedSessionService.SharedSessions> list(
+            @PathVariable Long userId, @AuthenticationPrincipal Long viewerId,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "12") int size) {
+        return ApiResponse.ok(service.list(userId, viewerId, page, size));
     }
 
     @GetMapping("/profiles/{userId}/shared-sessions/{sessionId}")

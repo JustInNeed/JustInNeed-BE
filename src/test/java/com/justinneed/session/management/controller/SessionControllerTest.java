@@ -8,7 +8,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.justinneed.auth.domain.Member;
+import com.justinneed.auth.domain.SocialProvider;
 import com.justinneed.auth.jwt.JwtTokenProvider;
+import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.domain.SessionStatus;
 import com.justinneed.session.management.domain.Source;
@@ -35,8 +38,7 @@ import tools.jackson.databind.ObjectMapper;
 @ActiveProfiles("test")
 class SessionControllerTest {
 
-    private static final Long USER_ID = 1L;
-    private static final Long OTHER_USER_ID = 2L;
+    private static final Long OTHER_USER_ID = Long.MAX_VALUE;
 
     @Autowired
     private MockMvc mockMvc;
@@ -50,15 +52,21 @@ class SessionControllerTest {
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
+    @Autowired
+    private MemberRepository memberRepository;
+
+    private Long userId;
     private BrowsingSession session;
     private String bearer;
 
     @BeforeEach
     void setUp() {
         sessionRepository.deleteAll();
-        bearer = "Bearer " + jwtTokenProvider.createAccessToken(USER_ID);
+        // 공개 여부를 바꾸면 회원 행을 잠그므로 실제 회원이 있어야 한다
+        userId = memberRepository.save(new Member(SocialProvider.KAKAO, "session-" + System.nanoTime(), null, null)).getId();
+        bearer = "Bearer " + jwtTokenProvider.createAccessToken(userId);
 
-        session = new BrowsingSession(USER_ID, "Spring 조사", LocalDateTime.of(2026, 6, 1, 10, 0));
+        session = new BrowsingSession(userId, "Spring 조사", LocalDateTime.of(2026, 6, 1, 10, 0));
         session.complete(LocalDateTime.of(2026, 6, 1, 10, 30), 3);
         session.update(null, null, false, true, List.of("Spring", "JPA"));
         session.replaceSources(List.of(new Source("Spring Docs", "https://spring.io", "Spring reference")));
@@ -97,10 +105,10 @@ class SessionControllerTest {
     @Test
     @DisplayName("진행 중 세션은 맨 위, 종료 시각 없는 끝난 세션은 맨 뒤 — 이 DB(H2 기본 NULL 정렬)에서도 운영 Postgres 와 같은 순서")
     void getSessionsOrdersInProgressFirstAndMissingEndedAtLast() throws Exception {
-        BrowsingSession analyzing = new BrowsingSession(USER_ID, "분석 중", LocalDateTime.of(2026, 5, 1, 9, 0));
+        BrowsingSession analyzing = new BrowsingSession(userId, "분석 중", LocalDateTime.of(2026, 5, 1, 9, 0));
         ReflectionTestUtils.setField(analyzing, "status", SessionStatus.ANALYZING);
         sessionRepository.save(analyzing);
-        BrowsingSession failedWithoutEnd = new BrowsingSession(USER_ID, "실패", LocalDateTime.of(2026, 6, 2, 9, 0));
+        BrowsingSession failedWithoutEnd = new BrowsingSession(userId, "실패", LocalDateTime.of(2026, 6, 2, 9, 0));
         ReflectionTestUtils.setField(failedWithoutEnd, "status", SessionStatus.FAILED);
         sessionRepository.save(failedWithoutEnd);
 
@@ -113,7 +121,7 @@ class SessionControllerTest {
     @Test
     @DisplayName("GET /sessions/hashtags 는 /sessions/{id} 가 아니라 해시태그 후보로 매칭되고, 대소문자 무시 중복 없이 목록 순서로 준다")
     void getHashtagsReturnsDistinctTagsInListOrder() throws Exception {
-        BrowsingSession newer = new BrowsingSession(USER_ID, "JPA 심화", LocalDateTime.of(2026, 6, 2, 10, 0));
+        BrowsingSession newer = new BrowsingSession(userId, "JPA 심화", LocalDateTime.of(2026, 6, 2, 10, 0));
         newer.complete(LocalDateTime.of(2026, 6, 2, 11, 0), 2);
         newer.update(null, null, false, false, List.of("jpa", "Hibernate"));
         sessionRepository.save(newer);

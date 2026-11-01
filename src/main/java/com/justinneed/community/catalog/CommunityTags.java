@@ -33,8 +33,7 @@ public class CommunityTags {
     public List<CommunityHashtag> owned(Long ownerId) {
         var profile = profiles.read(ownerId);
         Set<String> current = new LinkedHashSet<>();
-        sessions.findByUserIdAndDeletedAtIsNullOrderByEndedAtDescStartedAtDesc(ownerId)
-                .forEach(s -> s.getTags().forEach(t -> current.add(key(t))));
+        sessions.findTagsByUserId(ownerId).forEach(names -> names.forEach(t -> current.add(key(t))));
         profile.getInterests().forEach(t -> current.add(key(t)));
         profile.getHiddenHashtags().forEach(t -> current.add(key(t)));
         var indexed = index(ownerId);

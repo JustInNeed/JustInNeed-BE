@@ -1,6 +1,7 @@
 package com.justinneed.community.repository;
 
 import com.justinneed.community.domain.CommunityProfile;
+import com.justinneed.community.dto.PinCandidateRow;
 import com.justinneed.community.dto.SessionTagsRow;
 import com.justinneed.session.management.domain.BrowsingSession;
 import jakarta.persistence.LockModeType;
@@ -29,11 +30,32 @@ public interface CommunitySessionRepository extends Repository<BrowsingSession, 
             """)
     List<BrowsingSession> findPublicSessions(@Param("userId") Long userId);
 
+    @Query("select count(s) from BrowsingSession s where s.userId = :userId and " + PUBLIC_SESSION)
+    long countPublicSessions(@Param("userId") Long userId);
+
+    // 작성자 본인이 보는 세션: 공개 여부와 상관없이 완료 · 미삭제 전체
+    @EntityGraph(attributePaths = "summary")
+    @Query("""
+            select s from BrowsingSession s
+            where s.userId = :userId and s.deletedAt is null
+            and s.status = com.justinneed.session.management.domain.SessionStatus.COMPLETED
+            order by s.id desc
+            """)
+    List<BrowsingSession> findCompletedSessions(@Param("userId") Long userId);
+
     @Query("""
             select s.id from BrowsingSession s, Member m
             where m.id = s.userId and m.withdrawnAt is null and s.id in :ids and
             """ + PUBLIC_SESSION)
     List<Long> findPublicIds(@Param("ids") Collection<Long> ids);
+
+    // 내 세션 중 지우지 않은 것. 엔티티로 읽으면 세션마다 요약 조회가 한 번씩 더 나가므로 판단에 쓰는 값만 읽는다
+    @Query("""
+            select new com.justinneed.community.dto.PinCandidateRow(s.id, s.status, s.publicSession)
+            from BrowsingSession s
+            where s.userId = :userId and s.deletedAt is null and s.id in :ids
+            """)
+    List<PinCandidateRow> findPinCandidates(@Param("userId") Long userId, @Param("ids") Collection<Long> ids);
 
     // 아래 셋은 CommunityCardBackfill 용
     @Query("""
