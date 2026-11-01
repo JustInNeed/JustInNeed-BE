@@ -9,6 +9,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.justinneed.auth.jwt.JwtTokenProvider;
 import com.justinneed.session.chunk.domain.SessionRawChunk;
 import com.justinneed.session.chunk.repository.SessionRawChunkRepository;
+import com.justinneed.session.collection.repository.SessionCollectionRepository;
+import com.justinneed.session.management.domain.BrowsingSession;
+import com.justinneed.session.management.domain.SessionStatus;
+import com.justinneed.session.management.repository.BrowsingSessionRepository;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -36,7 +40,7 @@ class SessionChunkControllerTest {
     private static final Long USER_ID = 1L;
     private static final Long OTHER_USER_ID = 2L;
     private static final String SESSION = "1731a8f1-668b-4efe-b524-ff9a13913058";
-    private static final String SEG = "4d552ca4-4a1c-4ebc-b314-1108b1eadd45";
+    private static final String CHUNK = "chunk-1";
 
     @Autowired
     private MockMvc mockMvc;
@@ -48,19 +52,26 @@ class SessionChunkControllerTest {
     private SessionRawChunkRepository chunkRepository;
 
     @Autowired
+    private BrowsingSessionRepository sessionRepository;
+
+    @Autowired
+    private SessionCollectionRepository collectionRepository;
+
+    @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
     @BeforeEach
     void setUp() {
         chunkRepository.deleteAll();
+        collectionRepository.deleteAll();
+        sessionRepository.deleteAll();
     }
 
-    private Map<String, Object> chunk(String segId, int n) {
+    private Map<String, Object> chunk(String chunkId) {
         var body = new HashMap<String, Object>();
         body.put("sessionId", SESSION);
-        body.put("segId", segId);
-        body.put("n", n);
-        body.put("payload", Map.of("records", List.of(Map.of("t", 1200, "scrollY", 340))));
+        body.put("chunkId", chunkId);
+        body.put("payload", Map.of("pages", List.of(Map.of("timeline", List.of(Map.of("t", 1200))))));
         return body;
     }
 
@@ -71,144 +82,151 @@ class SessionChunkControllerTest {
                 .content(objectMapper.writeValueAsString(body)));
     }
 
-    private SessionRawChunk stored(Long userId, String segId, int n) {
-        return chunkRepository.findByUserIdAndCollectorSessionIdAndSegIdAndN(userId, SESSION, segId, n).orElseThrow();
+    private SessionRawChunk stored(Long userId, String chunkId) {
+        return chunkRepository.findByUserIdAndCollectorSessionIdAndChunkId(userId, SESSION, chunkId).orElseThrow();
+    }
+
+    private BrowsingSession session(Long userId) {
+        return sessionRepository.findByUserIdAndCollectorSessionId(userId, SESSION).orElseThrow();
     }
 
     @Test
     @DisplayName("처음 받은 청크는 저장하고 201 · duplicate false")
     void firstChunkIsStored() throws Exception {
-        send(USER_ID, chunk(SEG, 1))
+        send(USER_ID, chunk(CHUNK))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.sessionId").value(SESSION))
-                .andExpect(jsonPath("$.data.segId").value(SEG))
-                .andExpect(jsonPath("$.data.n").value(1))
+                .andExpect(jsonPath("$.data.chunkId").value(CHUNK))
                 .andExpect(jsonPath("$.data.duplicate").value(false))
+                .andExpect(jsonPath("$.data.ignored").value(false))
                 .andExpect(jsonPath("$.data.receivedAt").isNotEmpty());
 
-        var saved = stored(USER_ID, SEG, 1);
-        assertThat(saved.isFinalChunk()).isFalse();
-        assertThat(saved.getMaxN()).isNull();
-        assertThat(saved.getPayload()).containsKey("records");
+        assertThat(stored(USER_ID, CHUNK).getPayload()).containsKey("pages");
     }
 
     @Test
     @DisplayName("같은 청크를 다시 보내면 저장하지 않고 200 · duplicate true, 처음 받은 내용 · 시각을 그대로 둔다")
     void resentChunkIsIgnored() throws Exception {
-        send(USER_ID, chunk(SEG, 1)).andExpect(status().isCreated());
-        var first = stored(USER_ID, SEG, 1);
+        send(USER_ID, chunk(CHUNK)).andExpect(status().isCreated());
+        var first = stored(USER_ID, CHUNK);
 
-        var resent = chunk(SEG, 1);
-        resent.put("payload", Map.of("records", List.of()));
+        var resent = chunk(CHUNK);
+        resent.put("payload", Map.of("pages", List.of()));
         send(USER_ID, resent)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.duplicate").value(true))
-                .andExpect(jsonPath("$.data.n").value(1));
+                .andExpect(jsonPath("$.data.chunkId").value(CHUNK));
 
         assertThat(chunkRepository.count()).isEqualTo(1);
-        var kept = stored(USER_ID, SEG, 1);
+        var kept = stored(USER_ID, CHUNK);
         assertThat(kept.getPayload()).isEqualTo(first.getPayload());
         assertThat(kept.getReceivedAt()).isEqualTo(first.getReceivedAt());
     }
 
     @Test
-    @DisplayName("청크 번호나 구간이 다르면 다른 청크로 저장한다")
-    void differentNumberOrSegmentIsNewChunk() throws Exception {
-        send(USER_ID, chunk(SEG, 1)).andExpect(status().isCreated());
-        send(USER_ID, chunk(SEG, 2)).andExpect(status().isCreated());
-        send(USER_ID, chunk("other-seg", 1)).andExpect(status().isCreated());
-        assertThat(chunkRepository.count()).isEqualTo(3);
+    @DisplayName("청크 id 가 다르면 다른 청크로 저장하고, 세션은 하나다")
+    void differentChunkIdIsNewChunk() throws Exception {
+        send(USER_ID, chunk("a")).andExpect(status().isCreated());
+        send(USER_ID, chunk("b")).andExpect(status().isCreated());
+
+        assertThat(chunkRepository.count()).isEqualTo(2);
+        assertThat(sessionRepository.count()).isEqualTo(1);
     }
 
     @Test
-    @DisplayName("다른 회원이 같은 세션 id · 구간 · 번호로 보내도 그 회원의 청크로 따로 저장한다")
+    @DisplayName("다른 회원이 같은 세션 id · 청크 id 로 보내도 그 회원의 세션 · 청크로 따로 저장한다")
     void sameKeyFromAnotherUserIsSeparate() throws Exception {
-        send(USER_ID, chunk(SEG, 1)).andExpect(status().isCreated());
-        send(OTHER_USER_ID, chunk(SEG, 1))
+        send(USER_ID, chunk(CHUNK)).andExpect(status().isCreated());
+        send(OTHER_USER_ID, chunk(CHUNK))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.duplicate").value(false));
+
         assertThat(chunkRepository.count()).isEqualTo(2);
+        assertThat(session(USER_ID).getId()).isNotEqualTo(session(OTHER_USER_ID).getId());
     }
 
     @Test
-    @DisplayName("마지막 청크는 final · maxN · stopReason 을 함께 저장한다")
-    void finalChunkKeepsEndInfo() throws Exception {
-        var last = chunk(SEG, 62);
-        last.put("final", true);
-        last.put("maxN", 62);
-        last.put("stopReason", "user");
-        send(USER_ID, last).andExpect(status().isCreated());
+    @DisplayName("시작 요청 없이 온 청크는 세션을 만들고, 청크의 공통 값이 있으면 그 시작 시각을 쓴다")
+    void firstChunkCreatesSession() throws Exception {
+        var body = chunk(CHUNK);
+        body.put("payload", Map.of("session", Map.of("startedAt", "2026-10-30T16:44:04Z")));
 
-        var saved = stored(USER_ID, SEG, 62);
-        assertThat(saved.isFinalChunk()).isTrue();
-        assertThat(saved.getMaxN()).isEqualTo(62);
-        assertThat(saved.getStopReason()).isEqualTo("user");
-    }
-
-    @Test
-    @DisplayName("final 이 false 로 오면 마지막 청크가 아니다")
-    void explicitNonFinal() throws Exception {
-        var body = chunk(SEG, 3);
-        body.put("final", false);
         send(USER_ID, body).andExpect(status().isCreated());
-        assertThat(stored(USER_ID, SEG, 3).isFinalChunk()).isFalse();
+
+        BrowsingSession session = session(USER_ID);
+        assertThat(session.getStatus()).isEqualTo(SessionStatus.COLLECTING);
+        assertThat(session.getStartedAt()).isEqualTo(LocalDateTime.of(2026, 10, 31, 1, 44, 4));
+        assertThat(session.getTitle()).endsWith("의 1번째 세션");
     }
 
     @Test
-    @DisplayName("마지막 청크인데 maxN 이 없으면 400")
-    void finalWithoutMaxNIsRejected() throws Exception {
-        var body = chunk(SEG, 5);
-        body.put("final", true);
-        send(USER_ID, body)
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.message").value("마지막 청크에는 총 청크 수(maxN)가 필요합니다."));
-        assertThat(chunkRepository.count()).isZero();
+    @DisplayName("청크를 받으면 마지막 청크 시각을 갱신한다")
+    void lastChunkAtIsUpdated() throws Exception {
+        send(USER_ID, chunk(CHUNK)).andExpect(status().isCreated());
+
+        assertThat(collectionRepository.findById(session(USER_ID).getId()).orElseThrow().getLastChunkAt())
+                .isEqualTo(stored(USER_ID, CHUNK).getReceivedAt());
     }
 
     @Test
-    @DisplayName("청크 번호가 maxN 보다 크면 400")
-    void numberOverMaxNIsRejected() throws Exception {
-        var body = chunk(SEG, 63);
-        body.put("final", true);
-        body.put("maxN", 62);
-        send(USER_ID, body)
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("청크 번호(n)는 총 청크 수(maxN)보다 클 수 없습니다."));
+    @DisplayName("지운 세션의 청크는 저장하지 않고 200 · ignored true")
+    void deletedSessionChunkIsDropped() throws Exception {
+        send(USER_ID, chunk("a")).andExpect(status().isCreated());
+        BrowsingSession session = session(USER_ID);
+        session.delete();
+        sessionRepository.save(session);
+
+        send(USER_ID, chunk("b"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.ignored").value(true))
+                .andExpect(jsonPath("$.data.duplicate").value(false));
+
+        assertThat(chunkRepository.count()).isEqualTo(1);
     }
 
     @Test
-    @DisplayName("청크 번호가 1보다 작거나, 세션 id · 구간 id · payload 가 없으면 400")
+    @DisplayName("수집이 끝난 세션의 늦은 청크는 저장하지 않고 200 · ignored true")
+    void lateChunkIsDropped() throws Exception {
+        send(USER_ID, chunk("a")).andExpect(status().isCreated());
+        BrowsingSession session = session(USER_ID);
+        session.markReady();
+        sessionRepository.save(session);
+
+        send(USER_ID, chunk("b"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.ignored").value(true));
+
+        assertThat(chunkRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("세션 id · 청크 id · payload 가 없으면 400")
     void missingOrInvalidFieldsAreRejected() throws Exception {
-        send(USER_ID, chunk(SEG, 0))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("청크 번호(n)는 1 이상이어야 합니다."));
-
-        var noSession = chunk(SEG, 1);
+        var noSession = chunk(CHUNK);
         noSession.remove("sessionId");
         send(USER_ID, noSession)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("세션 id 를 입력해 주세요."));
 
-        var noSeg = chunk(" ", 1);
-        send(USER_ID, noSeg)
+        send(USER_ID, chunk(" "))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("구간 id(segId)를 입력해 주세요."));
+                .andExpect(jsonPath("$.message").value("청크 id 를 입력해 주세요."));
 
-        var noPayload = chunk(SEG, 1);
+        var noPayload = chunk(CHUNK);
         noPayload.remove("payload");
         send(USER_ID, noPayload)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("청크 내용(payload)을 입력해 주세요."));
 
         assertThat(chunkRepository.count()).isZero();
+        assertThat(sessionRepository.count()).isZero();
     }
 
     @Test
     @DisplayName("payload 가 JSON 객체가 아니면 400")
     void nonObjectPayloadIsRejected() throws Exception {
-        var body = chunk(SEG, 1);
+        var body = chunk(CHUNK);
         body.put("payload", List.of(1, 2, 3));
         send(USER_ID, body)
                 .andExpect(status().isBadRequest())
@@ -220,18 +238,17 @@ class SessionChunkControllerTest {
     void requiresAuthentication() throws Exception {
         mockMvc.perform(post("/sessions/chunks")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(chunk(SEG, 1))))
+                        .content(objectMapper.writeValueAsString(chunk(CHUNK))))
                 .andExpect(status().isUnauthorized());
         assertThat(chunkRepository.count()).isZero();
     }
 
     @Test
-    @DisplayName("DB 유니크 키가 (회원, 세션 id, 구간, 번호) 중복을 막는다 — 동시에 같은 청크가 들어와도 하나만 남는다")
+    @DisplayName("DB 유니크 키가 (회원, 세션 id, 청크 id) 중복을 막는다")
     void uniqueKeyRejectsDuplicateRow() {
-        chunkRepository.saveAndFlush(new SessionRawChunk(USER_ID, SESSION, SEG, 1, false, null, null,
-                Map.of("a", 1), LocalDateTime.now()));
-        assertThatThrownBy(() -> chunkRepository.saveAndFlush(new SessionRawChunk(USER_ID, SESSION, SEG, 1, false, null, null,
-                Map.of("b", 2), LocalDateTime.now())))
+        chunkRepository.saveAndFlush(new SessionRawChunk(USER_ID, SESSION, CHUNK, Map.of("a", 1), LocalDateTime.now()));
+        assertThatThrownBy(() -> chunkRepository.saveAndFlush(
+                new SessionRawChunk(USER_ID, SESSION, CHUNK, Map.of("b", 2), LocalDateTime.now())))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 }

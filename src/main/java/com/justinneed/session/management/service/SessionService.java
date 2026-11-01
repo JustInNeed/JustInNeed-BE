@@ -10,6 +10,7 @@ import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
 import com.justinneed.session.analysis.SessionMindmapBuilder;
 import com.justinneed.session.analysis.repository.SessionResultRepository;
+import com.justinneed.session.chunk.repository.SessionRawChunkRepository;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.domain.SessionStatus;
 import com.justinneed.session.management.dto.SessionDetailResponse;
@@ -37,15 +38,18 @@ public class SessionService {
 
     private final BrowsingSessionRepository sessionRepository;
     private final SessionResultRepository resultRepository;
+    private final SessionRawChunkRepository chunkRepository;
     private final CommunitySharing sharing;
     private final CommunityProfiles profiles;
     private final CommunityCardSync cards;
     private final ObjectMapper objectMapper;
 
     public SessionService(BrowsingSessionRepository sessionRepository, SessionResultRepository resultRepository,
-            CommunitySharing sharing, CommunityProfiles profiles, CommunityCardSync cards, ObjectMapper objectMapper) {
+            SessionRawChunkRepository chunkRepository, CommunitySharing sharing, CommunityProfiles profiles,
+            CommunityCardSync cards, ObjectMapper objectMapper) {
         this.sessionRepository = sessionRepository;
         this.resultRepository = resultRepository;
+        this.chunkRepository = chunkRepository;
         this.sharing = sharing;
         this.profiles = profiles;
         this.cards = cards;
@@ -137,6 +141,10 @@ public class SessionService {
         BrowsingSession session = sessionRepository.lockOwned(sessionId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         session.delete();
+        // 합치기 · 청크 수신은 세션 행을 잠그고 지운 세션을 건너뛰므로, 지운 뒤에 청크가 다시 쌓이지 않는다
+        if (session.getCollectorSessionId() != null) {
+            chunkRepository.deleteBySession(userId, session.getCollectorSessionId());
+        }
         cards.sync(session);
     }
 

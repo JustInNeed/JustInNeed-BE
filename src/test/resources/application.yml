@@ -59,3 +59,6 @@ app:
   ai:
     base-url: http://localhost:18000
     internal-token: test-ai-internal-token
+  # 복구 스케줄러가 테스트 데이터를 건드리지 않게 끈다. 테스트는 CollectionRecoveryService 를 직접 부른다
+  collection:
+    scheduler-enabled: false

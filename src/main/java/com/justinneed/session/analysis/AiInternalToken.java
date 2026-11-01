@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Spring ↔ AI 컨테이너 내부 호출 토큰 (AI_INTERNAL_TOKEN, 양쪽 같은 값).
- * Spring → AI 요청에 실어 보내고, AI → Spring 콜백(/internal/ai/**)에서 확인한다.
+ * Spring → AI 요청에 실어 보내고, AI → Spring 입력 조회 · 콜백(/internal/ai/**)에서 확인한다.
  */
 @Component
 public class AiInternalToken {

@@ -3,6 +3,7 @@ package com.justinneed.session.management.repository;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.domain.SessionStatus;
 import jakarta.persistence.LockModeType;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -92,6 +93,24 @@ public interface BrowsingSessionRepository extends JpaRepository<BrowsingSession
     );
 
     long countByUserIdAndDeletedAtIsNull(Long userId);
+
+    // 수집기 세션 id 로 세션 찾기. 지운 세션도 찾아서 늦게 온 청크가 세션을 다시 만들지 않게 한다
+    Optional<BrowsingSession> findByUserIdAndCollectorSessionId(Long userId, String collectorSessionId);
+
+    // 임시 제목의 번호. 지운 세션도 세어 번호가 겹치지 않게 한다
+    @Query("""
+            select count(session)
+            from BrowsingSession session
+            where session.userId = :userId
+              and session.createdAt >= :from
+              and session.createdAt < :to
+            """)
+    long countCreatedBetween(@Param("userId") Long userId, @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to);
+
+    // 분석 요청이 안 나갔을 수 있는 세션 (복구 스케줄러)
+    @Query("select session.id from BrowsingSession session where session.status = :status and session.deletedAt is null")
+    List<Long> findIdsByStatus(@Param("status") SessionStatus status);
 
     long countByUserIdAndFavoriteTrueAndDeletedAtIsNull(Long userId);
 

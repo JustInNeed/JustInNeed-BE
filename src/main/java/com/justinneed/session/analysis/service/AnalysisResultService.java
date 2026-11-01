@@ -21,6 +21,7 @@ import com.justinneed.session.analysis.dto.AiMindmap;
 import com.justinneed.session.analysis.repository.AiClusterModelRepository;
 import com.justinneed.session.analysis.repository.SessionRawPayloadRepository;
 import com.justinneed.session.analysis.repository.SessionResultRepository;
+import com.justinneed.session.chunk.repository.SessionRawChunkRepository;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.domain.SessionStatus;
 import com.justinneed.session.management.domain.Source;
@@ -51,11 +52,13 @@ import org.springframework.transaction.annotation.Transactional;
  * mindmap  → sessions.tags (최대 5개)
  * selected → sessions.sources (링크당 1개, 방문 시각은 원본 기준, 병합된 유닛의 링크 포함)
  * 원본     → sessions.page_count (방문 링크 수), markAnalyzed (21일 뒤 삭제)
+ * 청크     → 합친 원본이 있으니 삭제
  * </pre>
  *
  * AI 콜백(/internal/ai/sessions/{id}/result)으로 받으며, 세션이 ANALYZING 일 때만 저장한다. 지운 세션은 저장하지 않는다.
  * LLM 이 실패해 마인드맵 · 줄글이 없거나 대체 구조면 아무것도 저장하지 않고 세션을 FAILED 로 바꾼 뒤 예외를 던진다.
  * (실패 상태를 남겨야 하므로 CustomException 은 롤백하지 않는다. 검사는 모두 저장 전에 한다.)
+ * FAILED 로 바꿀 때는 실패 시각 · 보관 기한이 남도록 AnalysisFailures 를 거친다.
  */
 @Service
 public class AnalysisResultService {
@@ -66,24 +69,30 @@ public class AnalysisResultService {
     private final BrowsingSessionRepository sessionRepository;
     private final SessionResultRepository resultRepository;
     private final SessionRawPayloadRepository rawPayloadRepository;
+    private final SessionRawChunkRepository chunkRepository;
     private final AiClusterModelRepository clusterModelRepository;
     private final MemberRepository memberRepository;
     private final CommunityCardSync cards;
+    private final AnalysisFailures failures;
     private final ObjectMapper objectMapper;
 
     public AnalysisResultService(BrowsingSessionRepository sessionRepository,
             SessionResultRepository resultRepository,
             SessionRawPayloadRepository rawPayloadRepository,
+            SessionRawChunkRepository chunkRepository,
             AiClusterModelRepository clusterModelRepository,
             MemberRepository memberRepository,
             CommunityCardSync cards,
+            AnalysisFailures failures,
             ObjectMapper objectMapper) {
         this.sessionRepository = sessionRepository;
         this.resultRepository = resultRepository;
         this.rawPayloadRepository = rawPayloadRepository;
+        this.chunkRepository = chunkRepository;
         this.clusterModelRepository = clusterModelRepository;
         this.memberRepository = memberRepository;
         this.cards = cards;
+        this.failures = failures;
         this.objectMapper = objectMapper;
     }
 
@@ -94,17 +103,17 @@ public class AnalysisResultService {
         requireInProgress(session);
         // 분석 도중 탈퇴했으면 결과를 저장하지 않는다. 4xx 라 AI 도 재시도하지 않는다
         if (memberRepository.findById(session.getUserId()).map(Member::isWithdrawn).orElse(false)) {
-            session.failAnalysis();
+            failures.fail(session);
             throw new CustomException(ErrorCode.ANALYSIS_MEMBER_WITHDRAWN);
         }
 
         if (isLlmFailed(result)) {
-            session.failAnalysis();
+            failures.fail(session);
             throw new CustomException(ErrorCode.ANALYSIS_LLM_FAILED);
         }
         SessionRawPayload rawPayload = rawPayloadRepository.findById(sessionId).orElse(null);
         if (rawPayload == null) {
-            session.failAnalysis();
+            failures.fail(session);
             throw new CustomException(ErrorCode.RAW_PAYLOAD_NOT_FOUND);
         }
 
@@ -121,16 +130,19 @@ public class AnalysisResultService {
                 toSources(listOrEmpty(result.selected()), linkVisits),
                 linkVisits.linkCount());
         rawPayload.markAnalyzed(LocalDateTime.now());
+        if (session.getCollectorSessionId() != null) {
+            chunkRepository.deleteBySession(session.getUserId(), session.getCollectorSessionId());
+        }
         cards.sync(session);
     }
 
-    // AI 가 분석 중 오류를 알려 오면 FAILED 로 둔다 (원본은 남아 있어 다시 요청할 수 있다)
+    // AI 가 분석 중 오류를 알려 오면 FAILED 로 둔다 (원본은 21일 동안 남아 있어 다시 요청할 수 있다)
     @Transactional
     public void fail(Long sessionId, String reason) {
         BrowsingSession session = sessionRepository.lockById(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         requireInProgress(session);
-        session.failAnalysis();
+        failures.fail(session);
         log.warn("[ai analysis] session {} 분석 실패: {}", sessionId, reason);
     }
 
