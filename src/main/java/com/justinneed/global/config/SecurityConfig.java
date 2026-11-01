@@ -37,16 +37,19 @@ public class SecurityConfig {
             JwtAuthenticationFilter jwtAuthenticationFilter,
             JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
             @Value("${app.oauth.failure-redirect-uri}") String failureRedirectUri,
-            @Value("${app.cors.allowed-origins}") String allowedOrigins
+            @Value("${app.cors.allowed-origins}") String allowedOrigins,
+            @Value("${app.cors.extension-origins}") String extensionOrigins
     ) {
         this.customOAuth2UserService = customOAuth2UserService;
         this.oAuth2SuccessHandler = oAuth2SuccessHandler;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
         this.failureRedirectUri = failureRedirectUri;
-        this.allowedOrigins = Arrays.stream(allowedOrigins.split(","))
+        // FE 출처 + 크롬 확장 출처 (확장 background 의 요청에도 Origin 이 붙는다)
+        this.allowedOrigins = Arrays.stream((allowedOrigins + "," + extensionOrigins).split(","))
                 .map(String::trim)
                 .filter(origin -> !origin.isEmpty())
+                .distinct()
                 .toList();
     }
 
