@@ -14,6 +14,8 @@ import com.justinneed.auth.domain.Member;
 import com.justinneed.session.analysis.client.AiAnalysisClient;
 import com.justinneed.session.analysis.dto.AiAnalyzeRequest;
 import com.justinneed.session.analysis.repository.SessionRawPayloadRepository;
+import com.justinneed.session.chunk.service.ChunkAssembler;
+import com.justinneed.session.chunk.service.ChunkSessionTimeoutScheduler;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.domain.SessionStatus;
 import java.io.InputStream;
@@ -60,6 +62,9 @@ class ChunkSessionScenarioTest extends ScenarioTestSupport {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private ChunkSessionTimeoutScheduler timeouts;
 
     private Member me;
     private List<Map<String, Object>> chunks;
@@ -159,5 +164,55 @@ class ChunkSessionScenarioTest extends ScenarioTestSupport {
         assertThat(session.getStatus()).isEqualTo(SessionStatus.COLLECTING);
         assertThat(rawPayloads.existsById(session.getId())).isFalse();
         verify(aiClient, after(300).never()).requestAnalysis(any());
+    }
+
+    // 받은 시각을 앞당겨 "조용한 지 오래" 를 만든다
+    private void receivedMinutesAgo(int minutes) {
+        jdbc.update("update session_raw_chunks set received_at = ?", LocalDateTime.now().minusMinutes(minutes));
+    }
+
+    @Test
+    @DisplayName("final 없이 1시간 조용하면 그때까지 온 청크로 합쳐 분석하고, 늦게 온 청크는 받아만 둔다")
+    @SuppressWarnings("unchecked")
+    void quietWithoutFinalIsAnalyzed() throws Exception {
+        send(chunk(1)).andExpect(status().isCreated());
+        receivedMinutesAgo(59);
+        assertThat(timeouts.closeQuietSessions(LocalDateTime.now())).isZero();
+        assertThat(collected().getStatus()).isEqualTo(SessionStatus.COLLECTING);
+
+        receivedMinutesAgo(61);
+        assertThat(timeouts.closeQuietSessions(LocalDateTime.now())).isEqualTo(1);
+        var captor = ArgumentCaptor.forClass(AiAnalyzeRequest.class);
+        verify(aiClient, timeout(5000)).requestAnalysis(captor.capture());
+        var records = (List<Map<String, Object>>) ((Map<String, Object>) chunk(1).get("payload")).get("records");
+        JsonNode expected = objectMapper.readTree(objectMapper.writeValueAsString(ChunkAssembler.assemble(records)));
+        assertThat(objectMapper.readTree(objectMapper.writeValueAsString(captor.getValue().session()))).isEqualTo(expected);
+
+        // 늦게 온 마지막 청크: 201 로 받지만 분석은 다시 안 한다
+        send(chunk(2)).andExpect(status().isCreated());
+        verify(aiClient, after(500).times(1)).requestAnalysis(any());
+    }
+
+    @Test
+    @DisplayName("빈 번호가 있는 채로 1시간 조용하면 기존 FAILED 로, AI 요청은 없다")
+    void quietWithGapIsFailed() throws Exception {
+        send(chunk(2)).andExpect(status().isCreated());   // 1번이 없음
+        receivedMinutesAgo(61);
+        assertThat(timeouts.closeQuietSessions(LocalDateTime.now())).isEqualTo(1);
+        var session = collected();
+        assertThat(session.getStatus()).isEqualTo(SessionStatus.FAILED);
+        assertThat(rawPayloads.existsById(session.getId())).isFalse();
+        verify(aiClient, after(300).never()).requestAnalysis(any());
+    }
+
+    @Test
+    @DisplayName("받은 지 21일 지난 청크는 지우고, 그 안의 것은 둔다")
+    void oldChunksArePurged() throws Exception {
+        send(chunk(1)).andExpect(status().isCreated());
+        send(chunk(2)).andExpect(status().isCreated());
+        jdbc.update("update session_raw_chunks set received_at = ? where n = 1", LocalDateTime.now().minusDays(22));
+        jdbc.update("update session_raw_chunks set received_at = ? where n = 2", LocalDateTime.now().minusDays(20));
+        timeouts.purgeOldChunks();
+        assertThat(jdbc.queryForList("select n from session_raw_chunks", Integer.class)).containsExactly(2);
     }
 }
