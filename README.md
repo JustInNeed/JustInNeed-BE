@@ -130,7 +130,7 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 | PATCH | `/sessions/{id}` | 세션 편집. `title`, `editedMarkdown`, `isPublic`, `isFavorite`, `tags` 중 보낸 필드만 수정. 분석이 끝나기 전에는 `isFavorite` 만 바꿀 수 있고 나머지는 409. 소유자가 아니면 404 |
 | POST | `/sessions/{id}/reanalyze` | 실패한 세션 다시 분석. 소유자만(아니면 404), `FAILED` 가 아니면 409, 원본이 없으면 404. `READY` 상태의 세션 상세를 반환하고 AI 요청은 커밋 뒤 비동기로 보낸다 |
 | DELETE | `/sessions/{id}` | 세션 삭제. 실제 삭제가 아니라 soft delete 처리. 어떤 상태에서도 가능 |
-| POST | `/sessions/chunks` | 확장 프로그램이 세션 원본 청크(기록 로그를 30초마다 자른 것)를 보냄. `sessionId`(수집기 세션 id) · `n`(세션 안 묶음 번호, 1부터) · `payload`(`{v, memberId, fromSeq, toSeq, cutAt, records}`), 마지막 청크는 `final` · `maxN` · `stopReason`. 같은 청크 = (회원, `sessionId`, `n`). 처음 받으면 201, 이미 받은 청크면 저장하지 않고 200(`duplicate: true`) |
+| POST | `/sessions/chunks` | 확장 프로그램이 세션 원본 청크(기록 로그를 30초마다 자른 것)를 보냄. `sessionId`(수집기 세션 id) · `n`(세션 안 묶음 번호, 1부터) · `payload`(`{v, memberId, fromSeq, toSeq, cutAt, records}`), 마지막 청크는 `final` · `maxN` · `stopReason`. 같은 청크 = (회원, `sessionId`, `n`). 처음 받으면 201, 이미 받은 청크면 저장하지 않고 200(`duplicate: true`) — 같은 번호인데 내용이 다르면 409. `payload.memberId` 가 없으면 400, 토큰 회원과 다르면 403 |
 | GET | `/tag-groups` | 해시태그 그룹 목록 조회. 그룹별 매칭 세션 포함 (세션 순서는 `GET /sessions` 와 같음, 생성 · 수정 · 순서 변경 응답도 동일) |
 | POST | `/tag-groups` | 새 해시태그 그룹 생성. `hashtags` 는 1개 이상 필수(비었거나 없으면 400). `position` 생략 시 맨 뒤, 지정 시 해당 위치에 끼워 넣음 |
 | PATCH | `/tag-groups/{id}` | 그룹 이름과 해시태그 수정. 보낸 필드만 수정, 이름을 보낼 때 빈 값 · 공백만은 400, `hashtags` 를 빈 배열로 보내면 400 |

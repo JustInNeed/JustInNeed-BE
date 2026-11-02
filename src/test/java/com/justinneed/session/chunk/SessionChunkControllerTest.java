@@ -62,7 +62,15 @@ class SessionChunkControllerTest {
         return body;
     }
 
+    // payload.memberId 가 없으면 보내는 회원 id 를 넣는다 (확장은 늘 넣는다). 일부러 빼거나 다르게 할 때는 테스트가 직접 넣는다
+    @SuppressWarnings("unchecked")
     private ResultActions send(Long userId, Map<String, Object> body) throws Exception {
+        if (body.get("payload") instanceof Map<?, ?> p && !p.containsKey("memberId") && !body.containsKey("noMember")) {
+            var withMember = new HashMap<String, Object>((Map<String, Object>) p);
+            withMember.put("memberId", userId);
+            body.put("payload", withMember);
+        }
+        body.remove("noMember");
         return mockMvc.perform(post("/sessions/chunks")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + jwtTokenProvider.createAccessToken(userId))
                 .contentType(MediaType.APPLICATION_JSON)
@@ -91,22 +99,62 @@ class SessionChunkControllerTest {
     }
 
     @Test
-    @DisplayName("같은 청크를 다시 보내면 저장하지 않고 200 · duplicate true, 처음 받은 내용 · 시각을 그대로 둔다")
+    @DisplayName("같은 청크를 같은 내용으로 다시 보내면 저장하지 않고 200 · duplicate true, 처음 받은 시각을 그대로 둔다")
     void resentChunkIsIgnored() throws Exception {
         send(USER_ID, chunk(SESSION, 1)).andExpect(status().isCreated());
         var first = stored(USER_ID, 1);
 
-        var resent = chunk(SESSION, 1);
-        resent.put("payload", Map.of("records", List.of()));
-        send(USER_ID, resent)
+        send(USER_ID, chunk(SESSION, 1))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.duplicate").value(true))
                 .andExpect(jsonPath("$.data.n").value(1));
 
         assertThat(chunkRepository.count()).isEqualTo(1);
-        var kept = stored(USER_ID, 1);
-        assertThat(kept.getPayload()).isEqualTo(first.getPayload());
-        assertThat(kept.getReceivedAt()).isEqualTo(first.getReceivedAt());
+        assertThat(stored(USER_ID, 1).getReceivedAt()).isEqualTo(first.getReceivedAt());
+    }
+
+    @Test
+    @DisplayName("같은 번호인데 내용이 다르면 409, 처음 받은 내용을 그대로 둔다 — 확장이 지우지 않게")
+    void sameNumberDifferentContentIsConflict() throws Exception {
+        send(USER_ID, chunk(SESSION, 1)).andExpect(status().isCreated());
+        var first = stored(USER_ID, 1);
+
+        var changed = chunk(SESSION, 1);
+        changed.put("payload", Map.of("records", List.of(Map.of("t", 1200, "scrollY", 340), Map.of("t", 1350))));
+        send(USER_ID, changed)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("같은 번호의 청크가 다른 내용으로 이미 저장돼 있습니다."));
+
+        var nowFinal = chunk(SESSION, 1);
+        nowFinal.put("final", true);
+        nowFinal.put("maxN", 1);
+        nowFinal.put("stopReason", "user");
+        send(USER_ID, nowFinal).andExpect(status().isConflict());
+
+        assertThat(chunkRepository.count()).isEqualTo(1);
+        assertThat(stored(USER_ID, 1).getPayload()).isEqualTo(first.getPayload());
+    }
+
+    @Test
+    @DisplayName("payload.memberId 가 없거나 숫자가 아니면 400, 로그인한 회원과 다르면 403 — 저장하지 않는다")
+    void memberIdMustMatchToken() throws Exception {
+        var none = chunk(SESSION, 1);
+        none.put("noMember", true);
+        send(USER_ID, none)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("청크에 회원 id(payload.memberId)가 없습니다."));
+
+        var text = chunk(SESSION, 1);
+        text.put("payload", Map.of("memberId", "1", "records", List.of()));
+        send(USER_ID, text).andExpect(status().isBadRequest());
+
+        var other = chunk(SESSION, 1);
+        other.put("payload", Map.of("memberId", OTHER_USER_ID, "records", List.of()));
+        send(USER_ID, other)
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("청크의 회원 id(payload.memberId)가 로그인한 회원과 다릅니다."));
+
+        assertThat(chunkRepository.count()).isZero();
     }
 
     @Test
