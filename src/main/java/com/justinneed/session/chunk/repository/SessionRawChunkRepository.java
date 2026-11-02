@@ -16,6 +16,11 @@ public interface SessionRawChunkRepository extends JpaRepository<SessionRawChunk
 
     List<SessionRawChunk> findByUserIdAndCollectorSessionIdOrderByNAsc(Long userId, String collectorSessionId);
 
+    // 번호 · final · maxN 만 (payload 는 읽지 않는다) — 다 왔는지 먼저 가볍게 본다
+    @Query("select chunk.n, chunk.finalChunk, chunk.maxN from SessionRawChunk chunk"
+            + " where chunk.userId = :userId and chunk.collectorSessionId = :collectorSessionId")
+    List<Object[]> findHeads(@Param("userId") Long userId, @Param("collectorSessionId") String collectorSessionId);
+
     // 이 세션 청크를 마지막으로 받은 시각 (청크가 없으면 null)
     @Query("select max(chunk.receivedAt) from SessionRawChunk chunk"
             + " where chunk.userId = :userId and chunk.collectorSessionId = :collectorSessionId")

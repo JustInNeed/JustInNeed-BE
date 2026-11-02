@@ -41,6 +41,11 @@ public interface BrowsingSessionRepository extends JpaRepository<BrowsingSession
     // 확장 청크가 가리키는 세션 (회원 + 수집기 세션 id)
     Optional<BrowsingSession> findByUserIdAndCollectorSessionId(Long userId, String collectorSessionId);
 
+    // 잠그기 전에는 id 만 읽는다 — 엔티티를 먼저 읽으면 lockById 가 행만 잠그고 낡은 상태를 돌려준다
+    @Query("select session.id from BrowsingSession session"
+            + " where session.userId = :userId and session.collectorSessionId = :collectorSessionId")
+    Optional<Long> findIdByCollector(@Param("userId") Long userId, @Param("collectorSessionId") String collectorSessionId);
+
     // 확장 청크로 만든 세션 중 이 상태인 것 (안 끝난 세션 정리)
     List<BrowsingSession> findByStatusAndCollectorSessionIdIsNotNull(SessionStatus status);
 

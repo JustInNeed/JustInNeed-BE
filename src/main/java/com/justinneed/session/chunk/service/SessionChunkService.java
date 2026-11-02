@@ -38,7 +38,7 @@ public class SessionChunkService {
 
     public ChunkUploadResponse receive(Long userId, ChunkUploadRequest request) {
         var response = store(userId, request);
-        chunkSessionService.advance(userId, request.sessionId());
+        chunkSessionService.advance(userId, request.sessionId(), request.n(), request.payload());
         return response;
     }
 

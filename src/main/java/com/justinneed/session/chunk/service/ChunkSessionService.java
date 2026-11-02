@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -68,21 +69,28 @@ public class ChunkSessionService {
         this.analysisRequestService = analysisRequestService;
     }
 
+    // n · records = 방금 받은 청크 (1번이면 그 안의 시작 기록으로 시작 시각을 맞춘다)
     @Transactional
-    public State advance(Long userId, String collectorSessionId) {
-        var chunks = chunkRepository.findByUserIdAndCollectorSessionIdOrderByNAsc(userId, collectorSessionId);
-        LocalDateTime startedAt = startedAt(chunks);
-        BrowsingSession session = sessionRepository.findByUserIdAndCollectorSessionId(userId, collectorSessionId)
+    public State advance(Long userId, String collectorSessionId, int n, Map<String, Object> payload) {
+        LocalDateTime startedAt = n == 1 ? startedAt(payload) : null;
+        Long id = sessionRepository.findIdByCollector(userId, collectorSessionId)
                 .orElseGet(() -> sessionRepository.saveAndFlush(BrowsingSession.collecting(
-                        userId, collectorSessionId, COLLECTING_TITLE, startedAt != null ? startedAt : LocalDateTime.now())));
-        session = sessionRepository.lockById(session.getId()).orElseThrow();
+                        userId, collectorSessionId, COLLECTING_TITLE, startedAt != null ? startedAt : LocalDateTime.now())).getId());
+        BrowsingSession session = sessionRepository.lockById(id).orElseThrow();
         if (session.isDeleted() || session.getStatus() != SessionStatus.COLLECTING) {
+            log.info("[chunk] 세션 {} (수집기 {}) 는 이미 {} — 늦게 온 청크 n {} 는 받아만 두고 분석에 넣지 않음",
+                    id, collectorSessionId, session.isDeleted() ? "삭제됨" : session.getStatus(), n);
             return null;
         }
         if (startedAt != null && !startedAt.equals(session.getStartedAt())) {
             session.correctStartedAt(startedAt);
         }
 
+        // 다 왔는지는 번호 · final 만으로 먼저 본다 — 청크마다 세션 청크 전부의 payload 를 읽지 않게
+        if (!allArrived(chunkRepository.findHeads(userId, collectorSessionId))) {
+            return State.WAITING;
+        }
+        var chunks = chunkRepository.findByUserIdAndCollectorSessionIdOrderByNAsc(userId, collectorSessionId);
         var result = ChunkCompleteness.check(chunks);
         if (result.state() == State.BROKEN) {
             log.warn("[chunk] 세션 {} (수집기 {}) 청크가 맞지 않아 합치지 않음: {}", session.getId(), collectorSessionId, result.problems());
@@ -139,19 +147,42 @@ public class ChunkSessionService {
         log.info("[chunk] 세션 {} (수집기 {}) 청크 {}개를 합쳐 분석 대기로", session.getId(), session.getCollectorSessionId(), chunks.size());
     }
 
+    // final 이 있고 1..maxN 이 다 있으면 true (자세한 판정 · 모순은 ChunkCompleteness 가 본다)
+    private static boolean allArrived(List<Object[]> heads) {
+        Integer maxN = null;
+        var ns = new HashSet<Integer>();
+        for (Object[] h : heads) {
+            ns.add(((Number) h[0]).intValue());
+            if (Boolean.TRUE.equals(h[1]) && h[2] instanceof Number m) {
+                maxN = m.intValue();
+            }
+        }
+        if (maxN == null) {
+            return false;
+        }
+        for (int i = 1; i <= maxN; i++) {
+            if (!ns.contains(i)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     // 1번 청크 안의 시작 기록(k = start) 시각 → KST
-    private static LocalDateTime startedAt(List<SessionRawChunk> chunks) {
-        return chunks.stream()
-                .filter(c -> c.getN() == 1)
-                .flatMap(c -> records(c).stream())
+    private static LocalDateTime startedAt(Map<String, Object> payload) {
+        return records(payload).stream()
                 .filter(r -> "start".equals(r.get("k")) && r.get("ts") instanceof Number)
                 .findFirst()
                 .map(r -> LocalDateTime.ofInstant(Instant.ofEpochMilli(((Number) r.get("ts")).longValue()), KST))
                 .orElse(null);
     }
 
-    @SuppressWarnings("unchecked")
     private static List<Map<String, Object>> records(SessionRawChunk c) {
-        return c.getPayload().get("records") instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
+        return records(c.getPayload());
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<Map<String, Object>> records(Map<String, Object> payload) {
+        return payload.get("records") instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
     }
 }
