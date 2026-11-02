@@ -22,17 +22,27 @@ import org.springframework.stereotype.Service;
  *   - payload.memberId 가 없으면 400, 토큰의 회원과 다르면 403 — 남의 기록이 이 회원 세션으로 저장되지 않게
  *   - 같은 (회원, 세션 id, n) 이 이미 있는데 내용이 다르면 409 — "이미 받음" 으로 답하면 확장이 지워서
  *     새 내용이 조용히 사라진다. 내용이 같을 때만 200 duplicate
+ * 받은 뒤(처음 · 다시 온 것 모두) ChunkSessionService 가 세션을 만들고, 다 왔으면 합쳐 분석으로 넘긴다.
+ *   그 처리가 실패하면 요청도 실패(500) — 확장이 다시 보내면 이미 받은 청크라도 처리를 다시 돈다.
  */
 @Service
 public class SessionChunkService {
 
     private final SessionRawChunkRepository chunkRepository;
+    private final ChunkSessionService chunkSessionService;
 
-    public SessionChunkService(SessionRawChunkRepository chunkRepository) {
+    public SessionChunkService(SessionRawChunkRepository chunkRepository, ChunkSessionService chunkSessionService) {
         this.chunkRepository = chunkRepository;
+        this.chunkSessionService = chunkSessionService;
     }
 
     public ChunkUploadResponse receive(Long userId, ChunkUploadRequest request) {
+        var response = store(userId, request);
+        chunkSessionService.advance(userId, request.sessionId());
+        return response;
+    }
+
+    private ChunkUploadResponse store(Long userId, ChunkUploadRequest request) {
         checkMember(userId, request.payload());
         var existing = find(userId, request);
         if (existing != null) {

@@ -38,6 +38,9 @@ public interface BrowsingSessionRepository extends JpaRepository<BrowsingSession
 
     List<BrowsingSession> findByUserIdAndDeletedAtIsNullOrderByEndedAtDescStartedAtDesc(Long userId);
 
+    // 확장 청크가 가리키는 세션 (회원 + 수집기 세션 id)
+    Optional<BrowsingSession> findByUserIdAndCollectorSessionId(Long userId, String collectorSessionId);
+
     // 세션 목록 한 페이지. favoriteOnly 면 즐겨찾기만 (REC-10-3)
     default Slice<BrowsingSession> findListPage(Long userId, boolean favoriteOnly, Pageable pageable) {
         return findListPage(userId, favoriteOnly, FINISHED_STATUSES, pageable);
