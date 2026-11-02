@@ -15,15 +15,16 @@ import org.hibernate.type.SqlTypes;
 
 /**
  * 확장 프로그램(수집기)이 보낸 세션 원본 청크 (조립 전).
- * (회원, 수집기 세션 id, 구간 id, 청크 번호) 가 같으면 같은 청크로 보고 처음 받은 것만 남긴다 — 확장은 응답을 못 받으면 다시 보낸다.
+ * (회원, 수집기 세션 id, 청크 번호) 가 같으면 같은 청크로 보고 처음 받은 것만 남긴다 — 확장은 응답을 못 받으면 다시 보낸다.
  * 완료 판정 후 조립해 session_raw_payloads 에 저장하는 것 · 조립 후 삭제 시점은 아직 없음 (TODO).
+ * 옛 seg_id 칸은 ddl-auto 가 지우지 않는다 — 운영 DB 는 직접 ALTER TABLE session_raw_chunks DROP COLUMN seg_id (옛 유니크 키도 같이 지워짐)
  */
 @Entity
 @Table(
         name = "session_raw_chunks",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_session_raw_chunks_key",
-                columnNames = {"user_id", "collector_session_id", "seg_id", "n"}
+                name = "uk_session_raw_chunks_session_n",
+                columnNames = {"user_id", "collector_session_id", "n"}
         ),
         indexes = @Index(name = "idx_session_raw_chunks_session", columnList = "user_id, collector_session_id")
 )
@@ -40,11 +41,7 @@ public class SessionRawChunk {
     @Column(name = "collector_session_id", nullable = false, length = 64)
     private String collectorSessionId;
 
-    // 수집기의 구간 id (한 페이지를 연속으로 본 구간, stepC chunkReport.segId)
-    @Column(name = "seg_id", nullable = false, length = 64)
-    private String segId;
-
-    // 구간 안의 청크 번호 (1부터)
+    // 세션 안의 청크 번호 (1부터, 세션 전체에서 이어진다)
     @Column(name = "n", nullable = false)
     private int n;
 
@@ -68,12 +65,11 @@ public class SessionRawChunk {
     protected SessionRawChunk() {
     }
 
-    public SessionRawChunk(Long userId, String collectorSessionId, String segId, int n,
+    public SessionRawChunk(Long userId, String collectorSessionId, int n,
                            boolean finalChunk, Integer maxN, String stopReason,
                            Map<String, Object> payload, LocalDateTime receivedAt) {
         this.userId = userId;
         this.collectorSessionId = collectorSessionId;
-        this.segId = segId;
         this.n = n;
         this.finalChunk = finalChunk;
         this.maxN = maxN;
@@ -92,10 +88,6 @@ public class SessionRawChunk {
 
     public String getCollectorSessionId() {
         return collectorSessionId;
-    }
-
-    public String getSegId() {
-        return segId;
     }
 
     public int getN() {

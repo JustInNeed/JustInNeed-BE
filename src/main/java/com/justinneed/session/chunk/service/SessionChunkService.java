@@ -28,7 +28,7 @@ public class SessionChunkService {
         }
         try {
             SessionRawChunk saved = chunkRepository.saveAndFlush(new SessionRawChunk(
-                    userId, request.sessionId(), request.segId(), request.n(),
+                    userId, request.sessionId(), request.n(),
                     request.lastChunk(), request.maxN(), request.stopReason(),
                     request.payload(), LocalDateTime.now()));
             return ChunkUploadResponse.of(saved, false);
@@ -42,7 +42,7 @@ public class SessionChunkService {
     }
 
     private SessionRawChunk find(Long userId, ChunkUploadRequest request) {
-        return chunkRepository.findByUserIdAndCollectorSessionIdAndSegIdAndN(
-                userId, request.sessionId(), request.segId(), request.n()).orElse(null);
+        return chunkRepository.findByUserIdAndCollectorSessionIdAndN(
+                userId, request.sessionId(), request.n()).orElse(null);
     }
 }

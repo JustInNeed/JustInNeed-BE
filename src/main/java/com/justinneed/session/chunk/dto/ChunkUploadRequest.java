@@ -9,15 +9,12 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.Map;
 
-// 청크 형식(payload 안에 무엇이 들어가는지)은 확장 담당과 맞춘 뒤 확정. 지금은 JSON 객체를 그대로 저장한다
+// 청크 = 확장이 세션 기록을 30초마다 자른 묶음. n 은 세션 전체에서 1부터 이어지는 묶음 번호
+// payload = { v, memberId, fromSeq, toSeq, cutAt, records } (records 는 확장 기록 로그 줄 그대로, seq 순). 지금은 JSON 객체를 그대로 저장한다
 public record ChunkUploadRequest(
         @NotBlank(message = "세션 id 를 입력해 주세요.")
         @Size(max = 64, message = "세션 id 는 64자 이하여야 합니다.")
         String sessionId,
-
-        @NotBlank(message = "구간 id(segId)를 입력해 주세요.")
-        @Size(max = 64, message = "구간 id(segId)는 64자 이하여야 합니다.")
-        String segId,
 
         @NotNull(message = "청크 번호(n)를 입력해 주세요.")
         @Min(value = 1, message = "청크 번호(n)는 1 이상이어야 합니다.")
