@@ -9,7 +9,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.Map;
 
-// 청크 = 확장이 세션 기록을 30초마다 자른 묶음. n 은 세션 전체에서 1부터 이어지는 묶음 번호
+// 청크 = 확장이 세션 기록 로그를 30초마다 자른 단위. n 은 세션 전체에서 1부터 이어지는 청크 번호
 // payload = { v, memberId, fromSeq, toSeq, cutAt, records } (records 는 확장 기록 로그 줄 그대로, seq 순). 지금은 JSON 객체를 그대로 저장한다
 public record ChunkUploadRequest(
         @NotBlank(message = "세션 id 를 입력해 주세요.")
