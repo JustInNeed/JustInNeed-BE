@@ -20,29 +20,11 @@ public class SessionCollection {
     @Column(name = "session_id")
     private Long sessionId;
 
-    // 시작 요청을 받은 시각. null 이면 청크 · 종료 요청이 먼저 와서 안전장치로 만든 행이다
-    @Column(name = "start_requested_at")
-    private LocalDateTime startRequestedAt;
-
-    // 마지막 청크를 받은 시각 (자동 종료 기준)
+    // 마지막 청크를 받은 시각 (마지막 청크 뒤 1시간 자동 종료 기준)
     @Column(name = "last_chunk_at")
     private LocalDateTime lastChunkAt;
 
-    // 종료 요청을 받은 시각. 서버가 재시작해도 이어서 합치려고 DB 에 남긴다
-    @Column(name = "end_requested_at")
-    private LocalDateTime endRequestedAt;
-
-    // 종료 요청의 endedAt (KST). 자동 종료면 null 이고 합칠 때 마지막 틱 시각을 쓴다
-    @Column(name = "requested_ended_at")
-    private LocalDateTime requestedEndedAt;
-
-    @Column(name = "stop_reason", length = 50)
-    private String stopReason;
-
-    @Column(name = "total_chunks")
-    private Integer totalChunks;
-
-    // 원본 형식 문제로 합치기에 실패한 횟수
+    // 합치기에 실패한 횟수 (원본 형식 오류 등)
     @Column(name = "merge_attempts", nullable = false)
     private int mergeAttempts;
 
@@ -76,37 +58,8 @@ public class SessionCollection {
         this.sessionId = sessionId;
     }
 
-    public void markStartRequested(LocalDateTime requestedAt) {
-        this.startRequestedAt = requestedAt;
-    }
-
     public void chunkReceived(LocalDateTime receivedAt) {
         this.lastChunkAt = receivedAt;
-    }
-
-    // 재전송이면 처음 받은 값을 그대로 둔다
-    public void requestEnd(LocalDateTime endedAt, String stopReason, int totalChunks, LocalDateTime requestedAt) {
-        if (isEndRequested()) {
-            return;
-        }
-        this.requestedEndedAt = endedAt;
-        this.stopReason = stopReason;
-        this.totalChunks = totalChunks;
-        this.endRequestedAt = requestedAt;
-    }
-
-    public boolean isEndRequested() {
-        return endRequestedAt != null;
-    }
-
-    // 종료 요청이 있으면 청크가 다 왔거나 누락 대기가 끝났을 때, 없으면 자동 종료 시간이 지났을 때
-    public boolean isMergeDue(long chunkCount, LocalDateTime sessionStartedAt, Duration missingChunkWait,
-            Duration autoEndAfter, LocalDateTime now) {
-        if (isEndRequested()) {
-            return chunkCount >= totalChunks || !endRequestedAt.plus(missingChunkWait).isAfter(now);
-        }
-        LocalDateTime lastActivity = lastChunkAt != null ? lastChunkAt : sessionStartedAt;
-        return !lastActivity.plus(autoEndAfter).isAfter(now);
     }
 
     public int increaseMergeAttempts() {
@@ -163,28 +116,8 @@ public class SessionCollection {
         return sessionId;
     }
 
-    public LocalDateTime getStartRequestedAt() {
-        return startRequestedAt;
-    }
-
     public LocalDateTime getLastChunkAt() {
         return lastChunkAt;
-    }
-
-    public LocalDateTime getEndRequestedAt() {
-        return endRequestedAt;
-    }
-
-    public LocalDateTime getRequestedEndedAt() {
-        return requestedEndedAt;
-    }
-
-    public String getStopReason() {
-        return stopReason;
-    }
-
-    public Integer getTotalChunks() {
-        return totalChunks;
     }
 
     public int getMergeAttempts() {

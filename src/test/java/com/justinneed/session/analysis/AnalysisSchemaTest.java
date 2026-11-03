@@ -189,11 +189,12 @@ class AnalysisSchemaTest {
         BrowsingSession recent = failedSession("recent", now.minusDays(3));
         BrowsingSession collecting = sessionRepository.save(new BrowsingSession(USER_ID, "수집 중", NOW, "collecting"));
         for (BrowsingSession session : List.of(expired, recent, collecting)) {
-            chunkRepository.save(new SessionRawChunk(USER_ID, session.getCollectorSessionId(), "chunk-1",
-                    Map.of("pages", List.of()), now));
+            chunkRepository.save(new SessionRawChunk(USER_ID, session.getCollectorSessionId(), 1, false, null, null,
+                    Map.of("records", List.of()), now));
         }
         // 같은 수집기 세션 id 라도 다른 회원의 청크는 그대로 둔다
-        chunkRepository.save(new SessionRawChunk(2L, "expired", "chunk-1", Map.of("pages", List.of()), now));
+        chunkRepository.save(new SessionRawChunk(2L, "expired", 1, false, null, null,
+                    Map.of("records", List.of()), now));
         flushAndClear();
 
         cleanupScheduler.purgeExpiredPayloads();

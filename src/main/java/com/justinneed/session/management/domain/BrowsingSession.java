@@ -91,7 +91,7 @@ public class BrowsingSession extends BaseEntity {
         this.collectorSessionId = collectorSessionId;
     }
 
-    // 청크나 종료 요청이 먼저 와서 만든 행이면 시작 요청의 시각으로 고친다
+    // 청크가 순서 없이 와서 시작 기록(1번 청크)이 늦게 오면 그때 시작 시각을 맞춘다
     public void correctStartedAt(LocalDateTime startedAt) {
         this.startedAt = startedAt;
     }

@@ -39,6 +39,14 @@ public interface BrowsingSessionRepository extends JpaRepository<BrowsingSession
 
     List<BrowsingSession> findByUserIdAndDeletedAtIsNullOrderByEndedAtDescStartedAtDesc(Long userId);
 
+    // 잠그기 전에는 id 만 읽는다 — 엔티티를 먼저 읽으면 lockById 가 행만 잠그고 낡은 상태를 돌려준다
+    @Query("select session.id from BrowsingSession session"
+            + " where session.userId = :userId and session.collectorSessionId = :collectorSessionId")
+    Optional<Long> findIdByCollector(@Param("userId") Long userId, @Param("collectorSessionId") String collectorSessionId);
+
+    // 확장 청크로 만든 세션 중 이 상태인 것 (안 끝난 세션 정리)
+    List<BrowsingSession> findByStatusAndCollectorSessionIdIsNotNull(SessionStatus status);
+
     // 세션 목록 한 페이지. favoriteOnly 면 즐겨찾기만 (REC-10-3)
     default Slice<BrowsingSession> findListPage(Long userId, boolean favoriteOnly, Pageable pageable) {
         return findListPage(userId, favoriteOnly, FINISHED_STATUSES, pageable);

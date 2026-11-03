@@ -85,7 +85,7 @@ public class AnalysisRequestService {
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
-    // 합치기가 끝났을 때 호출 (SessionMergeService). 원본은 같은 트랜잭션에서 session_raw_payloads 에 저장한다
+    // 합치기가 끝났을 때 호출 (ChunkSessionService). 원본은 같은 트랜잭션에서 session_raw_payloads 에 저장한다
     @Transactional
     public void finishCollection(Long sessionId) {
         BrowsingSession session = sessionRepository.lockById(sessionId)

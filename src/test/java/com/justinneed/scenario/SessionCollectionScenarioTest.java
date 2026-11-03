@@ -21,18 +21,22 @@ import com.justinneed.session.analysis.client.AiAnalysisClient;
 import com.justinneed.session.analysis.domain.SessionRawPayload;
 import com.justinneed.session.analysis.dto.AiAnalyzeRequest;
 import com.justinneed.session.analysis.repository.SessionRawPayloadRepository;
-import com.justinneed.session.chunk.domain.SessionRawChunk;
-import com.justinneed.session.chunk.repository.SessionRawChunkRepository;
+import com.justinneed.session.analysis.service.RawPayloadCleanupScheduler;
+import com.justinneed.session.chunk.service.ChunkAssembler;
+import com.justinneed.session.chunk.service.ChunkSessionTimeoutScheduler;
 import com.justinneed.session.collection.domain.SessionCollection;
 import com.justinneed.session.collection.repository.SessionCollectionRepository;
 import com.justinneed.session.collection.service.CollectionRecoveryService;
-import com.justinneed.session.collection.service.SessionMergeService;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.domain.SessionStatus;
+import java.io.InputStream;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -46,29 +50,33 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.ResourceAccessException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JsonNode;
 
 /**
- * 세션 시작 → 청크 → 종료(요청 · 자동) → 합치기 → AI 호출 → GET → 결과 → 청크 삭제.
- * 커밋 뒤 비동기로 도는 합치기 · AI 요청을 봐야 해서 테스트 트랜잭션을 쓰지 않고 DB 를 따로 쓴다 (만든 행은 매번 지운다).
- * 시간이 지나야 하는 처리는 복구 서비스에 시각을 넘겨 돌린다.
+ * 확장 청크 → 세션 → 합치기(다 왔을 때 · 마지막 청크 뒤 1시간) → AI 호출 → GET /input → 결과 → 청크 보관 · 삭제.
+ * 확장은 시작 · 종료 요청을 보내지 않는다. 시작과 끝은 청크로 판단한다.
+ * 커밋 뒤 비동기로 나가는 AI 요청을 봐야 해서 테스트 트랜잭션을 쓰지 않고 DB 를 따로 쓴다 (만든 행은 매번 지운다).
+ * 시간이 지나야 하는 처리는 스케줄러 · 복구 서비스에 시각을 넘겨 돌린다.
+ * 청크 = src/test/resources/chunk-assembly/tricky.chunks.json (2개, 2번이 final · stop 기록 있음). payload.memberId 만 이 테스트 회원으로 바꿔 보낸다.
  */
 @TestPropertySource(properties = "spring.datasource.url=jdbc:h2:mem:session-collection;MODE=PostgreSQL;"
         + "DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000")
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@DisplayName("세션 수집")
+@DisplayName("세션 수집 (확장 청크 → 합치기 → AI)")
 class SessionCollectionScenarioTest extends ScenarioTestSupport {
 
-    private static final String COLLECTOR_ID = "ee30ed8c-5fb3-4cfc-aa4a-107b573409c6";
-    private static final String STARTED_AT = "2026-10-30T16:44:04.406Z";
-    private static final LocalDateTime STARTED_AT_KST = LocalDateTime.of(2026, 10, 31, 1, 44, 4, 406_000_000);
+    private static final String COLLECTOR = "00000000-tric-ky00-0000-000000000001";
+    private static final long START_TS = 1793600000000L;   // tricky 시작 기록의 ts
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
     private static final String RESULT = """
             {"modelSource": "global", "scoreMethod": "C", "state": {"unitFeatures": []},
              "mindmap": {"structureSource": "llm",
@@ -82,9 +90,6 @@ class SessionCollectionScenarioTest extends ScenarioTestSupport {
     private AiAnalysisClient aiClient;
 
     @Autowired
-    private SessionRawChunkRepository chunks;
-
-    @Autowired
     private SessionRawPayloadRepository rawPayloads;
 
     @Autowired
@@ -94,7 +99,10 @@ class SessionCollectionScenarioTest extends ScenarioTestSupport {
     private CollectionRecoveryService recovery;
 
     @Autowired
-    private SessionMergeService merges;
+    private ChunkSessionTimeoutScheduler timeouts;
+
+    @Autowired
+    private RawPayloadCleanupScheduler cleanup;
 
     @Autowired
     private AiInternalToken internalToken;
@@ -103,10 +111,14 @@ class SessionCollectionScenarioTest extends ScenarioTestSupport {
     private JdbcTemplate jdbc;
 
     private Member me;
+    private List<Map<String, Object>> chunks;
 
     @BeforeEach
-    void seed() {
+    void seed() throws Exception {
         me = member("seeker");
+        try (InputStream in = getClass().getResourceAsStream("/chunk-assembly/tricky.chunks.json")) {
+            chunks = objectMapper.readValue(in, new TypeReference<>() { });
+        }
     }
 
     @AfterEach
@@ -117,21 +129,32 @@ class SessionCollectionScenarioTest extends ScenarioTestSupport {
         }
     }
 
-    // ---------- 요청 ----------
+    // ---------- 요청 · 조회 ----------
 
-    private ResultActions start(String collectorSessionId, String startedAt) throws Exception {
-        return mvc.perform(post("/sessions/collector/start").with(as(me))
-                .with(json(Map.of("collectorSessionId", collectorSessionId, "startedAt", startedAt))));
+    // n 번 청크 (memberId 를 회원으로 바꾼다)
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> chunk(int n, Member owner) {
+        var body = new HashMap<>(chunks.get(n - 1));
+        var payload = new HashMap<>((Map<String, Object>) body.get("payload"));
+        payload.put("memberId", owner.getId());
+        body.put("payload", payload);
+        return body;
     }
 
-    private ResultActions end(String endedAt, String stopReason, int totalChunks) throws Exception {
-        return mvc.perform(post("/sessions/collector/{id}/end", COLLECTOR_ID).with(as(me))
-                .with(json(Map.of("endedAt", endedAt, "stopReason", stopReason, "totalChunks", totalChunks))));
+    private Map<String, Object> chunk(int n) {
+        return chunk(n, me);
     }
 
-    private ResultActions chunk(String chunkId, Map<String, Object> payload) throws Exception {
-        return mvc.perform(post("/sessions/chunks").with(as(me))
-                .with(json(Map.of("sessionId", COLLECTOR_ID, "chunkId", chunkId, "payload", payload))));
+    private ResultActions send(Map<String, Object> body) throws Exception {
+        return mvc.perform(post("/sessions/chunks").with(as(me)).with(json(body)));
+    }
+
+    private ResultActions send(int n) throws Exception {
+        return send(chunk(n));
+    }
+
+    private ResultActions input(Long id) throws Exception {
+        return mvc.perform(get("/internal/ai/sessions/{id}/input", id).header(AiInternalToken.HEADER, internalToken.value()));
     }
 
     private ResultActions result(Long id) throws Exception {
@@ -140,24 +163,14 @@ class SessionCollectionScenarioTest extends ScenarioTestSupport {
                 .with(json(RESULT)));
     }
 
-    // 공통 값이 든 첫 청크
-    private static Map<String, Object> firstChunk() {
-        return Map.of("kind", "rbc-session", "bundleVersion", 1,
-                "session", Map.of("sessionId", COLLECTOR_ID, "startedAt", STARTED_AT, "tickMs", 150),
-                "pages", List.of(page(1500)));
-    }
-
-    private static Map<String, Object> laterChunk() {
-        return Map.of("pages", List.of(page(3000)));
-    }
-
-    private static Map<String, Object> page(int t) {
-        return Map.of("meta", Map.of("pageId", "https://a.com"),
-                "timeline", List.of(Map.of("type", "tick", "t", t, "segId", "seg-1")));
+    private ResultActions failure(Long id) throws Exception {
+        return mvc.perform(post("/internal/ai/sessions/{id}/failure", id)
+                .header(AiInternalToken.HEADER, internalToken.value())
+                .with(json(Map.of("reason", "boom"))));
     }
 
     private BrowsingSession row() {
-        return sessions.findByUserIdAndCollectorSessionId(me.getId(), COLLECTOR_ID).orElseThrow();
+        return sessions.findByUserIdAndCollectorSessionId(me.getId(), COLLECTOR).orElseThrow();
     }
 
     private Long sessionId() {
@@ -172,150 +185,65 @@ class SessionCollectionScenarioTest extends ScenarioTestSupport {
         await().atMost(5, TimeUnit.SECONDS).until(() -> row().getStatus() == status);
     }
 
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> mergedSession() {
-        return (Map<String, Object>) rawPayloads.findById(sessionId()).orElseThrow().getPayload().get("session");
+    private JsonNode storedBundle() {
+        return objectMapper.valueToTree(rawPayloads.findById(sessionId()).orElseThrow().getPayload());
     }
 
-    private long storedChunks() {
-        return chunks.countByUserIdAndCollectorSessionId(me.getId(), COLLECTOR_ID);
+    private JsonNode tricky() throws Exception {
+        try (InputStream in = getClass().getResourceAsStream("/chunk-assembly/tricky.bundle.json")) {
+            return objectMapper.readTree(in);
+        }
+    }
+
+    private int storedChunks() {
+        return jdbc.queryForObject("select count(*) from session_raw_chunks", Integer.class);
     }
 
     private static String today() {
-        return LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd"));
+        return LocalDate.now(KST).format(DateTimeFormatter.ofPattern("yyyy.MM.dd"));
     }
 
-    // ---------- 시작 ----------
-
-    @Test
-    @DisplayName("시작하면 수집 중 세션을 만들고 임시 제목을 붙이며 201 로 답한다")
-    void startCreatesCollectingSession() throws Exception {
-        start(COLLECTOR_ID, STARTED_AT)
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.status").value("COLLECTING"))
-                .andExpect(jsonPath("$.data.collectorSessionId").value(COLLECTOR_ID))
-                .andExpect(jsonPath("$.data.created").value(true));
-
-        BrowsingSession session = row();
-        assertThat(session.getStartedAt()).isEqualTo(STARTED_AT_KST);
-        assertThat(session.getTitle()).isEqualTo(today() + "의 1번째 세션");
-    }
-
-    @Test
-    @DisplayName("시작을 다시 보내면 같은 세션을 돌려주고 시작 시각도 바꾸지 않는다")
-    void startIsIdempotent() throws Exception {
-        Long id = readLong(start(COLLECTOR_ID, STARTED_AT).andExpect(status().isCreated()), "$.data.sessionId");
-
-        start(COLLECTOR_ID, "2026-10-30T17:00:00Z")
-                .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.sessionId").value(id))
-                .andExpect(jsonPath("$.data.created").value(false));
-
-        assertThat(sessions.count()).isEqualTo(1);
-        assertThat(row().getStartedAt()).isEqualTo(STARTED_AT_KST);
-    }
-
-    @Test
-    @DisplayName("동시에 시작해도 세션은 하나다")
-    void concurrentStart() throws Exception {
-        ExecutorService pool = Executors.newFixedThreadPool(2);
-        CountDownLatch ready = new CountDownLatch(1);
-        Callable<Integer> request = () -> {
-            ready.await();
-            return start(COLLECTOR_ID, STARTED_AT).andReturn().getResponse().getStatus();
-        };
-
-        try {
-            List<Future<Integer>> responses = new ArrayList<>(List.of(pool.submit(request), pool.submit(request)));
-            ready.countDown();
-            List<Integer> statuses = new ArrayList<>();
-            for (Future<Integer> response : responses) {
-                statuses.add(response.get(20, TimeUnit.SECONDS));
-            }
-            assertThat(statuses).containsExactlyInAnyOrder(200, 201);
-        } finally {
-            pool.shutdownNow();
-        }
-        assertThat(sessions.count()).isEqualTo(1);
-    }
-
-    @Test
-    @DisplayName("임시 제목 번호는 오늘 만든 내 세션을 지운 것까지 세고, 다른 회원은 따로 센다")
-    void titleNumbering() throws Exception {
-        start("first", STARTED_AT).andExpect(status().isCreated());
-        Long second = readLong(start("second", STARTED_AT), "$.data.sessionId");
-        mvc.perform(delete("/sessions/{id}", second).with(as(me))).andExpect(okEnvelope());
-
-        start("third", STARTED_AT)
-                .andExpect(jsonPath("$.data.title").value(today() + "의 3번째 세션"));
-
-        Member other = member("other");
-        mvc.perform(post("/sessions/collector/start").with(as(other))
-                        .with(json(Map.of("collectorSessionId", "first", "startedAt", STARTED_AT))))
-                .andExpect(jsonPath("$.data.title").value(today() + "의 1번째 세션"));
-    }
-
-    @Test
-    @DisplayName("청크가 시작 요청보다 먼저 와서 만든 세션은 늦은 시작 요청의 시각으로 고친다. 그 뒤로는 고치지 않는다")
-    void lateStartCorrectsStartedAt() throws Exception {
-        chunk("a", laterChunk()).andExpect(status().isCreated());
-        assertThat(row().getStartedAt()).isNotEqualTo(STARTED_AT_KST);
-
-        start(COLLECTOR_ID, STARTED_AT).andExpect(okEnvelope()).andExpect(jsonPath("$.data.created").value(false));
-        assertThat(row().getStartedAt()).isEqualTo(STARTED_AT_KST);
-
-        start(COLLECTOR_ID, "2026-10-30T17:00:00Z").andExpect(okEnvelope());
-        assertThat(row().getStartedAt()).isEqualTo(STARTED_AT_KST);
-        assertThat(sessions.count()).isEqualTo(1);
-    }
-
-    @Test
-    @DisplayName("시작 · 종료 요청 형식이 틀리면 400, 로그인하지 않으면 401")
-    void invalidRequests() throws Exception {
-        mvc.perform(post("/sessions/collector/start").with(as(me)).with(json(Map.of("startedAt", STARTED_AT))))
-                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "수집기 세션 id 를 입력해 주세요."));
-        mvc.perform(post("/sessions/collector/start").with(as(me)).with(json(Map.of("collectorSessionId", "a"))))
-                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "시작 시각(startedAt)을 입력해 주세요."));
-        mvc.perform(post("/sessions/collector/{id}/end", COLLECTOR_ID).with(as(me))
-                        .with(json(Map.of("endedAt", STARTED_AT, "stopReason", "user", "totalChunks", -1))))
-                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "총 청크 수(totalChunks)는 0 이상이어야 합니다."));
-        mvc.perform(post("/sessions/collector/{id}/end", "x".repeat(65)).with(as(me))
-                        .with(json(Map.of("endedAt", STARTED_AT, "stopReason", "user", "totalChunks", 1))))
-                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "수집기 세션 id 는 64자 이하여야 합니다."));
-        mvc.perform(post("/sessions/collector/start")
-                        .with(json(Map.of("collectorSessionId", "a", "startedAt", STARTED_AT))))
-                .andExpect(status().isUnauthorized());
-
-        assertThat(sessions.count()).isZero();
-    }
-
-    // ---------- 종료 ----------
-
-    @Test
-    @DisplayName("끝까지: 청크가 총 수만큼 있으면 종료 요청 뒤 바로 합쳐 AI 를 부르고, GET 과 결과를 거쳐 청크를 지운다")
-    void fullFlow() throws Exception {
-        start(COLLECTOR_ID, STARTED_AT).andExpect(status().isCreated());
-        chunk("a", firstChunk()).andExpect(status().isCreated());
-        chunk("b", laterChunk()).andExpect(status().isCreated());
-
-        end("2026-10-30T16:50:00.123Z", "user", 2)
-                .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.sessionId").value(sessionId()));
-
-        verify(aiClient, timeout(5000)).requestAnalysis(new AiAnalyzeRequest(sessionId()));
+    // 다 와서 합쳐지고 AI 를 부를 때까지
+    private void collectAll() throws Exception {
+        send(1).andExpect(status().isCreated());
+        send(2).andExpect(status().isCreated());
+        verify(aiClient, timeout(5000)).requestAnalysis(any());
         awaitStatus(SessionStatus.ANALYZING);
-        assertThat(mergedSession())
-                .containsEntry("endedAt", "2026-10-30T16:50:00.123Z")
-                .containsEntry("stopReason", "user")
-                .containsEntry("focusMs", 300);
-        assertThat(row().getEndedAt()).isEqualTo(LocalDateTime.of(2026, 10, 31, 1, 50, 0, 123_000_000));
-        assertThat(collection().getEndRequestedAt()).isNotNull();
-        assertThat(storedChunks()).isEqualTo(2);
+    }
 
-        mvc.perform(get("/internal/ai/sessions/{id}/input", sessionId())
-                        .header(AiInternalToken.HEADER, internalToken.value()))
-                .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.session.pages[0].timeline.length()").value(2));
+    private LocalDateTime lastChunkAt() {
+        return collection().getLastChunkAt();
+    }
+
+    // ---------- 세션 만들기 · 다 왔을 때 ----------
+
+    @Test
+    @DisplayName("마지막 청크가 먼저 오면 수집 중으로 기다리고, 1번이 오면 시작 시각을 고친 뒤 합쳐 AI 를 부른다")
+    void finalFirstThenComplete() throws Exception {
+        send(2).andExpect(status().isCreated());
+        BrowsingSession waiting = row();
+        assertThat(waiting.getStatus()).isEqualTo(SessionStatus.COLLECTING);
+        assertThat(waiting.getTitle()).isEqualTo(today() + "의 1번째 세션");
+        assertThat(rawPayloads.existsById(waiting.getId())).isFalse();
+        verify(aiClient, after(300).never()).requestAnalysis(any());
+
+        send(1).andExpect(status().isCreated());
+
+        verify(aiClient, timeout(5000)).requestAnalysis(new AiAnalyzeRequest(waiting.getId()));
+        awaitStatus(SessionStatus.ANALYZING);
+        assertThat(row().getStartedAt()).isEqualTo(LocalDateTime.ofInstant(Instant.ofEpochMilli(START_TS), KST));
+        // stop 기록이 있어 채우는 값이 없다 → 확장 assemble() 이 만든 정답과 같다
+        assertThat(storedBundle()).isEqualTo(tricky());
+        MvcResult fetched = input(waiting.getId()).andExpect(okEnvelope()).andReturn();
+        JsonNode sent = objectMapper.readTree(fetched.getResponse().getContentAsString()).path("data").path("session");
+        assertThat(sent).isEqualTo(tricky());
+    }
+
+    @Test
+    @DisplayName("끝까지: 합쳐 AI 를 부르고, GET 과 결과를 거쳐 완료된다. 청크는 마지막 청크 뒤 3일까지 남았다가 지워진다")
+    void fullFlow() throws Exception {
+        collectAll();
+        input(sessionId()).andExpect(okEnvelope());
         assertThat(collection().getInputFetchedAt()).isNotNull();
 
         result(sessionId()).andExpect(okEnvelope());
@@ -323,211 +251,166 @@ class SessionCollectionScenarioTest extends ScenarioTestSupport {
         BrowsingSession session = row();
         assertThat(session.getStatus()).isEqualTo(SessionStatus.COMPLETED);
         assertThat(session.getTitle()).isEqualTo("분석한 제목");
-        assertThat(storedChunks()).isZero();
         assertThat(rawPayloads.findById(session.getId()).orElseThrow().getExpiresAt()).isNotNull();
-    }
+        assertThat(storedChunks()).isEqualTo(2);
 
-    @Test
-    @DisplayName("청크가 적으면 3분을 기다리고, 그 뒤 받은 만큼 합친다")
-    void missingChunksWait() throws Exception {
-        start(COLLECTOR_ID, STARTED_AT).andExpect(status().isCreated());
-        chunk("a", firstChunk()).andExpect(status().isCreated());
-        end("2026-10-30T16:50:00Z", "user", 3).andExpect(okEnvelope());
-        LocalDateTime requestedAt = collection().getEndRequestedAt();
-
-        recovery.run(requestedAt.plusMinutes(2));
-        verify(aiClient, after(300).never()).requestAnalysis(any());
-        assertThat(row().getStatus()).isEqualTo(SessionStatus.COLLECTING);
-
-        recovery.run(requestedAt.plusMinutes(3));
-
-        // 앞당긴 시각을 넘겨서 같은 실행의 재전송까지 나갈 수 있다
-        verify(aiClient, timeout(5000).atLeastOnce()).requestAnalysis(any());
-        awaitStatus(SessionStatus.ANALYZING);
-        assertThat(mergedSession()).containsEntry("focusMs", 150);
-    }
-
-    @Test
-    @DisplayName("기다리는 동안 늦은 청크로 총 수가 차면 바로 합친다")
-    void lateChunkCompletes() throws Exception {
-        chunk("a", firstChunk()).andExpect(status().isCreated());
-        end("2026-10-30T16:50:00Z", "user", 2).andExpect(okEnvelope());
-        assertThat(row().getStatus()).isEqualTo(SessionStatus.COLLECTING);
-
-        chunk("b", laterChunk()).andExpect(status().isCreated());
-
-        verify(aiClient, timeout(5000)).requestAnalysis(any());
-        assertThat(mergedSession()).containsEntry("focusMs", 300);
-    }
-
-    @Test
-    @DisplayName("종료를 다시 보내도 처음 값을 유지하고 AI 호출은 한 번이다")
-    void endIsIdempotent() throws Exception {
-        chunk("a", firstChunk()).andExpect(status().isCreated());
-        end("2026-10-30T16:50:00Z", "user", 2).andExpect(okEnvelope());
-        end("2026-10-30T16:59:00Z", "idle", 1).andExpect(okEnvelope());
-        chunk("b", laterChunk()).andExpect(status().isCreated());
-
-        verify(aiClient, timeout(5000)).requestAnalysis(any());
-        awaitStatus(SessionStatus.ANALYZING);
-        end("2026-10-30T17:00:00Z", "idle", 2).andExpect(okEnvelope());
-
-        verify(aiClient, after(300).times(1)).requestAnalysis(any());
-        assertThat(mergedSession()).containsEntry("endedAt", "2026-10-30T16:50:00Z")
-                .containsEntry("stopReason", "user");
-    }
-
-    @Test
-    @DisplayName("시작도 청크도 없이 종료만 오면 세션을 만들고, 청크 0개라 삭제한다. 늦은 청크는 저장하지 않고 세션도 되살리지 않는다")
-    void endWithoutAnything() throws Exception {
-        end("2026-10-30T16:50:00Z", "user", 0).andExpect(okEnvelope());
-
-        await().atMost(5, TimeUnit.SECONDS).until(() -> row().isDeleted());
-        verify(aiClient, never()).requestAnalysis(any());
-
-        chunk("a", firstChunk())
-                .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.ignored").value(true));
+        LocalDateTime lastChunk = jdbc.queryForObject("select max(received_at) from session_raw_chunks", LocalDateTime.class);
+        assertThat(timeouts.purgeCompletedChunks(lastChunk.plusDays(3).minusMinutes(1))).isZero();
+        assertThat(timeouts.purgeCompletedChunks(lastChunk.plusDays(3).plusMinutes(1))).isEqualTo(2);
         assertThat(storedChunks()).isZero();
-        assertThat(sessions.count()).isEqualTo(1);
-        assertThat(row().isDeleted()).isTrue();
     }
 
     @Test
-    @DisplayName("종료 요청의 총 수만큼 청크가 끝내 안 오고 0개면 3분 뒤 삭제한다")
-    void endWithNoChunkReceived() throws Exception {
-        start(COLLECTOR_ID, STARTED_AT).andExpect(status().isCreated());
-        end("2026-10-30T16:50:00Z", "user", 2).andExpect(okEnvelope());
+    @DisplayName("합친 뒤 같은 청크가 다시 오면 200 이고 AI 요청은 한 번뿐이다. 내용이 다르면 409")
+    @SuppressWarnings("unchecked")
+    void resendAfterComplete() throws Exception {
+        collectAll();
 
-        recovery.run(collection().getEndRequestedAt().plusMinutes(3));
+        send(2).andExpect(status().isOk()).andExpect(jsonPath("$.data.duplicate").value(true));
+        send(1).andExpect(status().isOk());
+        var changed = chunk(1);
+        ((Map<String, Object>) changed.get("payload")).put("cutAt", "다른 값");
+        send(changed).andExpect(status().isConflict());
 
-        assertThat(row().isDeleted()).isTrue();
-        assertThat(rawPayloads.findById(sessionId())).isEmpty();
+        verify(aiClient, after(500).times(1)).requestAnalysis(any());
+        assertThat(sessions.findAll().stream().filter(s -> COLLECTOR.equals(s.getCollectorSessionId()))).hasSize(1);
     }
 
     @Test
-    @DisplayName("합친 뒤 온 종료 요청 · 늦은 청크는 2xx 로 답하고 아무것도 바꾸지 않는다")
-    void afterMerge() throws Exception {
-        chunk("a", firstChunk()).andExpect(status().isCreated());
-        end("2026-10-30T16:50:00Z", "user", 1).andExpect(okEnvelope());
-        verify(aiClient, timeout(5000)).requestAnalysis(any());
-        awaitStatus(SessionStatus.ANALYZING);
-
-        chunk("b", laterChunk()).andExpect(okEnvelope()).andExpect(jsonPath("$.data.ignored").value(true));
-        end("2026-10-30T16:59:00Z", "idle", 2).andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.status").value("ANALYZING"));
-
-        assertThat(storedChunks()).isEqualTo(1);
-        assertThat(collection().getTotalChunks()).isEqualTo(1);
-    }
-
-    // ---------- 자동 종료 ----------
-
-    @Test
-    @DisplayName("종료 요청 없이 마지막 청크 후 30분이 지나면 timeout 으로 합친다. endedAt 은 마지막 틱 시각이다")
-    void autoEnd() throws Exception {
-        start(COLLECTOR_ID, STARTED_AT).andExpect(status().isCreated());
-        chunk("a", firstChunk()).andExpect(status().isCreated());
-        chunk("b", laterChunk()).andExpect(status().isCreated());
-        LocalDateTime lastChunkAt = collection().getLastChunkAt();
-
-        recovery.run(lastChunkAt.plusMinutes(29));
-        assertThat(row().getStatus()).isEqualTo(SessionStatus.COLLECTING);
-
-        recovery.run(lastChunkAt.plusMinutes(30));
-
-        verify(aiClient, timeout(5000).atLeastOnce()).requestAnalysis(any());
-        awaitStatus(SessionStatus.ANALYZING);
-        assertThat(mergedSession())
-                .containsEntry("stopReason", "timeout")
-                .containsEntry("endedAt", "2026-10-30T16:44:07.406Z");
-        assertThat(row().getEndedAt()).isEqualTo(STARTED_AT_KST.plusSeconds(3));
-    }
-
-    @Test
-    @DisplayName("청크가 없으면 시작 시각부터 30분 뒤 자동 종료하고 세션을 삭제한다")
-    void autoEndWithoutChunks() throws Exception {
-        start(COLLECTOR_ID, STARTED_AT).andExpect(status().isCreated());
-
-        recovery.run(STARTED_AT_KST.plusMinutes(29));
-        assertThat(row().isDeleted()).isFalse();
-
-        recovery.run(STARTED_AT_KST.plusMinutes(30));
-
-        assertThat(row().isDeleted()).isTrue();
-        verify(aiClient, never()).requestAnalysis(any());
-    }
-
-    @Test
-    @DisplayName("스케줄러가 고른 뒤 새 청크가 오면 잠금 안에서 다시 판단해 합치지 않는다")
-    void chunkAfterSelection() throws Exception {
-        chunk("a", firstChunk()).andExpect(status().isCreated());
-        LocalDateTime lastChunkAt = collection().getLastChunkAt();
-
-        merges.merge(sessionId(), lastChunkAt.plusMinutes(29));
-
-        assertThat(row().getStatus()).isEqualTo(SessionStatus.COLLECTING);
-    }
-
-    @Test
-    @DisplayName("이 기능 전에 만든 수집 중 세션(진행 기록 없음)은 자동 종료하지 않는다")
-    void legacyCollectingSessionIsLeftAlone() {
-        BrowsingSession legacy = sessionWithStatus(me, "옛 세션", "2026-01-01T09:00:00", null,
-                SessionStatus.COLLECTING, List.of());
-
-        recovery.run(LocalDateTime.now());
-
-        BrowsingSession found = sessions.findById(legacy.getId()).orElseThrow();
-        assertThat(found.getStatus()).isEqualTo(SessionStatus.COLLECTING);
-        assertThat(found.isDeleted()).isFalse();
-    }
-
-    // ---------- 합치기 실패 · 동시 실행 ----------
-
-    @Test
-    @DisplayName("원본 형식이 깨졌으면 롤백하고 3번째에 FAILED 로 바꾼다. 원본은 없고 청크는 남는다")
-    void brokenChunkFailsAfterThreeAttempts() throws Exception {
-        chunk("a", Map.of("pages", "깨진 값")).andExpect(status().isCreated());
-        LocalDateTime due = collection().getLastChunkAt().plusMinutes(30);
-
-        recovery.run(due);
-        recovery.run(due);
-        assertThat(row().getStatus()).isEqualTo(SessionStatus.COLLECTING);
-        assertThat(collection().getMergeAttempts()).isEqualTo(2);
-
-        recovery.run(due);
-
-        assertThat(row().getStatus()).isEqualTo(SessionStatus.FAILED);
-        assertThat(collection().getFailedAt()).isNotNull();
-        assertThat(rawPayloads.findById(sessionId())).isEmpty();
-        assertThat(storedChunks()).isEqualTo(1);
-    }
-
-    @Test
-    @DisplayName("같은 세션을 동시에 합쳐도 한 번만 합치고 AI 호출도 한 번이다")
-    void concurrentMerge() throws Exception {
-        chunk("a", firstChunk()).andExpect(status().isCreated());
-        Long id = sessionId();
-        LocalDateTime due = collection().getLastChunkAt().plusMinutes(30);
+    @DisplayName("같은 세션 첫 청크가 동시에 와도 세션 · 청크는 하나다")
+    void concurrentFirstChunk() throws Exception {
         ExecutorService pool = Executors.newFixedThreadPool(2);
         CountDownLatch ready = new CountDownLatch(1);
-        Callable<Void> merge = () -> {
+        Callable<Integer> post = () -> {
             ready.await();
-            merges.merge(id, due);
-            return null;
+            return send(1).andReturn().getResponse().getStatus();
         };
 
+        List<Integer> codes = new ArrayList<>();
         try {
-            List<Future<Void>> running = new ArrayList<>(List.of(pool.submit(merge), pool.submit(merge)));
+            List<Future<Integer>> running = new ArrayList<>(List.of(pool.submit(post), pool.submit(post)));
             ready.countDown();
-            for (Future<Void> task : running) {
-                task.get(20, TimeUnit.SECONDS);
+            for (Future<Integer> task : running) {
+                codes.add(task.get(20, TimeUnit.SECONDS));
             }
         } finally {
             pool.shutdownNow();
         }
 
+        assertThat(codes).containsExactlyInAnyOrder(201, 200);
+        assertThat(sessions.findAll().stream().filter(s -> COLLECTOR.equals(s.getCollectorSessionId()))).hasSize(1);
+        assertThat(storedChunks()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("임시 제목 번호는 오늘 만든 내 세션을 지운 것까지 세고, 다른 회원은 따로 센다")
+    void titleNumbering() throws Exception {
+        BrowsingSession removed = new BrowsingSession(me.getId(), "지운 세션", LocalDateTime.now());
+        removed.delete();
+        sessions.saveAndFlush(removed);
+        Member other = member("other");
+        mvc.perform(post("/sessions/chunks").with(as(other)).with(json(chunk(1, other)))).andExpect(status().isCreated());
+
+        send(1).andExpect(status().isCreated());
+
+        assertThat(row().getTitle()).isEqualTo(today() + "의 2번째 세션");
+        assertThat(sessions.findByUserIdAndCollectorSessionId(other.getId(), COLLECTOR).orElseThrow().getTitle())
+                .isEqualTo(today() + "의 1번째 세션");
+    }
+
+    @Test
+    @DisplayName("청크가 다 왔어도 seq 가 끊기면 합치지 않고 기다리다가, 1시간 뒤 FAILED 로 바꾸고 실패 기록을 남긴다")
+    @SuppressWarnings("unchecked")
+    void brokenFailsAfterQuiet() throws Exception {
+        var second = chunk(2);
+        var payload = (Map<String, Object>) second.get("payload");
+        var records = (List<Object>) payload.get("records");
+        payload.put("fromSeq", ((Number) payload.get("fromSeq")).intValue() + 1);
+        payload.put("records", records.subList(1, records.size()));
+
+        send(1).andExpect(status().isCreated());
+        send(second).andExpect(status().isCreated());
+        assertThat(row().getStatus()).isEqualTo(SessionStatus.COLLECTING);
+        verify(aiClient, after(300).never()).requestAnalysis(any());
+
+        assertThat(timeouts.closeQuietSessions(lastChunkAt().plusHours(1))).isEqualTo(1);
+
+        assertThat(row().getStatus()).isEqualTo(SessionStatus.FAILED);
+        assertThat(collection().getFailedAt()).isNotNull();
+        assertThat(rawPayloads.existsById(sessionId())).isFalse();
+        assertThat(storedChunks()).isEqualTo(2);
+    }
+
+    // ---------- 마지막 청크 뒤 1시간 ----------
+
+    @Test
+    @DisplayName("final 없이 1시간 조용하면 그때까지 온 청크로 합친다. 끝 시각은 마지막 기록 시각, 종료 사유는 timeout")
+    @SuppressWarnings("unchecked")
+    void quietWithoutFinal() throws Exception {
+        send(1).andExpect(status().isCreated());
+
+        assertThat(timeouts.closeQuietSessions(lastChunkAt().plusMinutes(59))).isZero();
+        assertThat(row().getStatus()).isEqualTo(SessionStatus.COLLECTING);
+
+        assertThat(timeouts.closeQuietSessions(lastChunkAt().plusMinutes(60))).isEqualTo(1);
+
+        verify(aiClient, timeout(5000)).requestAnalysis(any());
+        var records = (List<Map<String, Object>>) ((Map<String, Object>) chunk(1).get("payload")).get("records");
+        JsonNode assembled = objectMapper.valueToTree(ChunkAssembler.assemble(records));
+        JsonNode stored = storedBundle();
+        assertThat(stored.path("pages").size()).isEqualTo(assembled.path("pages").size());
+        assertThat(stored.path("pages").path(0).path("timeline")).isEqualTo(assembled.path("pages").path(0).path("timeline"));
+        // stop 기록이 없어 null 이던 끝 시각을 세션 · 페이지 모두 마지막 기록 시각으로 채운다
+        assertThat(assembled.path("session").path("endedAt").isNull()).isTrue();
+        assertThat(stored.path("session").path("endedAt").asText()).isEqualTo("2026-11-02T06:13:29.000Z");
+        assertThat(stored.path("pages").path(0).path("meta").path("endedAt").asText()).isEqualTo("2026-11-02T06:13:29.000Z");
+        assertThat(stored.path("session").path("stopReason").asText()).isEqualTo("timeout");
+        assertThat(stored.path("session").path("startedAt").asText()).isEqualTo("2026-11-02T06:13:20.000Z");
+    }
+
+    @Test
+    @DisplayName("빈 번호가 있어도 1시간 뒤 받은 만큼 합쳐 분석한다. 시작 기록이 없으면 세션 행의 시작 시각을 쓴다")
+    void quietWithGapIsAnalyzed() throws Exception {
+        send(2).andExpect(status().isCreated());   // 1번이 없음
+        LocalDateTime rowStartedAt = row().getStartedAt();
+
+        assertThat(timeouts.closeQuietSessions(lastChunkAt().plusHours(1))).isEqualTo(1);
+
+        verify(aiClient, timeout(5000)).requestAnalysis(new AiAnalyzeRequest(sessionId()));
+        JsonNode session = storedBundle().path("session");
+        assertThat(session.path("startedAt").asText()).isEqualTo(
+                DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+                        .format(rowStartedAt.atZone(KST).withZoneSameInstant(ZoneId.of("UTC"))));
+        // 2번 청크 안의 stop 기록은 그대로 쓴다
+        assertThat(session.path("stopReason").asText()).isEqualTo("idle");
+        assertThat(session.path("sessionId").asText()).isEqualTo(COLLECTOR);
+    }
+
+    @Test
+    @DisplayName("끝난 뒤 늦게 온 청크는 빈 번호를 채우더라도 저장만 하고 다시 합치거나 분석하지 않는다")
+    void lateChunkIsStoredOnly() throws Exception {
+        send(2).andExpect(status().isCreated());
+        timeouts.closeQuietSessions(lastChunkAt().plusHours(1));
+        verify(aiClient, timeout(5000)).requestAnalysis(any());
+        JsonNode before = storedBundle();
+
+        send(1).andExpect(status().isCreated());
+
         verify(aiClient, after(500).times(1)).requestAnalysis(any());
+        assertThat(storedChunks()).isEqualTo(2);
+        assertThat(storedBundle()).isEqualTo(before);
+        assertThat(row().getStatus()).isNotEqualTo(SessionStatus.COLLECTING);
+    }
+
+    @Test
+    @DisplayName("확장 청크로 만들지 않은 수집 중 세션(수집기 id 없음)은 정리하지 않는다")
+    void legacyCollectingSessionIsLeftAlone() {
+        BrowsingSession legacy = sessionWithStatus(me, "옛 세션", "2026-01-01T09:00:00", null,
+                SessionStatus.COLLECTING, List.of());
+
+        timeouts.closeQuietSessions(LocalDateTime.now().plusDays(1));
+
+        assertThat(sessions.findById(legacy.getId()).orElseThrow().getStatus()).isEqualTo(SessionStatus.COLLECTING);
     }
 
     // ---------- 복구 · 재전송 ----------
@@ -550,10 +433,7 @@ class SessionCollectionScenarioTest extends ScenarioTestSupport {
     @DisplayName("AI 가 응답하지 않으면 복구 스케줄러가 재전송 뒤 FAILED 로 바꾸고 실패 기록을 남긴다")
     void resendFromScheduler() throws Exception {
         doThrow(new ResourceAccessException("connection refused")).when(aiClient).requestAnalysis(any());
-        chunk("a", firstChunk()).andExpect(status().isCreated());
-        end("2026-10-30T16:50:00Z", "user", 1).andExpect(okEnvelope());
-        verify(aiClient, timeout(5000)).requestAnalysis(any());
-        awaitStatus(SessionStatus.ANALYZING);
+        collectAll();
         LocalDateTime requestedAt = collection().getAiRequestedAt();
 
         recovery.run(requestedAt.plusMinutes(1));
@@ -570,13 +450,8 @@ class SessionCollectionScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("GET 뒤 콜백이 오지 않으면 복구 스케줄러가 30분 뒤 FAILED 로 바꾼다")
     void callbackTimeoutFromScheduler() throws Exception {
-        chunk("a", firstChunk()).andExpect(status().isCreated());
-        end("2026-10-30T16:50:00Z", "user", 1).andExpect(okEnvelope());
-        verify(aiClient, timeout(5000)).requestAnalysis(any());
-        awaitStatus(SessionStatus.ANALYZING);
-        mvc.perform(get("/internal/ai/sessions/{id}/input", sessionId())
-                        .header(AiInternalToken.HEADER, internalToken.value()))
-                .andExpect(okEnvelope());
+        collectAll();
+        input(sessionId()).andExpect(okEnvelope());
         LocalDateTime fetchedAt = collection().getInputFetchedAt();
 
         recovery.run(fetchedAt.plusMinutes(29));
@@ -586,54 +461,28 @@ class SessionCollectionScenarioTest extends ScenarioTestSupport {
         assertThat(row().getStatus()).isEqualTo(SessionStatus.FAILED);
     }
 
-    // ---------- 삭제 ----------
+    // ---------- 실패 · 재분석 · 보관 ----------
 
     @Test
-    @DisplayName("수집 중 세션을 지우면 청크도 지우고, 이후 합치기가 돌지 않으며 늦은 청크 · 종료 요청도 무시한다")
-    void deleteWhileCollecting() throws Exception {
-        start(COLLECTOR_ID, STARTED_AT).andExpect(status().isCreated());
-        chunk("a", firstChunk()).andExpect(status().isCreated());
+    @DisplayName("실패한 세션의 청크는 실패 후 21일까지 남고, 그 뒤 지워진다. 분석 성공 세션의 청크는 이 정리에서 지우지 않는다")
+    void failedChunksArePurgedAfter21Days() throws Exception {
+        collectAll();
+        failure(sessionId()).andExpect(okEnvelope());
+        assertThat(row().getStatus()).isEqualTo(SessionStatus.FAILED);
 
-        mvc.perform(delete("/sessions/{id}", sessionId()).with(as(me))).andExpect(okEnvelope());
+        cleanup.purgeExpiredPayloads();
+        assertThat(storedChunks()).isEqualTo(2);
+
+        jdbc.update("update session_collections set failed_at = ?", LocalDateTime.now().minusDays(22));
+        cleanup.purgeExpiredPayloads();
         assertThat(storedChunks()).isZero();
-
-        chunk("b", laterChunk()).andExpect(okEnvelope()).andExpect(jsonPath("$.data.ignored").value(true));
-        end("2026-10-30T16:50:00Z", "user", 1).andExpect(okEnvelope());
-        recovery.run(LocalDateTime.now().plusHours(1));
-
-        verify(aiClient, after(300).never()).requestAnalysis(any());
-        assertThat(rawPayloads.findById(sessionId())).isEmpty();
-        assertThat(storedChunks()).isZero();
-        assertThat(row().getStatus()).isEqualTo(SessionStatus.COLLECTING);
     }
 
     @Test
-    @DisplayName("지운 세션은 복구 스케줄러가 재전송 · 실패 처리하지 않는다")
-    void deletedSessionIsSkippedByRecovery() throws Exception {
-        chunk("a", firstChunk()).andExpect(status().isCreated());
-        end("2026-10-30T16:50:00Z", "user", 1).andExpect(okEnvelope());
-        verify(aiClient, timeout(5000)).requestAnalysis(any());
-        awaitStatus(SessionStatus.ANALYZING);
-        mvc.perform(delete("/sessions/{id}", sessionId()).with(as(me))).andExpect(okEnvelope());
-
-        recovery.run(LocalDateTime.now().plusHours(2));
-
-        verify(aiClient, times(1)).requestAnalysis(any());
-        assertThat(row().getStatus()).isEqualTo(SessionStatus.ANALYZING);
-    }
-
-    @Test
-    @DisplayName("실패한 세션의 청크는 남아 있다가 재분석에 성공하면 지워진다")
-    void chunksStayUntilSuccessAfterReanalysis() throws Exception {
-        chunk("a", firstChunk()).andExpect(status().isCreated());
-        end("2026-10-30T16:50:00Z", "user", 1).andExpect(okEnvelope());
-        verify(aiClient, timeout(5000)).requestAnalysis(any());
-        awaitStatus(SessionStatus.ANALYZING);
-        mvc.perform(post("/internal/ai/sessions/{id}/failure", sessionId())
-                        .header(AiInternalToken.HEADER, internalToken.value())
-                        .with(json(Map.of("reason", "boom"))))
-                .andExpect(okEnvelope());
-        assertThat(storedChunks()).isEqualTo(1);
+    @DisplayName("실패 뒤 재분석에 성공해도 청크는 바로 지우지 않는다")
+    void reanalysisKeepsChunks() throws Exception {
+        collectAll();
+        failure(sessionId()).andExpect(okEnvelope());
         assertThat(rawPayloads.findById(sessionId()).orElseThrow().getExpiresAt()).isNotNull();
 
         mvc.perform(post("/sessions/{id}/reanalyze", sessionId()).with(as(me))).andExpect(okEnvelope());
@@ -643,21 +492,38 @@ class SessionCollectionScenarioTest extends ScenarioTestSupport {
 
         result(sessionId()).andExpect(okEnvelope());
 
+        assertThat(row().getStatus()).isEqualTo(SessionStatus.COMPLETED);
+        assertThat(storedChunks()).isEqualTo(2);
+    }
+
+    // ---------- 삭제 ----------
+
+    @Test
+    @DisplayName("수집 중 세션을 지우면 청크도 지우고, 이후 청크는 저장하지 않고 200(ignored) 으로 답하며 정리도 돌지 않는다")
+    void deleteWhileCollecting() throws Exception {
+        send(1).andExpect(status().isCreated());
+
+        mvc.perform(delete("/sessions/{id}", sessionId()).with(as(me))).andExpect(okEnvelope());
         assertThat(storedChunks()).isZero();
+
+        send(2).andExpect(status().isOk()).andExpect(jsonPath("$.data.ignored").value(true));
+        timeouts.closeQuietSessions(LocalDateTime.now().plusHours(2));
+
+        verify(aiClient, after(300).never()).requestAnalysis(any());
+        assertThat(rawPayloads.existsById(sessionId())).isFalse();
+        assertThat(storedChunks()).isZero();
+        assertThat(sessions.count()).isEqualTo(1);
     }
 
     @Test
-    @DisplayName("시작 · 청크 · 종료는 다른 회원의 세션을 건드리지 않는다")
-    void usersAreSeparate() throws Exception {
-        start(COLLECTOR_ID, STARTED_AT).andExpect(status().isCreated());
-        Member other = member("other");
+    @DisplayName("지운 세션은 복구 스케줄러가 재전송 · 실패 처리하지 않는다")
+    void deletedSessionIsSkippedByRecovery() throws Exception {
+        collectAll();
+        mvc.perform(delete("/sessions/{id}", sessionId()).with(as(me))).andExpect(okEnvelope());
 
-        mvc.perform(post("/sessions/collector/{id}/end", COLLECTOR_ID).with(as(other))
-                        .with(json(Map.of("endedAt", STARTED_AT, "stopReason", "user", "totalChunks", 0))))
-                .andExpect(okEnvelope());
+        recovery.run(LocalDateTime.now().plusHours(2));
 
-        await().atMost(5, TimeUnit.SECONDS).until(() -> sessions
-                .findByUserIdAndCollectorSessionId(other.getId(), COLLECTOR_ID).orElseThrow().isDeleted());
-        assertThat(row().isDeleted()).isFalse();
+        verify(aiClient, times(1)).requestAnalysis(any());
+        assertThat(row().getStatus()).isEqualTo(SessionStatus.ANALYZING);
     }
 }

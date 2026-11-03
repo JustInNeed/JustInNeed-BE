@@ -1,14 +1,15 @@
 -- 세션 수집 · AI 연동 이관 (Postgres). 여러 번 실행해도 안전하다.
--- ddl-auto: update 는 새 컬럼 · 테이블만 만들고, 옛 유니크 제약과 NOT NULL 은 지우지 못한다.
--- 그대로 두면 새 청크 insert 가 seg_id · n · is_final NOT NULL 에 걸려 실패한다.
+-- ddl-auto: update 는 새 컬럼 · 테이블만 만들고, 옛 컬럼 · 유니크 제약 · NOT NULL 은 지우거나 바꾸지 못한다.
+-- 그대로 두면 새 청크 insert 가 옛 seg_id · n NOT NULL 에 걸려 전부 실패한다.
 --
--- 실행 시점: 새 앱을 띄우기 직전. 앱이 먼저 떠서 일부를 만들어 둔 뒤에 실행해도 된다.
--- 옛 청크 행은 지우지 않는다. 옛 형식이라 합치기에는 쓰이지 않고, 세션과 이어지지 않아 정리 대상도 아니다.
+-- 실행 시점: 새 앱을 띄우기 직전. 앱이 먼저 떠서 일부(chunk_id 칸 등)를 만들어 둔 뒤에 실행해도 된다.
+-- 청크 번호: 확장이 보내는 n 을 chunk_id 칸에 저장한다. 옛 n 칸은 chunk_id 로 옮긴다.
+-- 옛 청크 행에 같은 (회원, 세션, 번호) 가 여러 줄 있으면 새 유니크 키를 만들 수 없어 오류로 멈춘다 — 확인 후 정리하고 다시 실행한다.
+
 BEGIN;
 
 -- 1. sessions: 수집기 세션 id
 ALTER TABLE sessions ADD COLUMN IF NOT EXISTS collector_session_id varchar(64);
-
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uk_sessions_user_collector') THEN
@@ -17,24 +18,40 @@ BEGIN
     END IF;
 END $$;
 
--- 2. session_raw_chunks: 중복 판단 키를 (user_id, collector_session_id, chunk_id) 로 변경
-ALTER TABLE session_raw_chunks ADD COLUMN IF NOT EXISTS chunk_id varchar(128);
+-- 2. session_raw_chunks: 청크 번호 칸을 chunk_id 로, 중복 판단 키를 (user_id, collector_session_id, chunk_id) 로
+DO $$
+DECLARE
+    has_n        boolean;
+    has_chunk_id boolean;
+BEGIN
+    SELECT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_schema = current_schema() AND table_name = 'session_raw_chunks' AND column_name = 'n')
+      INTO has_n;
+    SELECT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_schema = current_schema() AND table_name = 'session_raw_chunks' AND column_name = 'chunk_id')
+      INTO has_chunk_id;
+    IF has_n AND NOT has_chunk_id THEN
+        ALTER TABLE session_raw_chunks RENAME COLUMN n TO chunk_id;
+    ELSIF has_n AND has_chunk_id THEN
+        -- 앱이 먼저 떠서 빈 chunk_id 칸을 만든 경우
+        UPDATE session_raw_chunks SET chunk_id = n WHERE chunk_id IS NULL;
+        ALTER TABLE session_raw_chunks DROP COLUMN n;
+    END IF;
+END $$;
+
+-- 옛 유니크 키는 seg_id 와 함께 지워진다. 이름으로도 한 번 더 지운다
+ALTER TABLE session_raw_chunks DROP CONSTRAINT IF EXISTS uk_session_raw_chunks_key;
+ALTER TABLE session_raw_chunks DROP COLUMN IF EXISTS seg_id;
 
 DO $$
 BEGIN
-    -- 옛 컬럼이 있는 DB 에서만. 새로 만든 DB 에는 없다
-    IF EXISTS (SELECT 1 FROM information_schema.columns
-               WHERE table_schema = current_schema() AND table_name = 'session_raw_chunks' AND column_name = 'seg_id') THEN
-        UPDATE session_raw_chunks SET chunk_id = seg_id || ':' || n WHERE chunk_id IS NULL;
-        ALTER TABLE session_raw_chunks DROP CONSTRAINT IF EXISTS uk_session_raw_chunks_key;
-        ALTER TABLE session_raw_chunks ALTER COLUMN seg_id DROP NOT NULL;
-        ALTER TABLE session_raw_chunks ALTER COLUMN n DROP NOT NULL;
-        ALTER TABLE session_raw_chunks ALTER COLUMN is_final DROP NOT NULL;
+    IF EXISTS (SELECT 1 FROM session_raw_chunks
+               GROUP BY user_id, collector_session_id, chunk_id HAVING count(*) > 1) THEN
+        RAISE EXCEPTION '같은 (user_id, collector_session_id, chunk_id) 청크가 여러 줄 있음 — 확인 후 정리하고 다시 실행';
     END IF;
 END $$;
 
 ALTER TABLE session_raw_chunks ALTER COLUMN chunk_id SET NOT NULL;
-
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uk_session_raw_chunks_chunk') THEN
@@ -46,12 +63,7 @@ END $$;
 -- 3. session_collections: 수집 · AI 호출 진행 상태 (세션당 1행)
 CREATE TABLE IF NOT EXISTS session_collections (
     session_id          bigint PRIMARY KEY,
-    start_requested_at  timestamp(6),
     last_chunk_at       timestamp(6),
-    end_requested_at    timestamp(6),
-    requested_ended_at  timestamp(6),
-    stop_reason         varchar(50),
-    total_chunks        integer,
     merge_attempts      integer NOT NULL DEFAULT 0,
     ai_requested_at     timestamp(6),
     ai_last_called_at   timestamp(6),

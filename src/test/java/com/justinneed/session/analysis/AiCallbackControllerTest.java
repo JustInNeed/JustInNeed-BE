@@ -67,8 +67,8 @@ class AiCallbackControllerTest {
         Map<String, Object> raw = objectMapper.readValue(AnalysisResultServiceTest.RAW_JSON, new TypeReference<>() {
         });
         rawRepository.save(new SessionRawPayload(sessionId, 1L, raw, LocalDateTime.of(2026, 10, 30, 10, 30)));
-        chunkRepository.save(new SessionRawChunk(1L, COLLECTOR_ID, "chunk-1", Map.of("pages", List.of()), LocalDateTime.now()));
-        chunkRepository.save(new SessionRawChunk(2L, COLLECTOR_ID, "chunk-1", Map.of("pages", List.of()), LocalDateTime.now()));
+        chunkRepository.save(new SessionRawChunk(1L, COLLECTOR_ID, 1, false, null, null, Map.of("records", List.of()), LocalDateTime.now()));
+        chunkRepository.save(new SessionRawChunk(2L, COLLECTOR_ID, 1, false, null, null, Map.of("records", List.of()), LocalDateTime.now()));
     }
 
     @Test
@@ -83,13 +83,13 @@ class AiCallbackControllerTest {
     }
 
     @Test
-    void 결과를_받으면_저장하고_COMPLETED_가_되며_그_세션의_청크만_지운다() throws Exception {
+    void 결과를_받으면_저장하고_COMPLETED_가_되며_청크는_바로_지우지_않는다() throws Exception {
         mockMvc.perform(result(AnalysisResultServiceTest.RESULT_JSON).header(AiInternalToken.HEADER, TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
 
         assertThat(sessionStatus()).isEqualTo(SessionStatus.COMPLETED);
-        assertThat(chunkRepository.countByUserIdAndCollectorSessionId(1L, COLLECTOR_ID)).isZero();
+        assertThat(chunkRepository.countByUserIdAndCollectorSessionId(1L, COLLECTOR_ID)).isEqualTo(1);
         assertThat(chunkRepository.countByUserIdAndCollectorSessionId(2L, COLLECTOR_ID)).isEqualTo(1);
     }
 

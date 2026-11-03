@@ -32,7 +32,7 @@ class CollectionRecoverySchedulerTest {
     @DisplayName("켜면 등록되고, 설정이 없으면 정한 기본값을 쓴다")
     void registered() {
         assertThat(context.getBeansOfType(CollectionRecoveryScheduler.class)).hasSize(1);
-        assertThat(settings).isEqualTo(new CollectionSettings(Duration.ofMinutes(30), Duration.ofMinutes(3),
+        assertThat(settings).isEqualTo(new CollectionSettings(Duration.ofHours(1), Duration.ofDays(3),
                 Duration.ofMinutes(1), Duration.ofMinutes(2), Duration.ofMinutes(30), Duration.ofMinutes(30), 3));
     }
 }
