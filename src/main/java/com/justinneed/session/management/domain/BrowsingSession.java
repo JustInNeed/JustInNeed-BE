@@ -13,6 +13,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +21,13 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 @Entity
-@Table(name = "sessions")
+@Table(
+        name = "sessions",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_sessions_user_collector",
+                columnNames = {"user_id", "collector_session_id"}
+        )
+)
 public class BrowsingSession extends BaseEntity {
 
     @Id
@@ -29,6 +36,10 @@ public class BrowsingSession extends BaseEntity {
 
     @Column(name = "user_id", nullable = false)
     private Long userId;
+
+    // 수집기가 만든 세션 id (UUID). 세션을 찾고 청크를 합칠 때만 쓴다. 합친 뒤에는 id 로 구분한다
+    @Column(name = "collector_session_id", length = 64)
+    private String collectorSessionId;
 
     @Column(nullable = false, length = 100)
     private String title;
@@ -75,6 +86,16 @@ public class BrowsingSession extends BaseEntity {
         this.startedAt = startedAt;
     }
 
+    public BrowsingSession(Long userId, String title, LocalDateTime startedAt, String collectorSessionId) {
+        this(userId, title, startedAt);
+        this.collectorSessionId = collectorSessionId;
+    }
+
+    // 청크가 순서 없이 와서 시작 기록(1번 청크)이 늦게 오면 그때 시작 시각을 맞춘다
+    public void correctStartedAt(LocalDateTime startedAt) {
+        this.startedAt = startedAt;
+    }
+
     public void complete(LocalDateTime endedAt, int pageCount) {
         this.endedAt = endedAt;
         this.pageCount = pageCount;
@@ -85,7 +106,7 @@ public class BrowsingSession extends BaseEntity {
         this.sources = new ArrayList<>(sources);
     }
 
-    // 확장 수집이 끝나 AI 분석을 기다리는 상태로
+    // 청크를 합쳐 AI 분석을 기다리는 상태로 (재분석도 여기서 다시 시작한다)
     public void markReady() {
         this.status = SessionStatus.READY;
     }
@@ -107,6 +128,7 @@ public class BrowsingSession extends BaseEntity {
         this.status = SessionStatus.COMPLETED;
     }
 
+    // 상태만 바꾼다. 서비스에서는 실패 시각 · 보관 기한도 남도록 AnalysisFailures 를 거친다
     public void failAnalysis() {
         this.status = SessionStatus.FAILED;
     }
@@ -164,6 +186,10 @@ public class BrowsingSession extends BaseEntity {
 
     public Long getUserId() {
         return userId;
+    }
+
+    public String getCollectorSessionId() {
+        return collectorSessionId;
     }
 
     public String getTitle() {

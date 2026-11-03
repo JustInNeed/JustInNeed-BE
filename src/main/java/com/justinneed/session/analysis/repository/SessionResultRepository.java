@@ -12,7 +12,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface SessionResultRepository extends JpaRepository<SessionResult, Long> {
 
-    // AI 가 다음 세션을 분석할 때 이 사용자의 이전 세션 유닛 피처를 모두 읽는다. 지운 세션은 개인화에 쓰지 않는다
+    // AI 가 재학습할 때 이 사용자의 이전 세션 유닛 피처를 모두 읽는다 (GET /history). 지운 세션은 개인화에 쓰지 않는다
     @Query("""
             select result
             from SessionResult result
@@ -21,6 +21,17 @@ public interface SessionResultRepository extends JpaRepository<SessionResult, Lo
                               where session.id = result.sessionId and session.deletedAt is not null)
             """)
     List<SessionResult> findActiveByUserId(@Param("userId") Long userId);
+
+    // 현재 세션을 뺀 이전 세션 수 (AI 의 개인 모델 사용 · 재학습 판단)
+    @Query("""
+            select count(result)
+            from SessionResult result
+            where result.userId = :userId
+              and result.sessionId <> :sessionId
+              and not exists (select 1 from BrowsingSession session
+                              where session.id = result.sessionId and session.deletedAt is not null)
+            """)
+    long countActiveExcluding(@Param("userId") Long userId, @Param("sessionId") Long sessionId);
 
     long countByUserId(Long userId);
 

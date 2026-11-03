@@ -2,6 +2,7 @@ package com.justinneed.session.analysis;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 import com.justinneed.session.analysis.domain.AiClusterModel;
 import com.justinneed.session.analysis.domain.ClusterModelScope;
@@ -10,7 +11,12 @@ import com.justinneed.session.analysis.domain.SessionResult;
 import com.justinneed.session.analysis.repository.AiClusterModelRepository;
 import com.justinneed.session.analysis.repository.SessionRawPayloadRepository;
 import com.justinneed.session.analysis.repository.SessionResultRepository;
+import com.justinneed.session.analysis.service.AnalysisFailures;
 import com.justinneed.session.analysis.service.RawPayloadCleanupScheduler;
+import com.justinneed.session.chunk.domain.SessionRawChunk;
+import com.justinneed.session.chunk.repository.SessionRawChunkRepository;
+import com.justinneed.session.collection.domain.SessionCollection;
+import com.justinneed.session.collection.repository.SessionCollectionRepository;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.repository.BrowsingSessionRepository;
 import com.justinneed.session.summary.domain.Summary;
@@ -50,6 +56,15 @@ class AnalysisSchemaTest {
 
     @Autowired
     private RawPayloadCleanupScheduler cleanupScheduler;
+
+    @Autowired
+    private SessionRawChunkRepository chunkRepository;
+
+    @Autowired
+    private SessionCollectionRepository collectionRepository;
+
+    @Autowired
+    private AnalysisFailures failures;
 
     // AI 출력(pipeline/output.py)과 같은 모양
     private static final Map<String, Object> MINDMAP = Map.of(
@@ -157,6 +172,69 @@ class AnalysisSchemaTest {
     }
 
     @Test
+    void 실패하면_원본은_실패_후_21일_뒤_만료되고_재분석하면_만료를_해제한다() {
+        SessionRawPayload raw = new SessionRawPayload(40L, USER_ID, Map.of("kind", "rbc-session"), NOW);
+
+        raw.markFailed(NOW);
+        assertThat(raw.getExpiresAt()).isEqualTo(NOW.plusDays(21));
+
+        raw.clearExpiry();
+        assertThat(raw.getExpiresAt()).isNull();
+    }
+
+    @Test
+    void 정리_스케줄러는_실패한_지_21일이_지난_세션의_청크만_지운다() {
+        LocalDateTime now = LocalDateTime.now();
+        BrowsingSession expired = failedSession("expired", now.minusDays(22));
+        BrowsingSession recent = failedSession("recent", now.minusDays(3));
+        BrowsingSession collecting = sessionRepository.save(new BrowsingSession(USER_ID, "수집 중", NOW, "collecting"));
+        for (BrowsingSession session : List.of(expired, recent, collecting)) {
+            chunkRepository.save(new SessionRawChunk(USER_ID, session.getCollectorSessionId(), 1, false, null, null,
+                    Map.of("records", List.of()), now));
+        }
+        // 같은 수집기 세션 id 라도 다른 회원의 청크는 그대로 둔다
+        chunkRepository.save(new SessionRawChunk(2L, "expired", 1, false, null, null,
+                    Map.of("records", List.of()), now));
+        flushAndClear();
+
+        cleanupScheduler.purgeExpiredPayloads();
+
+        assertThat(chunkRepository.findAll()).extracting(SessionRawChunk::getCollectorSessionId, SessionRawChunk::getUserId)
+                .containsExactlyInAnyOrder(
+                        tuple("recent", USER_ID),
+                        tuple("collecting", USER_ID),
+                        tuple("expired", 2L));
+    }
+
+    @Test
+    void 실패를_거치면_실패_시각과_원본_만료가_함께_남는다() {
+        BrowsingSession session = sessionRepository.save(new BrowsingSession(USER_ID, "세션", NOW, "fail"));
+        rawRepository.save(new SessionRawPayload(session.getId(), USER_ID, Map.of("kind", "rbc-session"), NOW));
+
+        failures.fail(session);
+        flushAndClear();
+
+        SessionCollection collection = collectionRepository.findById(session.getId()).orElseThrow();
+        assertThat(collection.getFailedAt()).isNotNull();
+        assertThat(rawRepository.findById(session.getId()).orElseThrow().getExpiresAt())
+                .isEqualTo(collection.getFailedAt().plusDays(21));
+    }
+
+    @Test
+    void 같은_사용자의_수집기_세션_id_는_하나만_둘_수_있다() {
+        sessionRepository.save(new BrowsingSession(USER_ID, "세션", NOW, "same"));
+        sessionRepository.save(new BrowsingSession(2L, "다른 회원 세션", NOW, "same"));
+        sessionRepository.save(new BrowsingSession(USER_ID, "수집기 없는 세션", NOW));
+        sessionRepository.save(new BrowsingSession(USER_ID, "수집기 없는 세션", NOW));
+        sessionRepository.flush();
+
+        assertThatThrownBy(() -> {
+            sessionRepository.save(new BrowsingSession(USER_ID, "세션", NOW, "same"));
+            sessionRepository.flush();
+        }).isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
     void 군집_모델은_전체_1개와_사용자별로_저장된다() {
         Map<String, Object> model = Map.of("scope", "global", "centroids", List.of(List.of(0.1, 0.2), List.of(1.0, 2.0)),
                 "levels", List.of(0, 3, 1, 2));
@@ -199,6 +277,16 @@ class AnalysisSchemaTest {
                 .orElseThrow();
         assertThat(found.getSummary().getEssay()).isEqualTo(essay);
         assertThat(found.getSummary().getMarkdown()).startsWith("## 음수량");
+    }
+
+    private BrowsingSession failedSession(String collectorSessionId, LocalDateTime failedAt) {
+        BrowsingSession session = new BrowsingSession(USER_ID, "실패", NOW, collectorSessionId);
+        session.failAnalysis();
+        session = sessionRepository.save(session);
+        SessionCollection collection = new SessionCollection(session.getId());
+        collection.markFailed(failedAt);
+        collectionRepository.save(collection);
+        return session;
     }
 
     private void flushAndClear() {

@@ -8,7 +8,6 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -19,11 +18,11 @@ import com.justinneed.auth.domain.Member;
 import com.justinneed.session.analysis.AiInternalToken;
 import com.justinneed.session.analysis.client.AiAnalysisClient;
 import com.justinneed.session.analysis.domain.SessionRawPayload;
-import com.justinneed.session.analysis.domain.SessionResult;
 import com.justinneed.session.analysis.dto.AiAnalyzeRequest;
 import com.justinneed.session.analysis.repository.SessionRawPayloadRepository;
-import com.justinneed.session.analysis.repository.SessionResultRepository;
 import com.justinneed.session.analysis.service.AnalysisRequestService;
+import com.justinneed.session.collection.domain.SessionCollection;
+import com.justinneed.session.collection.repository.SessionCollectionRepository;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.domain.SessionStatus;
 import java.time.LocalDateTime;
@@ -86,7 +85,7 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
     private SessionRawPayloadRepository rawPayloads;
 
     @Autowired
-    private SessionResultRepository results;
+    private SessionCollectionRepository collections;
 
     @Autowired
     private AiInternalToken internalToken;
@@ -106,7 +105,8 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
 
     @AfterEach
     void cleanUp() {
-        for (String table : List.of("summaries", "session_results", "session_raw_payloads", "sessions", "members")) {
+        for (String table : List.of("summaries", "session_results", "session_raw_payloads", "session_collections",
+                "sessions", "members")) {
             jdbc.update("delete from " + table);
         }
     }
@@ -141,8 +141,37 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
         ArgumentCaptor<AiAnalyzeRequest> request = ArgumentCaptor.forClass(AiAnalyzeRequest.class);
         verify(aiClient, timeout(3000)).requestAnalysis(request.capture());
         assertThat(request.getValue().sessionId()).isEqualTo(id);
-        assertThat(request.getValue().session()).containsEntry("kind", "rbc-session");
-        assertThat(status(id)).isEqualTo(SessionStatus.ANALYZING);
+        await().atMost(3, TimeUnit.SECONDS).until(() -> status(id) == SessionStatus.ANALYZING);
+    }
+
+    @Test
+    @DisplayName("다시 분석하면 원본 만료와 실패 · 호출 기록을 지우고 새로 잰다")
+    void reanalyzeResetsRetention() throws Exception {
+        Long id = session(SessionStatus.FAILED, true);
+        SessionRawPayload raw = rawPayloads.findById(id).orElseThrow();
+        raw.markFailed(LocalDateTime.now());
+        rawPayloads.save(raw);
+        SessionCollection failed = new SessionCollection(id);
+        failed.startAiRequest(LocalDateTime.now().minusHours(1));
+        failed.markResent(LocalDateTime.now().minusHours(1));
+        failed.resendUnanswered();
+        failed.markInputFetched(LocalDateTime.now().minusHours(1));
+        failed.increaseMergeAttempts();
+        failed.markFailed(LocalDateTime.now().minusHours(1));
+        collections.save(failed);
+
+        reanalyze(id, me).andExpect(okEnvelope());
+
+        verify(aiClient, timeout(3000)).requestAnalysis(any());
+        await().atMost(3, TimeUnit.SECONDS).until(() -> status(id) == SessionStatus.ANALYZING);
+        assertThat(rawPayloads.findById(id).orElseThrow().getExpiresAt()).isNull();
+        SessionCollection collection = collections.findById(id).orElseThrow();
+        assertThat(collection.getFailedAt()).isNull();
+        assertThat(collection.getInputFetchedAt()).isNull();
+        assertThat(collection.getAiResendCount()).isZero();
+        assertThat(collection.getAiUnansweredCount()).isZero();
+        assertThat(collection.getMergeAttempts()).isZero();
+        assertThat(collection.getAiRequestedAt()).isAfter(LocalDateTime.now().minusMinutes(1));
     }
 
     @Test
@@ -202,7 +231,7 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("AI 요청이 실패하면 다시 FAILED 로 돌아간다")
+    @DisplayName("AI 요청이 실패해도 ANALYZING 으로 두고 재전송 규칙을 따른다")
     void aiRequestFails() throws Exception {
         doThrow(new ResourceAccessException("connection refused")).when(aiClient).requestAnalysis(any());
         Long id = session(SessionStatus.FAILED, true);
@@ -211,7 +240,7 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
 
         verify(aiClient, timeout(3000)).requestAnalysis(any());
         await().atMost(3, TimeUnit.SECONDS)
-                .until(() -> status(id) == SessionStatus.FAILED);
+                .until(() -> status(id) == SessionStatus.ANALYZING);
     }
 
     @Test
@@ -249,23 +278,6 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
 
         verify(aiClient, never()).requestAnalysis(any());
         assertThat(status(id)).isEqualTo(SessionStatus.READY);
-    }
-
-    @Test
-    @DisplayName("개인화 이력(history)에는 지운 세션의 결과가 들어가지 않는다")
-    void historySkipsDeletedSessions() throws Exception {
-        Long kept = session(SessionStatus.COMPLETED, false);
-        Long removed = session(SessionStatus.COMPLETED, false);
-        result(kept, Map.of("x", 1));
-        result(removed, Map.of("x", 2));
-        mvc.perform(delete("/sessions/{id}", removed).with(as(me))).andExpect(okEnvelope());
-        Long id = session(SessionStatus.READY, true);
-
-        requests.requestAnalysis(id);
-
-        ArgumentCaptor<AiAnalyzeRequest> request = ArgumentCaptor.forClass(AiAnalyzeRequest.class);
-        verify(aiClient, times(1)).requestAnalysis(request.capture());
-        assertThat(request.getValue().history()).extracting(row -> row.get("x")).containsExactly(1);
     }
 
     @Test
@@ -340,21 +352,25 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("즐겨찾기 저장 뒤에 줄 선 AI 요청 실패 처리도 최신 행을 읽어 즐겨찾기를 덮지 않는다")
-    void favouriteThenRequestFailure() throws Exception {
+    @DisplayName("즐겨찾기 저장 뒤에 줄 선 재전송 실패 처리도 최신 행을 읽어 즐겨찾기를 덮지 않는다")
+    void favouriteThenResendFailure() throws Exception {
         Long id = session(SessionStatus.READY, true);
-        CountDownLatch analyzing = new CountDownLatch(1);
+        requests.requestAnalysis(id);
+        LocalDateTime requestedAt = collections.findById(id).orElseThrow().getAiRequestedAt();
+        doThrow(new ResourceAccessException("connection refused")).when(aiClient).requestAnalysis(any());
+        requests.resendIfDue(id, requestedAt.plusMinutes(1));
+        CountDownLatch sending = new CountDownLatch(1);
         CountDownLatch fail = new CountDownLatch(1);
         doAnswer(invocation -> {
-            analyzing.countDown();
+            sending.countDown();
             fail.await(10, TimeUnit.SECONDS);
             throw new ResourceAccessException("connection refused");
         }).when(aiClient).requestAnalysis(any());
         ExecutorService requester = Executors.newSingleThreadExecutor();
 
         try {
-            Future<?> request = requester.submit(() -> requests.requestAnalysis(id));
-            assertThat(analyzing.await(5, TimeUnit.SECONDS)).isTrue();
+            Future<?> request = requester.submit(() -> requests.resendIfDue(id, requestedAt.plusMinutes(3)));
+            assertThat(sending.await(5, TimeUnit.SECONDS)).isTrue();
             favouriteThen(id, () -> {
                 fail.countDown();
                 request.get(20, TimeUnit.SECONDS);
@@ -396,11 +412,5 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
         } catch (InterruptedException e) {
             throw new IllegalStateException(e);
         }
-    }
-
-    private void result(Long sessionId, Map<String, Object> feature) {
-        SessionResult result = new SessionResult(sessionId, me.getId());
-        result.replace(null, List.of(), List.of(), Map.of(), List.of(), List.of(feature), "global", "C");
-        results.save(result);
     }
 }

@@ -35,3 +35,5 @@ app:
   ai:
     base-url: http://localhost:18000
     internal-token: test-ai-internal-token
+  collection:
+    scheduler-enabled: false

@@ -276,7 +276,8 @@ class AnalysisResultServiceTest {
         assertThat(session.getTitle()).isEqualTo("분석 전 제목");
         assertThat(session.getSummary()).isNull();
         assertThat(resultRepository.findById(sessionId)).isEmpty();
-        assertThat(rawRepository.findById(sessionId).orElseThrow().getExpiresAt()).isNull();
+        // 실패해도 원본은 21일 동안 남아 재분석할 수 있다
+        assertThat(rawRepository.findById(sessionId).orElseThrow().getExpiresAt()).isNotNull();
     }
 
     private AiAnalysisResult result(String json) {

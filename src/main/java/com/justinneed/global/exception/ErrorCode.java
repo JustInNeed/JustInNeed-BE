@@ -11,6 +11,9 @@ public enum ErrorCode {
     SESSION_FORBIDDEN(HttpStatus.FORBIDDEN, "비공개 세션이라 볼 수 없어요."),
     SESSION_NOT_COMPLETED(HttpStatus.CONFLICT, "분석이 끝난 세션만 수정할 수 있습니다."),
     RAW_PAYLOAD_NOT_FOUND(HttpStatus.NOT_FOUND, "세션 원본을 찾을 수 없습니다."),
+    CHUNK_MEMBER_REQUIRED(HttpStatus.BAD_REQUEST, "청크에 회원 id(payload.memberId)가 없습니다."),
+    CHUNK_MEMBER_MISMATCH(HttpStatus.FORBIDDEN, "청크의 회원 id(payload.memberId)가 로그인한 회원과 다릅니다."),
+    CHUNK_CONTENT_CONFLICT(HttpStatus.CONFLICT, "같은 번호의 청크가 다른 내용으로 이미 저장돼 있습니다."),
     // AI 콜백에 대한 응답. 5xx 면 AI 가 재시도하므로 4xx 로 둔다
     ANALYSIS_LLM_FAILED(HttpStatus.UNPROCESSABLE_CONTENT, "AI 요약 생성에 실패했습니다."),
     SESSION_NOT_COLLECTING(HttpStatus.CONFLICT, "수집 중인 세션이 아닙니다."),
