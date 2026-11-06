@@ -104,6 +104,7 @@ public class AnalysisResultService {
         }
 
         if (isLlmFailed(result)) {
+            log.warn("[ai analysis] session {} 마인드맵 · 줄글이 LLM 결과가 아니라 FAILED: {}", sessionId, llmFailureDetail(result));
             failures.fail(session);
             throw new CustomException(ErrorCode.ANALYSIS_LLM_FAILED);
         }
@@ -151,6 +152,20 @@ public class AnalysisResultService {
                 || result.essay() == null
                 || !SOURCE_LLM.equals(result.mindmap().get("structureSource"))
                 || !SOURCE_LLM.equals(result.essay().get("source"));
+    }
+
+    // 실패로 본 까닭 (로그용). source 가 null 이면 분석할 유닛이 없어 LLM 을 부르지 않은 것, fallback 이면 LLM 호출 · 응답 실패
+    private static String llmFailureDetail(AiAnalysisResult result) {
+        return "mindmap " + sourceDetail(result.mindmap(), "structureSource")
+                + ", essay " + sourceDetail(result.essay(), "source");
+    }
+
+    private static String sourceDetail(Map<String, Object> part, String sourceKey) {
+        if (part == null) {
+            return "없음";
+        }
+        Object reason = part.get("fallbackReason");
+        return sourceKey + "=" + part.get(sourceKey) + (reason != null ? " (" + reason + ")" : "");
     }
 
     private void saveResult(BrowsingSession session, AiAnalysisResult result, RawLinkVisits linkVisits) {
