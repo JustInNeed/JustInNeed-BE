@@ -48,7 +48,7 @@ public class OAuth2UserInfo {
         return new OAuth2UserInfo(providerId, email);
     }
 
-    // naver: { response: { id, email, nickname, name } }
+    // naver: { response: { id, email, ... } } — id · email 만 읽는다
     @SuppressWarnings("unchecked")
     private static OAuth2UserInfo ofNaver(Map<String, Object> attributes) {
         Object response = attributes.get("response");

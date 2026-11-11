@@ -41,8 +41,8 @@ spring:
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
             authorization-grant-type: authorization_code
             client-authentication-method: client_secret_post
+            # name(실명)은 쓰지 않아서 요청하지 않는다 (#121). 실제 제공 항목은 네이버 개발자 콘솔의 "제공 정보 선택"이 정한다
             scope:
-              - name
               - email
         provider:
           kakao:
