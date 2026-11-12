@@ -38,7 +38,7 @@ public class Member extends BaseEntity {
     private String providerId;
 
     // 방법 B: 첫 소셜 로그인 시 null로 생성되고, 이후 닉네임 입력(PATCH)으로 채워짐
-    @Column(length = 8, unique = true)
+    @Column(length = 16, unique = true)
     private String nickname;
 
     // 선택값: 카카오/네이버 동의 항목에 따라 없을 수 있음
