@@ -99,7 +99,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
         BrowsingSession lastWeek = completed("2026-10-21T10:00:00", "2026-10-21T10:20:00", "JPA", "파리");
         analyzed(lastWeek, chain("파리 여행", "항공권", "직항"), readingUnits(0, 0, 30, 10), List.of());
         BrowsingSession noResult = completed("2026-09-21T10:00:00", "2026-09-21T10:30:00", "파리");
-        TagGroup group = tagGroups.saveAndFlush(new TagGroup(me.getId(), "백엔드", List.of("JPA", "스프링"), 0));
+        TagGroup group = tagGroups.saveAndFlush(new TagGroup(me.getId(), List.of("JPA", "스프링"), 0));
 
         home().andExpect(content().json("""
                 {
@@ -134,7 +134,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
                         "n7": {"seen": "today", "tags": ["자바", "스프링", "JPA"], "sessionId": %1$d},
                         "n8": {"seen": "month", "tags": ["JPA", "파리"], "sessionId": %3$d}
                       },
-                      "tagGroups": [{"id": %5$d, "name": "백엔드", "tags": ["JPA", "스프링"]}],
+                      "tagGroups": [{"id": %5$d, "tags": ["JPA", "스프링"]}],
                       "filterTags": ["JPA", "스프링", "파리", "자바"]
                     },
                     "stats": {
@@ -256,7 +256,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
                 false, false, List.of("남의태그"), List.of(), null);
         analyzed(others, chain("남의 루트", "남의 주제", "남의 유닛"), readingUnits(0, 0, 100, 0),
                 List.of(page("https://other.example/", 1_000)));
-        tagGroups.saveAndFlush(new TagGroup(other.getId(), "남의 그룹", List.of("남의태그"), 0));
+        tagGroups.saveAndFlush(new TagGroup(other.getId(), List.of("남의태그"), 0));
 
         BrowsingSession deleted = completed("2026-10-31T08:00:00", "2026-10-31T08:30:00", "삭제태그");
         analyzed(deleted, chain("삭제 루트", "삭제 주제", "삭제 유닛"), readingUnits(0, 0, 100, 0),
@@ -308,13 +308,13 @@ class HomeScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("graph.tagGroups: 내 태그 그룹이 position 순서로 온다")
     void tagGroupsInPositionOrder() throws Exception {
-        TagGroup later = tagGroups.saveAndFlush(new TagGroup(me.getId(), "나중", List.of("파리"), 1));
-        TagGroup earlier = tagGroups.saveAndFlush(new TagGroup(me.getId(), "먼저", List.of("JPA", "스프링"), 0));
+        TagGroup later = tagGroups.saveAndFlush(new TagGroup(me.getId(), List.of("파리"), 1));
+        TagGroup earlier = tagGroups.saveAndFlush(new TagGroup(me.getId(), List.of("JPA", "스프링"), 0));
 
         home()
                 .andExpect(jsonPath("$.data.graph.tagGroups[*].id")
                         .value(contains(ids(earlier.getId(), later.getId()))))
-                .andExpect(jsonPath("$.data.graph.tagGroups[0].name").value("먼저"))
+                .andExpect(jsonPath("$.data.graph.tagGroups[0].name").doesNotExist())
                 .andExpect(jsonPath("$.data.graph.tagGroups[0].tags").value(contains("JPA", "스프링")));
     }
 

@@ -64,8 +64,8 @@ class TagGroupControllerTest {
         session.update(null, null, false, false, List.of("Spring", "JPA"));
         sessionRepository.save(session);
 
-        springGroup = tagGroupRepository.save(new TagGroup(USER_ID, "Spring", List.of("Spring"), 0));
-        javaGroup = tagGroupRepository.save(new TagGroup(USER_ID, "Java", List.of("Java"), 1));
+        springGroup = tagGroupRepository.save(new TagGroup(USER_ID, List.of("Spring"), 0));
+        javaGroup = tagGroupRepository.save(new TagGroup(USER_ID, List.of("Java"), 1));
     }
 
     @Test
@@ -86,20 +86,20 @@ class TagGroupControllerTest {
 
     @Test
     void createTagGroupAppendsToEnd() throws Exception {
-        TagGroupCreateRequest request = new TagGroupCreateRequest("Backend", List.of("Backend"), null);
+        TagGroupCreateRequest request = new TagGroupCreateRequest(List.of("Backend"), null);
 
         mockMvc.perform(post("/tag-groups")
                         .header(HttpHeaders.AUTHORIZATION, bearer)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.name").value("Backend"))
+                .andExpect(jsonPath("$.data.hashtags[0]").value("Backend"))
                 .andExpect(jsonPath("$.data.position").value(2));
     }
 
     @Test
     void createTagGroupAtPositionShiftsOthers() throws Exception {
-        TagGroupCreateRequest request = new TagGroupCreateRequest("Backend", List.of("Backend"), 0);
+        TagGroupCreateRequest request = new TagGroupCreateRequest(List.of("Backend"), 0);
 
         mockMvc.perform(post("/tag-groups")
                         .header(HttpHeaders.AUTHORIZATION, bearer)
@@ -111,7 +111,7 @@ class TagGroupControllerTest {
         mockMvc.perform(get("/tag-groups").header(HttpHeaders.AUTHORIZATION, bearer))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data", hasSize(3)))
-                .andExpect(jsonPath("$.data[0].name").value("Backend"))
+                .andExpect(jsonPath("$.data[0].hashtags[0]").value("Backend"))
                 .andExpect(jsonPath("$.data[1].id").value(springGroup.getId()))
                 .andExpect(jsonPath("$.data[1].position").value(1))
                 .andExpect(jsonPath("$.data[2].id").value(javaGroup.getId()))
@@ -120,7 +120,7 @@ class TagGroupControllerTest {
 
     @Test
     void createTagGroupRejectsOutOfRangePosition() throws Exception {
-        TagGroupCreateRequest request = new TagGroupCreateRequest("Backend", List.of("Backend"), 5);
+        TagGroupCreateRequest request = new TagGroupCreateRequest(List.of("Backend"), 5);
 
         mockMvc.perform(post("/tag-groups")
                         .header(HttpHeaders.AUTHORIZATION, bearer)

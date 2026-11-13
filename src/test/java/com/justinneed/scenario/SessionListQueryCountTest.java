@@ -74,7 +74,7 @@ class SessionListQueryCountTest extends ScenarioTestSupport {
     @DisplayName("태그 그룹: 그룹에 묶인 세션이 1개든 10개든 조회 · 수정 응답의 SQL 수가 같다")
     void tagGroupQueryCountDoesNotGrowWithSessions() throws Exception {
         Member me = member("sprout");
-        TagGroup group = tagGroups.saveAndFlush(new TagGroup(me.getId(), "로마", List.of("로마"), 0));
+        TagGroup group = tagGroups.saveAndFlush(new TagGroup(me.getId(), List.of("로마"), 0));
         seedSessions(me, 0, 1);
         long getOne = statementsFor(get("/tag-groups").with(as(me)),
                 jsonPath("$.data[0].sessions.length()").value(1));

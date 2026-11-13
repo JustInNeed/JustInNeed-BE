@@ -23,9 +23,6 @@ public class TagGroup extends BaseEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(nullable = false, length = 50)
-    private String name;
-
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false)
     private List<String> hashtags = new ArrayList<>();
@@ -36,17 +33,13 @@ public class TagGroup extends BaseEntity {
     protected TagGroup() {
     }
 
-    public TagGroup(Long userId, String name, List<String> hashtags, int position) {
+    public TagGroup(Long userId, List<String> hashtags, int position) {
         this.userId = userId;
-        this.name = name;
         this.hashtags = new ArrayList<>(hashtags);
         this.position = position;
     }
 
-    public void update(String name, List<String> hashtags) {
-        if (name != null) {
-            this.name = name;
-        }
+    public void update(List<String> hashtags) {
         if (hashtags != null) {
             this.hashtags = new ArrayList<>(hashtags);
         }
@@ -64,9 +57,6 @@ public class TagGroup extends BaseEntity {
         return userId;
     }
 
-    public String getName() {
-        return name;
-    }
 
     public List<String> getHashtags() {
         return hashtags;

@@ -119,7 +119,7 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
             mvc.perform(get(path).with(bearerToken(phone))).andExpect(status().isUnauthorized());
         }
         mvc.perform(post("/tag-groups").with(bearerToken(phone))
-                        .with(json(Map.of("name", "탈퇴 후", "hashtags", List.of("로마")))))
+                        .with(json(Map.of("hashtags", List.of("로마")))))
                 .andExpect(status().isUnauthorized());
         assertThat(tagGroups.findByUserIdOrderByPositionAscIdAsc(me.getId())).isEmpty();
     }

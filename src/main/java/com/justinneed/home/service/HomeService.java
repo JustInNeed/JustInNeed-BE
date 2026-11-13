@@ -290,7 +290,7 @@ public class HomeService {
 
     private List<TagGroup> tagGroups(Long userId) {
         return tagGroupRepository.findByUserIdOrderByPositionAscIdAsc(userId).stream()
-                .map(group -> new TagGroup(group.getId(), group.getName(), group.getHashtags()))
+                .map(group -> new TagGroup(group.getId(), group.getHashtags()))
                 .toList();
     }
 

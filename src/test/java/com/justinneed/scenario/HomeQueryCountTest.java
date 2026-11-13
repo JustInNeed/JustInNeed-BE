@@ -53,7 +53,7 @@ class HomeQueryCountTest extends ScenarioTestSupport {
     @DisplayName("세션이 1개든 30개든 SQL 수가 같다 — 토큰 확인 1 + 탈퇴 확인 1 + 세션 · 분석 결과 1 + 태그 그룹 1")
     void queryCountDoesNotGrowWithSessions() throws Exception {
         Member me = member("sprout");
-        tagGroups.saveAndFlush(new TagGroup(me.getId(), "로마", List.of("로마"), 0));
+        tagGroups.saveAndFlush(new TagGroup(me.getId(), List.of("로마"), 0));
         seedAnalyzedSessions(me, 0, 1);
         long one = statementsFor(me, 1);
 

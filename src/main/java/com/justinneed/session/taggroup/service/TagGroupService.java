@@ -55,7 +55,7 @@ public class TagGroupService {
         for (int i = position; i < existing.size(); i++) {
             existing.get(i).updatePosition(i + 1);
         }
-        TagGroup group = tagGroupRepository.save(new TagGroup(userId, request.name(), hashtags, position));
+        TagGroup group = tagGroupRepository.save(new TagGroup(userId, hashtags, position));
         List<BrowsingSession> sessions = sessionRepository.findListByUserId(userId);
         return TagGroupResponse.from(group, matchingSessions(group, sessions));
     }
@@ -65,7 +65,7 @@ public class TagGroupService {
         TagGroup group = getOwnedGroup(userId, groupId);
         List<String> hashtags = HashtagValidator.normalizeAndValidate(request.hashtags());
         rejectEmptyHashtags(hashtags);
-        group.update(request.name(), hashtags);
+        group.update(hashtags);
 
         List<BrowsingSession> sessions = sessionRepository.findListByUserId(userId);
         return TagGroupResponse.from(group, matchingSessions(group, sessions));
