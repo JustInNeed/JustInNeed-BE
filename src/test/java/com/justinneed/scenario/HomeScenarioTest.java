@@ -46,6 +46,7 @@ import org.springframework.test.web.servlet.ResultActions;
  * 세션 결과는 AI 출력(pipeline/output.py · mindmap/builder.py)과 같은 모양으로 넣는다.
  *
  * <p>시각은 Clock 을 고정해 쓴다: KST 2026-10-31(토) 10:30. 최근 7일 = 10.25 ~ 10.31, 지난주 = 10.18 ~ 10.24.
+ * 이번 주 활동 막대만 일요일 시작 주라, 토요일인 이 시각에는 두 기간이 같다.
  * Clock 을 바꾸면 컨텍스트가 따로 뜨므로 DB 도 따로 쓴다.
  */
 @TestPropertySource(properties = "spring.datasource.url=jdbc:h2:mem:home-scenario;MODE=PostgreSQL;"
@@ -346,11 +347,11 @@ class HomeScenarioTest extends ScenarioTestSupport {
         completed("2026-10-25T23:59:00", "2026-10-26T00:00:00");
 
         home()
-                .andExpect(jsonPath("$.data.weekActivity.range").value("10.26 — 11.1"))
+                // 이번 주 활동은 일요일 시작 주: 오늘(일)이 첫 칸, 어제(토)는 지난주라 빠진다
+                .andExpect(jsonPath("$.data.weekActivity.range").value("11.1 — 11.7"))
                 .andExpect(jsonPath("$.data.weekActivity.days[*].day")
-                        .value(contains("월", "화", "수", "목", "금", "토", "일")))
-                .andExpect(jsonPath("$.data.weekActivity.days[6].minutes").value(10))
-                .andExpect(jsonPath("$.data.weekActivity.days[5].minutes").value(5))
+                        .value(contains("일", "월", "화", "수", "목", "금", "토")))
+                .andExpect(jsonPath("$.data.weekActivity.days[*].minutes").value(contains(10, 0, 0, 0, 0, 0, 0)))
                 .andExpect(jsonPath("$.data.todayTimeline", hasSize(1)))
                 .andExpect(jsonPath("$.data.todayTimeline[0].startTime").value("00:10"))
                 .andExpect(jsonPath("$.data.stats.weekSessions").value(3))
@@ -372,7 +373,26 @@ class HomeScenarioTest extends ScenarioTestSupport {
         given(clock.instant()).willReturn(Instant.parse("2026-10-30T14:59:59Z"));
         home()
                 .andExpect(jsonPath("$.data.todayTimeline", empty()))
-                .andExpect(jsonPath("$.data.weekActivity.range").value("10.24 — 10.30"));
+                .andExpect(jsonPath("$.data.weekActivity.range").value("10.25 — 10.31"));
+    }
+
+    @Test
+    @DisplayName("주간 활동: 일요일 시작 주(일 ~ 토)로 그리고, 오늘 이후 요일은 0분이다. 통계는 최근 7일 그대로")
+    void weekActivityStartsOnSunday() throws Exception {
+        // UTC 10-28 01:30 = KST 10-28(수) 10:30
+        given(clock.instant()).willReturn(Instant.parse("2026-10-28T01:30:00Z"));
+        completed("2026-10-28T09:00:00", "2026-10-28T09:10:00");
+        completed("2026-10-25T09:00:00", "2026-10-25T09:30:00");
+        completed("2026-10-24T09:00:00", "2026-10-24T09:20:00");
+
+        home()
+                .andExpect(jsonPath("$.data.weekActivity.range").value("10.25 — 10.31"))
+                .andExpect(jsonPath("$.data.weekActivity.days[*].day")
+                        .value(contains("일", "월", "화", "수", "목", "금", "토")))
+                .andExpect(jsonPath("$.data.weekActivity.days[*].minutes").value(contains(30, 0, 0, 10, 0, 0, 0)))
+                // 통계 · 타임라인의 이번 주는 최근 7일(10.22 ~ 10.28)이라 토요일 세션도 들어간다
+                .andExpect(jsonPath("$.data.stats.weekSessions").value(3))
+                .andExpect(jsonPath("$.data.weekSessions[*].dayOffset").value(contains(-4, -3, 0)));
     }
 
     // ---------- 세션 길이 ----------

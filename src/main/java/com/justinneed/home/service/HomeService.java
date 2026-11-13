@@ -46,7 +46,7 @@ import org.springframework.transaction.annotation.Transactional;
  * 홈 대시보드 집계. 대상은 내 완료(COMPLETED) · 미삭제 세션이고, 날짜 기준은 세션 시작 시각(KST)이다.
  *
  * <pre>
- * 이번 주 = 오늘 포함 최근 7일, 지난주 = 그 앞 7일
+ * 이번 주 = 오늘 포함 최근 7일, 지난주 = 그 앞 7일 (이번 주 활동 막대만 일요일 시작 주)
  * 세션 길이 = 종료 시각 - 시작 시각. 종료 시각이 없으면 세션 수에만 들어간다
  * Deep Reading 비율 = Deep Reading 유닛 수 ÷ 전체 유닛 수 (Idle 포함)
  * </pre>
@@ -97,7 +97,7 @@ public class HomeService {
         return new HomeResponse(
                 new Graph(graph.nodes(), graph.edges(), graph.nodeMeta(), tagGroups(userId), filterTags(tags)),
                 stats(graph, tags.size(), thisWeek, lastWeek),
-                weekActivity(thisWeek, weekStart, today),
+                weekActivity(thisWeek, today),
                 topTags(tags),
                 todayTimeline(thisWeek, today),
                 weekSessions(thisWeek, today),
@@ -145,19 +145,23 @@ public class HomeService {
         );
     }
 
+    // 이번 주 활동 막대만 일요일 시작 주(일 ~ 토)로 그린다. 오늘 이후 요일은 0분 (QA-005).
+    // 일요일은 늘 오늘 포함 최근 7일 안이라 재료는 thisWeek 로 충분하다.
     // 세션은 시작한 날에 넣는다. 자정을 넘긴 세션도 시작일 한 칸에 모두 들어간다
-    private static WeekActivity weekActivity(List<HomeSessionRow> thisWeek, LocalDate weekStart, LocalDate today) {
+    private static WeekActivity weekActivity(List<HomeSessionRow> thisWeek, LocalDate today) {
         Map<LocalDate, Long> secondsByDay = thisWeek.stream()
                 .collect(Collectors.groupingBy(HomeSessionRow::startDate,
                         Collectors.summingLong(HomeService::lengthSeconds)));
 
+        LocalDate sunday = today.minusDays(today.getDayOfWeek().getValue() % WEEK_DAYS);
+        LocalDate saturday = sunday.plusDays(WEEK_DAYS - 1);
         List<DayActivity> days = new ArrayList<>();
-        for (LocalDate day = weekStart; !day.isAfter(today); day = day.plusDays(1)) {
+        for (LocalDate day = sunday; !day.isAfter(saturday); day = day.plusDays(1)) {
             long seconds = secondsByDay.getOrDefault(day, 0L);
             String weekday = WEEKDAYS.get(day.getDayOfWeek().getValue() - 1);
             days.add(new DayActivity(weekday, (int) Math.round(seconds / SECONDS_PER_MINUTE)));
         }
-        return new WeekActivity(weekStart.format(DATE_FORMAT) + " — " + today.format(DATE_FORMAT), days);
+        return new WeekActivity(sunday.format(DATE_FORMAT) + " — " + saturday.format(DATE_FORMAT), days);
     }
 
     // 종료 시각이 없으면 0. 종료가 시작보다 앞서는 잘못된 값도 0 으로 본다
