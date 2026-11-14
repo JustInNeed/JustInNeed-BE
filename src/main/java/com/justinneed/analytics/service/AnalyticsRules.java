@@ -25,7 +25,7 @@ final class AnalyticsRules {
     /** 시간대 문구: 체류가 가장 많은 3시간 구간이 전체의 이 % 이상이면 "주로" 문구 */
     static final int PEAK_SLOT_PCT = 30;
     /** 정독 시간대: 체류가 이 ms 이상인 구간만 본다 */
-    static final long MIN_FOCUS_SLOT_DWELL_MS = 60_000;
+    static final long MIN_FOCUS_SLOT_DWELL_MS = 600_000;
 
     private AnalyticsRules() {
     }

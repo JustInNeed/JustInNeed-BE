@@ -586,13 +586,13 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("체류 60초 이상 구간 중 정독 비율이 가장 높은 구간을 추천한다")
+        @DisplayName("체류 10분 이상 구간 중 정독 비율이 가장 높은 구간을 추천한다")
         void focusNote() throws Exception {
-            units(unit("Deep Reading", 59_000, "2026-10-30T15:10:00+00:00"), // 00시 구간 100% 지만 60초 미만
-                    unit("Reading", 68_000, "2026-10-31T00:30:00+00:00"), // 09시 구간 68%
-                    unit("Scanning", 32_000, "2026-10-31T00:40:00+00:00"),
-                    unit("Reading", 30_000, "2026-10-30T07:10:00+00:00"), // 15시 구간 50%
-                    unit("Scanning", 30_000, "2026-10-30T07:20:00+00:00"));
+            units(unit("Deep Reading", 599_000, "2026-10-30T15:10:00+00:00"), // 00시 구간 100% 지만 10분 미만
+                    unit("Reading", 680_000, "2026-10-31T00:30:00+00:00"), // 09시 구간 68%
+                    unit("Scanning", 320_000, "2026-10-31T00:40:00+00:00"),
+                    unit("Reading", 300_000, "2026-10-30T07:10:00+00:00"), // 15시 구간 50%
+                    unit("Scanning", 300_000, "2026-10-30T07:20:00+00:00"));
 
             card("time-patterns").andExpect(jsonPath("$.data.note.recommendation").value(
                     "**오전 9시 ~ 오후 12시**에 집중도가 가장 높아요. (정독 비율 68%로 가장 높은 시간대) 중요한 학습은 이 시간대를 활용해보세요."));
