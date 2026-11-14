@@ -130,7 +130,7 @@ public class SessionService {
         if (Boolean.FALSE.equals(request.isPublic())) {
             profile.removePinnedSession(sessionId);
         }
-        if (request.changesContent()) {
+        if (request.syncsCard()) {
             cards.sync(session);
         }
         return SessionDetailResponse.from(session);
