@@ -194,22 +194,32 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("예전에 꺼 둔 기본 URL 은 다시 켤 수 있다 (QA-029)")
-        void legacyUncheckedDefaultCanBeTurnedOn() throws Exception {
+        @DisplayName("예전에 꺼 둔 기본 URL 은 목록을 열면 다시 켜진다 — 기본 URL 은 예외 없이 수집 제외 (QA-029)")
+        void legacyUncheckedDefaultIsTurnedBackOn() throws Exception {
             Member me = member("sprout");
             Long mail = urlId(me, "mail.google.com");
             ExcludedUrl row = excludedUrls.findById(mail).orElseThrow();
             row.updateExcluded(false); // 정책을 바꾸기 전에 꺼 둔 행
             excludedUrls.saveAndFlush(row);
 
-            mvc.perform(patch(EXCLUDED_URLS + "/selections").with(as(me))
-                            .with(json(Map.of("excludedUrlIds", List.of(mail), "isExcluded", true))))
-                    .andExpect(okEnvelope())
-                    .andExpect(jsonPath("$.data.updatedCount").value(1));
-
             mvc.perform(get(EXCLUDED_URLS).with(as(me)))
+                    .andExpect(okEnvelope())
                     .andExpect(jsonPath("$.data.excludedUrls[?(@.url == 'mail.google.com')].isExcluded")
                             .value(contains(true)));
+            assertThat(excludedUrls.findById(mail).orElseThrow().isExcluded()).isTrue();
+        }
+
+        @Test
+        @DisplayName("예전에 꺼 둔 기본 URL 은 URL 을 추가할 때도 다시 켜진다 (QA-029)")
+        void legacyUncheckedDefaultIsTurnedBackOnWhenAdding() throws Exception {
+            Member me = member("sprout");
+            Long mail = urlId(me, "mail.google.com");
+            ExcludedUrl row = excludedUrls.findById(mail).orElseThrow();
+            row.updateExcluded(false);
+            excludedUrls.saveAndFlush(row);
+
+            addUrlId(me, "https://tistory.com/feed");
+            assertThat(excludedUrls.findById(mail).orElseThrow().isExcluded()).isTrue();
         }
 
         @Test

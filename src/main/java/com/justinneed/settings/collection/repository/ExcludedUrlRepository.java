@@ -17,4 +17,8 @@ public interface ExcludedUrlRepository extends JpaRepository<ExcludedUrl, Long> 
     long countByMemberId(Long memberId);
 
     long countByMemberIdAndUrlIn(Long memberId, Collection<String> urls);
+
+    long countByMemberIdAndUrlInAndExcludedTrue(Long memberId, Collection<String> urls);
+
+    List<ExcludedUrl> findByMemberIdAndDefaultUrlTrueAndExcludedFalse(Long memberId);
 }
