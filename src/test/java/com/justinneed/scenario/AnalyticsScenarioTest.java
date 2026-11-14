@@ -220,9 +220,9 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
                 "9,  29, 59, QUICK_CHECK",
                 "1,  60, 0,  QUICK_CHECK",
         })
-        @DisplayName("성향 판정 기준의 경계")
+        @DisplayName("성향 판정 기준의 경계 (정독 % 는 Idle 포함 유닛 수 기준)")
         void judge(int urls, int dwellSec, int focusedPct, String expected) throws Exception {
-            analyzed(completed("2026-10-31T09:00:00", null, urls), dwell(100 - focusedPct, 0, 0, focusedPct),
+            analyzed(completed("2026-10-31T09:00:00", null, urls), summary(100 - focusedPct, 0, 0, focusedPct),
                     List.of(visit("https://a.example/", dwellSec * 1000, 1)), List.of());
 
             card("exploration").andExpect(jsonPath("$.data.type").value(expected));
@@ -231,9 +231,9 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         @Test
         @DisplayName("7일 중 가장 많이 나온 성향의 엑셀 문구가 오고, 같은 수면 앞선 성향이다")
         void mostCommonType() throws Exception {
-            analyzed(completed("2026-10-31T09:00:00", null, 1), dwell(0, 0, 0, 100),
+            analyzed(completed("2026-10-31T09:00:00", null, 1), summary(0, 0, 0, 100),
                     List.of(visit("https://a.example/", 60_000, 1)), List.of());
-            analyzed(completed("2026-10-30T09:00:00", null, 12), dwell(100, 0, 0, 0),
+            analyzed(completed("2026-10-30T09:00:00", null, 12), summary(100, 0, 0, 0),
                     List.of(visit("https://a.example/", 1_000, 1)), List.of());
 
             card("exploration")
@@ -242,13 +242,27 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
                     .andExpect(jsonPath("$.data.note.recommendation").value(
                             "지금 가장 중요한 문서 딱 하나만 남기고 나머지 탭은 잠시 닫아두세요. 15분만 타이머를 맞추고 하나의 글에만 온전히 몰입해 보는 걸 추천합니다."));
 
-            analyzed(completed("2026-10-29T09:00:00", null, 1), dwell(0, 0, 0, 100),
+            analyzed(completed("2026-10-29T09:00:00", null, 1), summary(0, 0, 0, 100),
                     List.of(visit("https://a.example/", 60_000, 1)), List.of());
 
             card("exploration")
                     .andExpect(jsonPath("$.data.type").value("FOCUSED"))
                     .andExpect(jsonPath("$.data.note.analysis").value("하나의 주제에 대해 깊이 있게 탐색하는 방식입니다."))
                     .andExpect(jsonPath("$.data.note.recommendation").value(nullValue()));
+        }
+
+        @Test
+        @DisplayName("집중 판정은 체류시간이 아니라 유닛 수로 본다 (Idle 이 많으면 체류가 정독에 몰려도 집중이 아니다)")
+        void focusedByUnits() throws Exception {
+            Map<String, Object> summary = Map.of(
+                    "Idle", Map.of("units", 7, "dwellMs", 0),
+                    "Scanning", Map.of("units", 1, "dwellMs", 1_000),
+                    "Reading", Map.of("units", 1, "dwellMs", 50_000),
+                    "Deep Reading", Map.of("units", 1, "dwellMs", 50_000));
+            analyzed(completed("2026-10-31T09:00:00", null, 5), summary,
+                    List.of(visit("https://a.example/", 60_000, 1)), List.of());
+
+            card("exploration").andExpect(jsonPath("$.data.type").value("QUICK_CHECK"));
         }
 
         @Test

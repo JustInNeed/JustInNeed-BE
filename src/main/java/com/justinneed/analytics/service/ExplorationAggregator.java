@@ -19,6 +19,7 @@ import java.util.Map;
  * 평균 페이지 체류 = 세션별 (페이지 체류시간 합 ÷ 페이지 수) 의 평균. pageVisits 가 없는 세션은 뺀다
  * 평균 세션 길이 = 종료 시각 - 시작 시각의 평균. 종료 시각이 없는 세션은 뺀다
  * 탐색 성향     = 세션별로 판정해 가장 많이 나온 성향. pageVisits 가 없는 세션은 뺀다
+ * 집중 비율     = 세션의 Deep Reading + Reading 유닛 수 ÷ 전체 유닛 수 (Idle 포함, 읽기 행동 분포와 같은 기준)
  * </pre>
  */
 final class ExplorationAggregator {
@@ -75,19 +76,19 @@ final class ExplorationAggregator {
         return dwellMs / MILLIS_PER_SECOND / session.pageVisits().size();
     }
 
-    // Deep + Reading 체류시간 ÷ 전체 체류시간. 요약이 없으면 0
+    // Deep + Reading 유닛 수 ÷ 전체 유닛 수 (Idle 포함). 요약이 없으면 0
     private static double focusedPct(AnalyticsSessionRow session) {
-        long total = dwellMs(session, ALL_LABELS);
-        return total == 0 ? 0 : dwellMs(session, FOCUSED_LABELS) * 100.0 / total;
+        long total = units(session, ALL_LABELS);
+        return total == 0 ? 0 : units(session, FOCUSED_LABELS) * 100.0 / total;
     }
 
-    private static long dwellMs(AnalyticsSessionRow session, String[] labels) {
+    private static long units(AnalyticsSessionRow session, String[] labels) {
         if (session.analysisSummary() == null) {
             return 0;
         }
         return Arrays.stream(labels)
                 .mapToLong(label -> session.analysisSummary().get(label) instanceof Map<?, ?> entry
-                        ? AnalyticsJson.nonNegative(entry.get("dwellMs"))
+                        ? AnalyticsJson.nonNegative(entry.get("units"))
                         : 0)
                 .sum();
     }

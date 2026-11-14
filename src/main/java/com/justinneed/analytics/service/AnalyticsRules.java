@@ -9,7 +9,7 @@ final class AnalyticsRules {
     static final int MANY_URLS = 10;
     /** 탐색 성향: 페이지 평균 체류가 이 초 미만이면 빠르게 오간 세션 */
     static final int SHORT_DWELL_SEC = 30;
-    /** 탐색 성향: Deep + Reading 체류 비율이 이 % 이상이면 집중 */
+    /** 탐색 성향: Deep + Reading 유닛 비율(Idle 포함)이 이 % 이상이면 집중 */
     static final int FOCUSED_PCT = 60;
 
     /** 카테고리 문구: 1위 카테고리가 이 % 이상이면 "중심" 문구 */
