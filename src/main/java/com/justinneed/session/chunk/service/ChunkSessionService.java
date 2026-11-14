@@ -13,6 +13,7 @@ import com.justinneed.session.collection.service.CollectionSettings;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.domain.SessionStatus;
 import com.justinneed.session.management.repository.BrowsingSessionRepository;
+import com.justinneed.settings.collection.service.ExcludedUrlService;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -45,6 +46,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  *
  * 확장은 크롬 밖 30분이면 스스로 정지하므로 살아 있는 세션이 1시간 동안 조용할 일은 없다. final 이 안 온 것 = 브라우저를 끄거나 덮은 경우.
  * 끝난 뒤 늦게 온 청크는 받아만 두고(SessionChunkService) 다시 합치지 않는다.
+ * 합친 뒤 저장 전에 수집 제외 URL 의 페이지를 뺀다 (ExcludedPageFilter). 확장이 거르지 못한 것까지 AI 로 가지 않게.
  * 합칠 때 stop 기록이 없으면 끝 시각 = 마지막 기록 시각, 종료 사유 = timeout 으로 채운다. 시작 기록이 없으면(1번 청크 유실) 시작 시각 = 세션 행 값.
  * 합치기가 예외로 실패하면 롤백해 청크를 남기고 횟수를 센다. 정해진 횟수가 차면 FAILED.
  * 세션 행을 잠그고 COLLECTING 인지 다시 보므로 청크 수신과 정리 스케줄러가 겹쳐도 한 번만 합친다.
@@ -66,6 +68,7 @@ public class ChunkSessionService {
     private final AnalysisRequestService analysisRequestService;
     private final AnalysisFailures failures;
     private final CollectionSettings settings;
+    private final ExcludedUrlService excludedUrlService;
     private final TransactionTemplate transactionTemplate;
 
     public ChunkSessionService(BrowsingSessionRepository sessionRepository,
@@ -75,6 +78,7 @@ public class ChunkSessionService {
             AnalysisRequestService analysisRequestService,
             AnalysisFailures failures,
             CollectionSettings settings,
+            ExcludedUrlService excludedUrlService,
             PlatformTransactionManager transactionManager) {
         this.sessionRepository = sessionRepository;
         this.collectionRepository = collectionRepository;
@@ -83,6 +87,7 @@ public class ChunkSessionService {
         this.analysisRequestService = analysisRequestService;
         this.failures = failures;
         this.settings = settings;
+        this.excludedUrlService = excludedUrlService;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
@@ -174,6 +179,10 @@ public class ChunkSessionService {
         }
         Map<String, Object> bundle = ChunkAssembler.assemble(logRecords);
         fillMissingSessionValues(bundle, session, logRecords, chunks.get(chunks.size() - 1).getReceivedAt());
+        int excluded = ExcludedPageFilter.apply(bundle, excludedUrlService.findActiveUrls(session.getUserId()));
+        if (excluded > 0) {
+            log.info("[chunk] 세션 {} (수집기 {}) 수집 제외 URL 페이지 {}개를 뺌", session.getId(), session.getCollectorSessionId(), excluded);
+        }
         if (!rawPayloadRepository.existsById(session.getId())) {
             rawPayloadRepository.save(new SessionRawPayload(session.getId(), session.getUserId(), bundle, LocalDateTime.now()));
         }

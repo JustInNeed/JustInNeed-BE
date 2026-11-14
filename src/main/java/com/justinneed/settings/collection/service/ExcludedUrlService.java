@@ -50,6 +50,29 @@ public class ExcludedUrlService {
         );
     }
 
+    /**
+     * 지금 수집 제외가 적용된 URL (표시형). 세션 원본을 저장하기 전에 제외 페이지를 거를 때 쓴다.
+     * 기본 URL 은 설정 화면을 한 번도 열지 않아 행이 없어도 체크된 상태이므로 포함한다. 행을 만들지는 않는다.
+     */
+    public List<String> findActiveUrls(Long memberId) {
+        List<ExcludedUrl> rows = excludedUrlRepository.findByMemberId(memberId);
+        Set<String> stored = new LinkedHashSet<>();
+        List<String> active = new ArrayList<>();
+        for (ExcludedUrl row : rows) {
+            stored.add(row.getUrl());
+            if (row.isExcluded()) {
+                active.add(row.getUrl());
+            }
+        }
+        for (String defaultUrl : DEFAULT_URLS) {
+            String url = ExcludedUrlParser.parse(defaultUrl).url();
+            if (!stored.contains(url)) {
+                active.add(url);
+            }
+        }
+        return active;
+    }
+
     @Transactional
     public ExcludedUrlCreateResponse create(Long memberId, String rawUrl) {
         ExcludedUrlParser.ParsedUrl parsed = ExcludedUrlParser.parse(rawUrl);
