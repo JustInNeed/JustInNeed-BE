@@ -386,21 +386,21 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("1위가 60% 이상이면 '중심' 문구, 아니면 '균형' 문구에 상위 3개가 나온다")
+        @DisplayName("1위가 70% 이상이면 '중심' 문구, 아니면 '균형' 문구에 상위 3개가 나온다")
         void note() throws Exception {
             analyzed(completed("2026-10-31T09:00:00", null, 1), null, List.of(
-                    visit("https://velog.io/a", 1_000, 6),
-                    visit("https://docs.spring.io/b", 1_000, 4)), List.of());
+                    visit("https://velog.io/a", 1_000, 7),
+                    visit("https://docs.spring.io/b", 1_000, 3)), List.of());
 
             card("categories").andExpect(jsonPath("$.data.note.analysis")
-                    .value("현재 탐색은 **블로그** 중심으로 이루어지고 있습니다. (전체 탐색의 60%)"));
+                    .value("현재 탐색은 **블로그** 중심으로 이루어지고 있습니다. (전체 탐색의 70%)"));
 
             analyzed(completed("2026-10-30T09:00:00", null, 1), null, List.of(
                     visit("https://stackoverflow.com/c", 1_000, 5),
                     visit("https://news.naver.com/d", 1_000, 1)), List.of());
 
             card("categories").andExpect(jsonPath("$.data.note.analysis")
-                    .value("다양한 유형의 출처를 균형 있게 활용하고 있습니다. (블로그 38% / 커뮤니티 31% / 공식문서 25%)"));
+                    .value("다양한 유형의 출처를 균형 있게 활용하고 있습니다. (블로그 44% / 커뮤니티 31% / 공식문서 19%)"));
         }
 
         @Test

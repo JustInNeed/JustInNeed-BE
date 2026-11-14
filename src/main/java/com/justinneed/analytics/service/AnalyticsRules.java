@@ -13,7 +13,7 @@ final class AnalyticsRules {
     static final int FOCUSED_PCT = 60;
 
     /** 카테고리 문구: 1위 카테고리가 이 % 이상이면 "중심" 문구 */
-    static final int LEADING_CATEGORY_PCT = 60;
+    static final int LEADING_CATEGORY_PCT = 70;
 
     /** 추천 행동: 블로그 + 커뮤니티가 이 % 이상 */
     static final int BLOG_AND_COMMUNITY_PCT = 60;
