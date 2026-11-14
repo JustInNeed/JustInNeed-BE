@@ -82,6 +82,10 @@ public class ExcludedUrlService {
         List<Long> ids = distinctIds(requestedIds);
         lockMember(memberId);
         List<ExcludedUrl> urls = findOwnedUrls(memberId, ids);
+        // 기본 URL 은 해제할 수 없다. 예전에 꺼 둔 기본 URL 을 다시 켜는 건 된다 (QA-029)
+        if (!excluded) {
+            rejectDefaults(urls);
+        }
         urls.forEach(url -> url.updateExcluded(excluded));
         return new ExcludedUrlSelectionUpdateResponse(200, urls.size(), excluded, ids);
     }
@@ -91,21 +95,22 @@ public class ExcludedUrlService {
         List<Long> ids = distinctIds(requestedIds);
         lockMember(memberId);
         List<ExcludedUrl> urls = findOwnedUrls(memberId, ids);
+        // 기본 URL 은 삭제(예전엔 체크 해제로 처리)할 수 없다. 섞여 있으면 아무것도 지우지 않는다 (QA-029)
+        rejectDefaults(urls);
         List<Long> deletedIds = new ArrayList<>();
-        List<Long> uncheckedDefaultIds = new ArrayList<>();
-
         for (ExcludedUrl url : urls) {
-            if (url.isDefaultUrl()) {
-                url.updateExcluded(false);
-                uncheckedDefaultIds.add(url.getId());
-            } else {
-                excludedUrlRepository.delete(url);
-                deletedIds.add(url.getId());
-            }
+            excludedUrlRepository.delete(url);
+            deletedIds.add(url.getId());
         }
 
-        return new ExcludedUrlDeleteResponse(
-                200, deletedIds, uncheckedDefaultIds, deletedIds.size());
+        // uncheckedDefaultUrlIds 는 응답 모양을 지키려고 남겨 둔다. 이제 항상 비어 있다
+        return new ExcludedUrlDeleteResponse(200, deletedIds, List.of(), deletedIds.size());
+    }
+
+    private void rejectDefaults(List<ExcludedUrl> urls) {
+        if (urls.stream().anyMatch(ExcludedUrl::isDefaultUrl)) {
+            throw new CustomException(ErrorCode.DEFAULT_URL_LOCKED);
+        }
     }
 
     private List<ExcludedUrl> findOwnedUrls(Long memberId, List<Long> ids) {

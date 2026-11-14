@@ -3,8 +3,11 @@ package com.justinneed.scenario;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
@@ -44,6 +47,7 @@ class SettingsScenarioTest extends ScenarioTestSupport {
     private static final String EXCLUDED_URLS = "/settings/collection/excluded-urls";
     private static final String INVALID_URL = "올바른 URL 형식이 아닙니다.";
     private static final String URL_NOT_FOUND = "수집 제외 URL을 찾을 수 없습니다.";
+    private static final String DEFAULT_URL_LOCKED = "기본 제외 URL은 해제하거나 삭제할 수 없습니다.";
 
     @Autowired
     private ExcludedUrlRepository excludedUrls;
@@ -152,27 +156,60 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("체크를 해제하면(MEM-5-2) 수집 제외가 꺼지고, 목록에서 체크된 항목 뒤로 간다")
+        @DisplayName("내가 추가한 URL 의 체크를 해제하면(MEM-5-2) 수집 제외가 꺼지고, 목록에서 체크된 항목 뒤로 간다")
         void uncheckedGoLast() throws Exception {
             Member me = member("sprout");
             Long tistory = addUrlId(me, "https://tistory.com/feed");
-            addUrlId(me, "https://naver.com/blog");
-            Long mail = urlId(me, "mail.google.com");
+            Long naver = addUrlId(me, "https://naver.com/blog");
 
             mvc.perform(patch(EXCLUDED_URLS + "/selections").with(as(me))
-                            .with(json(Map.of("excludedUrlIds", List.of(mail, tistory), "isExcluded", false))))
+                            .with(json(Map.of("excludedUrlIds", List.of(naver, tistory), "isExcluded", false))))
                     .andExpect(okEnvelope())
                     .andExpect(jsonPath("$.message").value("URL 선택 상태가 변경되었습니다."))
                     .andExpect(jsonPath("$.data.updatedCount").value(2))
                     .andExpect(jsonPath("$.data.isExcluded").value(false))
-                    .andExpect(jsonPath("$.data.updatedUrlIds").value(contains(ids(mail, tistory))));
+                    .andExpect(jsonPath("$.data.updatedUrlIds").value(contains(ids(naver, tistory))));
 
             mvc.perform(get(EXCLUDED_URLS).with(as(me)))
                     .andExpect(jsonPath("$.data.excludedUrls[*].url").value(contains(
-                            "instagram.com", "naver.com/blog", "tiktok.com", "twitter.com", "youtube.com/shorts",
-                            "mail.google.com", "tistory.com/feed")))
+                            "instagram.com", "mail.google.com", "tiktok.com", "twitter.com", "youtube.com/shorts",
+                            "naver.com/blog", "tistory.com/feed")))
                     .andExpect(jsonPath("$.data.excludedUrls[*].isExcluded")
                             .value(contains(true, true, true, true, true, false, false)));
+        }
+
+        @Test
+        @DisplayName("기본 URL 은 체크를 해제할 수 없다 — 섞여 있으면 400 이고 아무것도 바뀌지 않는다 (QA-029)")
+        void defaultCannotBeUnchecked() throws Exception {
+            Member me = member("sprout");
+            Long tistory = addUrlId(me, "https://tistory.com/feed");
+            Long mail = urlId(me, "mail.google.com");
+
+            mvc.perform(patch(EXCLUDED_URLS + "/selections").with(as(me))
+                            .with(json(Map.of("excludedUrlIds", List.of(mail, tistory), "isExcluded", false))))
+                    .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, DEFAULT_URL_LOCKED));
+
+            mvc.perform(get(EXCLUDED_URLS).with(as(me)))
+                    .andExpect(jsonPath("$.data.excludedUrls[*].isExcluded").value(everyItem(is(true))));
+        }
+
+        @Test
+        @DisplayName("예전에 꺼 둔 기본 URL 은 다시 켤 수 있다 (QA-029)")
+        void legacyUncheckedDefaultCanBeTurnedOn() throws Exception {
+            Member me = member("sprout");
+            Long mail = urlId(me, "mail.google.com");
+            ExcludedUrl row = excludedUrls.findById(mail).orElseThrow();
+            row.updateExcluded(false); // 정책을 바꾸기 전에 꺼 둔 행
+            excludedUrls.saveAndFlush(row);
+
+            mvc.perform(patch(EXCLUDED_URLS + "/selections").with(as(me))
+                            .with(json(Map.of("excludedUrlIds", List.of(mail), "isExcluded", true))))
+                    .andExpect(okEnvelope())
+                    .andExpect(jsonPath("$.data.updatedCount").value(1));
+
+            mvc.perform(get(EXCLUDED_URLS).with(as(me)))
+                    .andExpect(jsonPath("$.data.excludedUrls[?(@.url == 'mail.google.com')].isExcluded")
+                            .value(contains(true)));
         }
 
         @Test
@@ -193,24 +230,37 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("선택 삭제(MEM-5-4): 내가 추가한 URL 은 지워지고 기본 URL 은 체크만 해제된다")
-        void deleteKeepsDefaults() throws Exception {
+        @DisplayName("선택 삭제(MEM-5-4): 내가 추가한 URL 은 지워진다")
+        void deleteOwnUrls() throws Exception {
+            Member me = member("sprout");
+            Long tistory = addUrlId(me, "https://tistory.com/feed");
+
+            mvc.perform(delete(EXCLUDED_URLS).with(as(me)).with(json(Map.of("excludedUrlIds", List.of(tistory)))))
+                    .andExpect(okEnvelope())
+                    .andExpect(jsonPath("$.message").value("선택한 URL이 삭제되었습니다."))
+                    .andExpect(jsonPath("$.data.deletedUrlIds").value(contains(ids(tistory))))
+                    .andExpect(jsonPath("$.data.uncheckedDefaultUrlIds").value(empty()))
+                    .andExpect(jsonPath("$.data.deletedCount").value(1));
+
+            mvc.perform(get(EXCLUDED_URLS).with(as(me)))
+                    .andExpect(jsonPath("$.data.excludedUrls[*].url").value(not(hasItem("tistory.com/feed"))));
+        }
+
+        @Test
+        @DisplayName("기본 URL 은 삭제할 수 없다 — 섞여 있으면 400 이고 아무것도 지우거나 해제하지 않는다 (QA-029)")
+        void defaultCannotBeDeleted() throws Exception {
             Member me = member("sprout");
             Long tistory = addUrlId(me, "https://tistory.com/feed");
             Long instagram = urlId(me, "instagram.com");
 
             mvc.perform(delete(EXCLUDED_URLS).with(as(me))
                             .with(json(Map.of("excludedUrlIds", List.of(instagram, tistory)))))
-                    .andExpect(okEnvelope())
-                    .andExpect(jsonPath("$.message").value("선택한 URL이 삭제되었습니다."))
-                    .andExpect(jsonPath("$.data.deletedUrlIds").value(contains(ids(tistory))))
-                    .andExpect(jsonPath("$.data.uncheckedDefaultUrlIds").value(contains(ids(instagram))))
-                    .andExpect(jsonPath("$.data.deletedCount").value(1));
+                    .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, DEFAULT_URL_LOCKED));
 
             mvc.perform(get(EXCLUDED_URLS).with(as(me)))
-                    .andExpect(jsonPath("$.data.excludedUrls[*].url").value(not(hasItem("tistory.com/feed"))))
+                    .andExpect(jsonPath("$.data.excludedUrls[*].url").value(hasItem("tistory.com/feed")))
                     .andExpect(jsonPath("$.data.excludedUrls[?(@.url == 'instagram.com')].isExcluded")
-                            .value(contains(false)));
+                            .value(contains(true)));
         }
 
         @Test

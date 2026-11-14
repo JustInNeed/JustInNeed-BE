@@ -7,6 +7,7 @@ public enum ErrorCode {
     INVALID_URL(HttpStatus.BAD_REQUEST, "올바른 URL 형식이 아닙니다."),
     DUPLICATE_URL(HttpStatus.CONFLICT, "이미 등록된 URL입니다."),
     EXCLUDED_URL_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "URL은 최대 100개까지 등록할 수 있습니다."),
+    DEFAULT_URL_LOCKED(HttpStatus.BAD_REQUEST, "기본 제외 URL은 해제하거나 삭제할 수 없습니다."),
     SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "세션을 찾을 수 없습니다."),
     SESSION_FORBIDDEN(HttpStatus.FORBIDDEN, "비공개 세션이라 볼 수 없어요."),
     SESSION_NOT_COMPLETED(HttpStatus.CONFLICT, "분석이 끝난 세션만 수정할 수 있습니다."),
