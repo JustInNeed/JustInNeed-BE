@@ -22,9 +22,9 @@ final class AnalyticsRules {
     /** 추천 행동: 한 사이트가 이 % 이상 */
     static final int ONE_SITE_PCT = 60;
 
-    /** 시간대 문구: 체류가 가장 많은 3시간 구간이 전체의 이 % 이상이면 "주로" 문구 */
+    /** 시간대 문구: 유닛이 가장 많은 3시간 구간이 전체 유닛의 이 % 이상이면 "주로" 문구 */
     static final int PEAK_SLOT_PCT = 30;
-    /** 정독 시간대: 체류가 이 ms 이상인 구간만 본다 */
+    /** 정독 시간대: 체류가 이 ms 이상인 구간만 본다 (비율은 유닛 수로 계산) */
     static final long MIN_FOCUS_SLOT_DWELL_MS = 600_000;
 
     private AnalyticsRules() {

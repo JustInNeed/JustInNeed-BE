@@ -160,7 +160,8 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
             card("reading-behavior").andExpect(jsonPath("$.data.shares.DEEP_READING").value(100));
             card("categories").andExpect(okEnvelope());
             card("recommendations").andExpect(okEnvelope());
-            card("time-patterns").andExpect(jsonPath("$.data").value(nullValue()));
+            // 시각이 어긋난 유닛은 빼고, 체류만 어긋난 유닛은 체류 0 으로 보고 1개로 센다
+            card("time-patterns").andExpect(jsonPath("$.data.surfing[5][3]").value(1.0));
         }
     }
 
@@ -490,7 +491,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("요일 7 × 3시간 구간 8 칸이고, 웹서핑은 가장 많은 칸 대비, 집중은 칸 안의 정독 비율이다")
+        @DisplayName("요일 7 × 3시간 구간 8 칸이고, 활동은 유닛이 가장 많은 칸 대비, 정독은 칸 안의 정독 유닛 비율이다")
         void grids() throws Exception {
             units(unit("Deep Reading", 60_000, "2026-10-31T00:30:00+00:00"), // 토 09:30 KST
                     unit("Scanning", 30_000, "2026-10-30T11:10:00+00:00"), // 금 20:10 KST
@@ -502,9 +503,9 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
                     .andExpect(jsonPath("$.data.surfing[0]", hasSize(8)))
                     .andExpect(jsonPath("$.data.focus", hasSize(7)))
                     .andExpect(jsonPath("$.data.focus[0]", hasSize(8)))
-                    .andExpect(jsonPath("$.data.surfing[5][3]").value(1.0))
+                    .andExpect(jsonPath("$.data.surfing[5][3]").value(0.5))
                     .andExpect(jsonPath("$.data.surfing[4][6]").value(0.5))
-                    .andExpect(jsonPath("$.data.surfing[5][0]").value(0.5))
+                    .andExpect(jsonPath("$.data.surfing[5][0]").value(1.0))
                     .andExpect(jsonPath("$.data.focus[5][3]").value(1.0))
                     .andExpect(jsonPath("$.data.focus[4][6]").value(0.0))
                     .andExpect(jsonPath("$.data.focus[5][0]").value(0.5))
@@ -525,22 +526,37 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("본 적 없는 유닛(시각 null)과 체류 0 유닛은 칸에 들어가지 않는다")
+        @DisplayName("본 적 없는 유닛(시각 null)만 있으면 null 이다")
         void skipsUnseen() throws Exception {
-            Map<String, Object> unseen = new LinkedHashMap<>();
-            unseen.put("clusterLabel", "Idle");
-            unseen.put("dwellMs", 0);
-            unseen.put("firstSeenAt", null);
-            units(unseen, unit("Idle", 0, "2026-10-31T00:30:00+00:00"));
+            units(unseenUnit());
 
             card("time-patterns").andExpect(jsonPath("$.data").value(nullValue()));
         }
 
         @Test
-        @DisplayName("체류가 가장 많은 구간이 30% 이상이면 '주로' 문구, 아니면 '하루 전반' 문구다")
+        @DisplayName("체류 0 인 Idle 유닛도 1개로 세고, 본 적 없는 유닛은 뺀다")
+        void countsIdleUnits() throws Exception {
+            units(unseenUnit(), unit("Idle", 0, "2026-10-31T00:30:00+00:00"));
+
+            card("time-patterns")
+                    .andExpect(jsonPath("$.data.surfing[5][3]").value(1.0))
+                    .andExpect(jsonPath("$.data.focus[5][3]").value(0.0));
+        }
+
+        private Map<String, Object> unseenUnit() {
+            Map<String, Object> unseen = new LinkedHashMap<>();
+            unseen.put("clusterLabel", "Idle");
+            unseen.put("dwellMs", 0);
+            unseen.put("firstSeenAt", null);
+            return unseen;
+        }
+
+        @Test
+        @DisplayName("유닛이 가장 많은 구간이 30% 이상이면 '주로' 문구다 (체류시간이 아니라 유닛 수로 본다)")
         void peakNote() throws Exception {
-            units(unit("Scanning", 30_000, "2026-10-31T00:30:00+00:00"), // 09시 구간
-                    unit("Scanning", 40_000, "2026-10-30T15:10:00+00:00"), // 00시 구간
+            units(unit("Scanning", 90_000, "2026-10-31T00:30:00+00:00"), // 09시 구간, 체류는 가장 길다
+                    unit("Scanning", 10_000, "2026-10-30T15:10:00+00:00"), // 00시 구간 유닛 2개
+                    unit("Scanning", 10_000, "2026-10-30T15:20:00+00:00"),
                     unit("Scanning", 30_000, "2026-10-30T11:10:00+00:00")); // 18시 구간
 
             card("time-patterns").andExpect(jsonPath("$.data.note.analysis").value(
@@ -560,19 +576,25 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("체류가 가장 많은 구간이 정확히 30% 여도 '주로' 문구다")
+        @DisplayName("유닛이 가장 많은 구간이 정확히 30% 여도 '주로' 문구다")
         void peakAtThreshold() throws Exception {
-            units(unit("Scanning", 30_000, "2026-10-30T15:10:00+00:00"),
-                    unit("Scanning", 25_000, "2026-10-31T00:10:00+00:00"),
-                    unit("Scanning", 25_000, "2026-10-30T03:10:00+00:00"),
-                    unit("Scanning", 20_000, "2026-10-30T11:10:00+00:00"));
+            units(unit("Scanning", 1_000, "2026-10-30T15:10:00+00:00"), // 00시 구간 3개 (10개 중 30%)
+                    unit("Scanning", 1_000, "2026-10-30T15:20:00+00:00"),
+                    unit("Scanning", 1_000, "2026-10-30T15:30:00+00:00"),
+                    unit("Scanning", 1_000, "2026-10-31T00:10:00+00:00"), // 09시 구간 2개
+                    unit("Scanning", 1_000, "2026-10-31T00:20:00+00:00"),
+                    unit("Scanning", 1_000, "2026-10-30T03:10:00+00:00"), // 12시 구간 2개
+                    unit("Scanning", 1_000, "2026-10-30T03:20:00+00:00"),
+                    unit("Scanning", 1_000, "2026-10-30T11:10:00+00:00"), // 18시 구간 2개
+                    unit("Scanning", 1_000, "2026-10-30T11:20:00+00:00"),
+                    unit("Scanning", 1_000, "2026-10-30T06:30:00+00:00")); // 15시 구간 1개
 
             card("time-patterns").andExpect(jsonPath("$.data.note.analysis").value(
                     "웹 탐색은 주로 **오전 0시 ~ 오전 3시**에 진행됩니다. 이 시간대에 가장 많은 정보 탐색과 읽기가 이루어지고 있어요."));
         }
 
         @Test
-        @DisplayName("어느 구간도 30% 가 안 되면 '하루 전반' 문구다")
+        @DisplayName("어느 구간도 유닛 30% 가 안 되면 '하루 전반' 문구다")
         void noPeak() throws Exception {
             units(unit("Scanning", 29_000, "2026-10-30T15:10:00+00:00"),
                     unit("Scanning", 29_000, "2026-10-31T00:10:00+00:00"),
@@ -586,16 +608,17 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("체류 10분 이상 구간 중 정독 비율이 가장 높은 구간을 추천한다")
+        @DisplayName("체류 10분 이상 구간 중 정독 유닛 비율이 가장 높은 구간을 추천한다")
         void focusNote() throws Exception {
             units(unit("Deep Reading", 599_000, "2026-10-30T15:10:00+00:00"), // 00시 구간 100% 지만 10분 미만
-                    unit("Reading", 680_000, "2026-10-31T00:30:00+00:00"), // 09시 구간 68%
+                    unit("Reading", 400_000, "2026-10-31T00:30:00+00:00"), // 09시 구간 유닛 3개 중 정독 2개 = 67%
+                    unit("Reading", 280_000, "2026-10-31T00:35:00+00:00"),
                     unit("Scanning", 320_000, "2026-10-31T00:40:00+00:00"),
                     unit("Reading", 300_000, "2026-10-30T07:10:00+00:00"), // 15시 구간 50%
                     unit("Scanning", 300_000, "2026-10-30T07:20:00+00:00"));
 
             card("time-patterns").andExpect(jsonPath("$.data.note.recommendation").value(
-                    "**오전 9시 ~ 오후 12시**에 집중도가 가장 높아요. (정독 비율 68%로 가장 높은 시간대) 중요한 학습은 이 시간대를 활용해보세요."));
+                    "**오전 9시 ~ 오후 12시**에 집중도가 가장 높아요. (정독 비율 67%로 가장 높은 시간대) 중요한 학습은 이 시간대를 활용해보세요."));
         }
 
         @Test
