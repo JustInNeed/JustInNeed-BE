@@ -123,7 +123,7 @@ class MemberControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, bearer))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.message").value("닉네임은 영문으로 시작하는 3~8자(영문·숫자)여야 합니다."));
+                .andExpect(jsonPath("$.message").value("닉네임은 영문으로 시작하는 3~16자(영문·숫자)여야 합니다."));
     }
 
     @Test

@@ -46,7 +46,6 @@ public record HomeResponse(
 
     public record TagGroup(
             Long id,
-            String name,
             List<String> tags
     ) {
     }

@@ -45,7 +45,7 @@ import org.springframework.http.HttpStatus;
 @DisplayName("회원가입 · 로그인 · 계정")
 class AccountScenarioTest extends ScenarioTestSupport {
 
-    private static final String NICKNAME_FORMAT_MESSAGE = "닉네임은 영문으로 시작하는 3~8자(영문·숫자)여야 합니다.";
+    private static final String NICKNAME_FORMAT_MESSAGE = "닉네임은 영문으로 시작하는 3~16자(영문·숫자)여야 합니다.";
     // FE NICKNAME_TAKEN_MESSAGE 와 같은 문구
     private static final String NICKNAME_TAKEN_MESSAGE = "이미 사용 중인 닉네임입니다.";
     private static final String INVALID_REFRESH_MESSAGE = "유효하지 않은 리프레시 토큰입니다.";
@@ -99,8 +99,8 @@ class AccountScenarioTest extends ScenarioTestSupport {
     }
 
     @ParameterizedTest(name = "\"{0}\"")
-    @ValueSource(strings = {"ab", "abcdefghi", "1abc", "ab_c", "ab c", "sprout.kr", "wanderlust", "새싹"})
-    @DisplayName("닉네임 형식(영문 시작 3~8자, 영문·숫자)이 틀리면 400 과 안내 문구를 받고 닉네임은 그대로다")
+    @ValueSource(strings = {"ab", "abcdefghijklmnopq", "1abc", "ab_c", "ab c", "sprout.kr", "새싹"})
+    @DisplayName("닉네임 형식(영문 시작 3~16자, 영문·숫자)이 틀리면 400 과 안내 문구를 받고 닉네임은 그대로다")
     void invalidNicknameIsRejected(String nickname) throws Exception {
         Member signedUp = member(null);
 
@@ -112,8 +112,8 @@ class AccountScenarioTest extends ScenarioTestSupport {
     }
 
     @ParameterizedTest(name = "\"{0}\"")
-    @ValueSource(strings = {"abc", "abcdefgh", "Sprout27"})
-    @DisplayName("경계값(3자 · 8자)과 대문자 · 숫자가 섞인 닉네임은 저장된다")
+    @ValueSource(strings = {"abc", "abcdefgh", "abcdefghijklmnop", "wanderlust", "Sprout27"})
+    @DisplayName("경계값(3자 · 16자)과 9자 이상, 대문자 · 숫자가 섞인 닉네임은 저장된다")
     void boundaryNicknamesAreAccepted(String nickname) throws Exception {
         Member signedUp = member(null);
 

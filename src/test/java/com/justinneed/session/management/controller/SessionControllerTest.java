@@ -147,7 +147,8 @@ class SessionControllerTest {
                 "수정된 본문",
                 true,
                 false,
-                List.of("Java")
+                List.of("Java"),
+                null
         );
 
         mockMvc.perform(patch("/sessions/{id}", session.getId())
@@ -164,7 +165,7 @@ class SessionControllerTest {
 
     @Test
     void updateSessionRejectsBlankTitle() throws Exception {
-        SessionUpdateRequest request = new SessionUpdateRequest("   ", null, null, null, null);
+        SessionUpdateRequest request = new SessionUpdateRequest("   ", null, null, null, null, null);
 
         mockMvc.perform(patch("/sessions/{id}", session.getId())
                         .header(HttpHeaders.AUTHORIZATION, bearer)

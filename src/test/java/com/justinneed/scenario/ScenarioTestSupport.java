@@ -277,7 +277,7 @@ public abstract class ScenarioTestSupport {
     // ---------- 다른 사용자(wanderer) 시드 ----------
 
     /**
-     * FE otherProfile("wanderlust") 을 닮은 다른 사용자. 닉네임 규칙(영문 시작 3~8자) 때문에 "wanderer" 로 줄였다.
+     * FE otherProfile("wanderlust") 을 닮은 다른 사용자. 닉네임 규칙(당시 영문 시작 3~8자) 때문에 "wanderer" 로 줄였다.
      * <ul>
      *     <li>공개 세션: 프라하 · 비엔나 · 야간열차 (+ 카페 태그가 섞인 세션)</li>
      *     <li>비공개 해시태그: 카페, 슬로우트래블 → 다른 사람에겐 그 태그만 안 보이고, 태그가 섞인 세션은 보인다 (COM-1-2)</li>

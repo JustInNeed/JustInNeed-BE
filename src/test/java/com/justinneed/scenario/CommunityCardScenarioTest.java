@@ -160,6 +160,40 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
+    @DisplayName("자동 저장(draft)으로 제목 · 본문을 고치면 세션만 저장하고 카드는 그대로 둔다 (QA-030)")
+    void draftSaveSkipsCard() throws Exception {
+        patchSession(Map.of("isPublic", true));
+        String title = card().getTitle();
+
+        patchSession(Map.of("title", "자동 저장 제목", "editedMarkdown", "자동 저장 본문", "draft", true));
+
+        assertThat(card().getTitle()).isEqualTo(title);
+        assertThat(sessions.findById(rome.getId()).orElseThrow().getTitle()).isEqualTo("자동 저장 제목");
+    }
+
+    @Test
+    @DisplayName("자동 저장 뒤 편집을 끝내는 저장(draft 없음)은 카드를 맞춘다 (QA-030)")
+    void finalSaveAfterDraftSyncsCard() throws Exception {
+        patchSession(Map.of("isPublic", true));
+        patchSession(Map.of("title", "자동 저장 제목", "editedMarkdown", "자동 저장 본문", "draft", true));
+
+        patchSession(Map.of("title", "자동 저장 제목", "editedMarkdown", "자동 저장 본문"));
+
+        assertThat(card().getTitle()).isEqualTo("자동 저장 제목");
+        assertThat(card().getSnippet()).isEqualTo("자동 저장 본문");
+    }
+
+    @Test
+    @DisplayName("draft 여도 공개 여부 · 태그가 바뀌면 카드를 바로 맞춘다 (QA-030)")
+    void draftWithVisibilityOrTagsStillSyncs() throws Exception {
+        patchSession(Map.of("isPublic", true, "draft", true));
+        assertThat(cards.findById(rome.getId())).isPresent();
+
+        patchSession(Map.of("tags", List.of("피렌체"), "draft", true));
+        assertThat(card().getHashtags()).containsExactly("피렌체");
+    }
+
+    @Test
     @DisplayName("즐겨찾기만 바꾸면 카드를 다시 쓰지 않는다")
     void favoriteDoesNotTouchCard() throws Exception {
         patchSession(Map.of("isPublic", true));

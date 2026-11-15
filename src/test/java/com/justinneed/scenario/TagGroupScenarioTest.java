@@ -42,8 +42,8 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     @Autowired
     private TagGroupRepository tagGroups;
 
-    private TagGroup group(Member owner, String name, List<String> hashtags, int position) {
-        return tagGroups.saveAndFlush(new TagGroup(owner.getId(), name, hashtags, position));
+    private TagGroup group(Member owner, List<String> hashtags, int position) {
+        return tagGroups.saveAndFlush(new TagGroup(owner.getId(), hashtags, position));
     }
 
     @Test
@@ -51,20 +51,18 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     void groupsWithMatchingSessions() throws Exception {
         Member me = member("sprout");
         seedMockSessions(me);
-        group(me, "React 학습", List.of("React", "TypeScript", "훅", "상태관리"), 1);
-        group(me, "유럽 여행 준비", List.of("로마", "파리", "콜로세움", "항공권", "숙소"), 0);
+        group(me, List.of("React", "TypeScript", "훅", "상태관리"), 1);
+        group(me, List.of("로마", "파리", "콜로세움", "항공권", "숙소"), 0);
 
         mvc.perform(get("/tag-groups").with(as(me)))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data", hasSize(2)))
-                .andExpect(jsonPath("$.data[0].name").value("유럽 여행 준비"))
                 .andExpect(jsonPath("$.data[0].position").value(0))
                 .andExpect(jsonPath("$.data[0].hashtags").value(contains("로마", "파리", "콜로세움", "항공권", "숙소")))
                 .andExpect(jsonPath("$.data[0].sessions[*].title").value(contains(ROME, FLIGHT, PARIS)))
                 // 그룹 안 세션도 목록 카드와 같은 필드
                 .andExpect(jsonPath("$.data[0].sessions[0].pageCount").value(18))
                 .andExpect(jsonPath("$.data[0].sessions[0].tags").value(contains("로마", "콜로세움", "바티칸", "먹거리")))
-                .andExpect(jsonPath("$.data[1].name").value("React 학습"))
                 .andExpect(jsonPath("$.data[1].sessions", hasSize(0)));
     }
 
@@ -78,7 +76,7 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
         sessionWithStatus(me, "파리 숙소 비교", "2026-04-25T20:00:00", "2026-04-25T21:00:00", SessionStatus.FAILED,
                 List.of("파리"));
         sessionWithStatus(me, "항공권 마일리지", "2026-04-27T09:00:00", null, SessionStatus.FAILED, List.of("항공권"));
-        TagGroup europe = group(me, "유럽", List.of("로마", "파리", "항공권"), 0);
+        TagGroup europe = group(me, List.of("로마", "파리", "항공권"), 0);
         String[] expected = {"로마 근교 당일치기", ROME, "파리 숙소 비교", FLIGHT, PARIS, "항공권 마일리지"};
 
         mvc.perform(get("/tag-groups").with(as(me)))
@@ -87,7 +85,7 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
                         .with(json(Map.of("hashtags", List.of("항공권", "파리", "로마")))))
                 .andExpect(jsonPath("$.data.sessions[*].title").value(contains(expected)));
         Long copyId = readLong(mvc.perform(post("/tag-groups").with(as(me))
-                        .with(json(Map.of("name", "유럽 사본", "hashtags", List.of("로마", "파리", "항공권")))))
+                        .with(json(Map.of("hashtags", List.of("로마", "파리", "항공권")))))
                 .andExpect(jsonPath("$.data.sessions[*].title").value(contains(expected))), "$.data.id");
         mvc.perform(patch("/tag-groups/order").with(as(me))
                         .with(json(Map.of("groupIds", List.of(copyId, europe.getId())))))
@@ -157,41 +155,37 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     void matchingIgnoresCase() throws Exception {
         Member me = member("sprout");
         seedMockSessions(me);
-        group(me, "입국 서류", List.of("etias"), 0);
+        group(me, List.of("etias"), 0);
 
         mvc.perform(get("/tag-groups").with(as(me)))
                 .andExpect(jsonPath("$.data[0].sessions[*].title").value(contains("쉥겐 비자 & 입국 서류")));
     }
 
     @Test
-    @DisplayName("그룹 만들기(REC-7-5): FE 처럼 이름을 앞 3개 태그로 지어 보내면 맨 뒤 position 으로 생기고 매칭 세션이 함께 온다")
+    @DisplayName("그룹 만들기(REC-7-5): FE 처럼 해시태그만 보내면 맨 뒤 position 으로 생기고 매칭 세션이 함께 온다")
     void createGroupLikeFe() throws Exception {
         Member me = member("sprout");
         seedMockSessions(me);
-        group(me, "React 학습", List.of("React"), 0);
+        group(me, List.of("React"), 0);
 
-        mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of(
-                        "name", "로마, 파리, 항공권",
-                        "hashtags", List.of("로마", "파리", "항공권")))))
+        mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of("hashtags", List.of("로마", "파리", "항공권")))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.id").isNumber())
-                .andExpect(jsonPath("$.data.name").value("로마, 파리, 항공권"))
                 .andExpect(jsonPath("$.data.hashtags").value(contains("로마", "파리", "항공권")))
                 .andExpect(jsonPath("$.data.position").value(1))
                 .andExpect(jsonPath("$.data.sessions[*].title").value(contains(ROME, FLIGHT, PARIS)));
     }
 
     @Test
-    @DisplayName("그룹 수정: hashtags 만 보내면(REC-7-4 드래그 순서) 그 순서로 저장되고 이름은 그대로다")
+    @DisplayName("그룹 수정: hashtags 만 보내면(REC-7-4 드래그 순서) 그 순서로 저장된다")
     void reorderHashtagsInsideGroup() throws Exception {
         Member me = member("sprout");
         seedMockSessions(me);
-        TagGroup europe = group(me, "로마, 파리, 항공권", List.of("로마", "파리", "항공권"), 0);
+        TagGroup europe = group(me, List.of("로마", "파리", "항공권"), 0);
 
         mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me))
                         .with(json(Map.of("hashtags", List.of("항공권", "로마", "파리")))))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.name").value("로마, 파리, 항공권"))
                 .andExpect(jsonPath("$.data.hashtags").value(contains("항공권", "로마", "파리")))
                 .andExpect(jsonPath("$.data.position").value(0));
 
@@ -204,7 +198,7 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     void removingHashtagShrinksSessions() throws Exception {
         Member me = member("sprout");
         seedMockSessions(me);
-        TagGroup europe = group(me, "유럽", List.of("로마", "파리", "항공권"), 0);
+        TagGroup europe = group(me, List.of("로마", "파리", "항공권"), 0);
 
         mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me)).with(json(Map.of("hashtags", List.of("로마")))))
                 .andExpect(jsonPath("$.data.sessions[*].title").value(contains(ROME)));
@@ -215,7 +209,7 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     void groupFollowsSessionChanges() throws Exception {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
-        group(me, "유럽", List.of("로마", "파리"), 0);
+        group(me, List.of("로마", "파리"), 0);
 
         mvc.perform(patch("/sessions/{id}", mock.rome().getId()).with(as(me)).with(json(Map.of("tags", List.of("먹거리")))))
                 .andExpect(okEnvelope());
@@ -229,9 +223,9 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     @DisplayName("그룹을 지우면(확인 팝업 후) 남은 그룹 position 이 0 부터 다시 매겨진다")
     void deleteGroupCompactsPositions() throws Exception {
         Member me = member("sprout");
-        TagGroup first = group(me, "유럽", List.of("로마"), 0);
-        TagGroup middle = group(me, "React", List.of("React"), 1);
-        TagGroup last = group(me, "예산", List.of("예산"), 2);
+        TagGroup first = group(me, List.of("로마"), 0);
+        TagGroup middle = group(me, List.of("React"), 1);
+        TagGroup last = group(me, List.of("예산"), 2);
 
         mvc.perform(delete("/tag-groups/{id}", middle.getId()).with(as(me)))
                 .andExpect(okEnvelope())
@@ -246,14 +240,14 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     @DisplayName("그룹 순서 변경(위로 이동): 내 그룹 id 를 전부 한 번씩 보내면 그 순서로 position 0.. 이 매겨져 온다")
     void reorderGroups() throws Exception {
         Member me = member("sprout");
-        TagGroup a = group(me, "유럽", List.of("로마"), 0);
-        TagGroup b = group(me, "React", List.of("React"), 1);
-        TagGroup c = group(me, "예산", List.of("예산"), 2);
+        TagGroup a = group(me, List.of("로마"), 0);
+        TagGroup b = group(me, List.of("React"), 1);
+        TagGroup c = group(me, List.of("예산"), 2);
 
         mvc.perform(patch("/tag-groups/order").with(as(me))
                         .with(json(Map.of("groupIds", List.of(c.getId(), a.getId(), b.getId())))))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data[*].name").value(contains("예산", "유럽", "React")))
+                .andExpect(jsonPath("$.data[*].hashtags[0]").value(contains("예산", "로마", "React")))
                 .andExpect(jsonPath("$.data[*].position").value(contains(0, 1, 2)));
     }
 
@@ -261,10 +255,10 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     @DisplayName("순서 변경에 그룹이 빠지거나 · 중복되거나 · 남의 그룹이 섞이면 400 '정렬할 그룹 목록이 올바르지 않습니다.' 이고 순서는 그대로다")
     void reorderMustContainEveryGroupExactlyOnce() throws Exception {
         Member me = member("sprout");
-        TagGroup a = group(me, "유럽", List.of("로마"), 0);
-        TagGroup b = group(me, "React", List.of("React"), 1);
-        TagGroup c = group(me, "예산", List.of("예산"), 2);
-        TagGroup foreign = group(member("wanderer"), "프라하", List.of("프라하"), 0);
+        TagGroup a = group(me, List.of("로마"), 0);
+        TagGroup b = group(me, List.of("React"), 1);
+        TagGroup c = group(me, List.of("예산"), 2);
+        TagGroup foreign = group(member("wanderer"), List.of("프라하"), 0);
 
         List<List<Long>> invalid = List.of(
                 List.of(b.getId(), a.getId()),
@@ -285,62 +279,32 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     @DisplayName("빈 순서 목록을 보내면 400 '정렬할 그룹 목록을 입력해 주세요.'")
     void emptyOrderIsRejected() throws Exception {
         Member me = member("sprout");
-        group(me, "유럽", List.of("로마"), 0);
+        group(me, List.of("로마"), 0);
 
         mvc.perform(patch("/tag-groups/order").with(as(me)).with(json(Map.of("groupIds", List.of()))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "정렬할 그룹 목록을 입력해 주세요."));
     }
 
     @Test
-    @DisplayName("그룹 이름이 없거나 50자를 넘으면 400 안내 문구")
-    void groupNameValidation() throws Exception {
+    @DisplayName("그룹은 이름 없이 해시태그만으로 만들고 고친다. 요청에 name 을 보내도 무시하고 응답에도 name 이 없다 (QA-011)")
+    void groupHasNoName() throws Exception {
         Member me = member("sprout");
 
-        mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of("hashtags", List.of("로마")))))
-                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "그룹 이름을 입력해 주세요."));
-        mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of("name", "가".repeat(51), "hashtags", List.of("로마")))))
-                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "그룹 이름은 최대 50자까지 입력할 수 있습니다."));
-    }
-
-    @Test
-    @DisplayName("그룹 이름을 빈 값 · 공백으로 수정하면 400 '그룹 이름을 입력해 주세요.' 이고 이름 · 해시태그는 그대로다")
-    void blankNameUpdateIsRejected() throws Exception {
-        Member me = member("sprout");
-        TagGroup europe = group(me, "유럽 여행 준비", List.of("로마", "파리"), 0);
-
-        for (String blank : List.of("", "   ", "\t", " \n ")) {
-            mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me))
-                            .with(json(Map.of("name", blank, "hashtags", List.of("항공권")))))
-                    .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "그룹 이름을 입력해 주세요."));
-        }
-        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me)).with(json(Map.of("name", "가".repeat(51)))))
-                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "그룹 이름은 최대 50자까지 입력할 수 있습니다."));
-
+        Long id = readLong(mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of("hashtags", List.of("로마")))))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.name").doesNotExist())
+                .andExpect(jsonPath("$.data.hashtags").value(contains("로마"))), "$.data.id");
+        mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of("name", "옛 이름", "hashtags", List.of("파리")))))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.name").doesNotExist());
+        mvc.perform(patch("/tag-groups/{id}", id).with(as(me))
+                        .with(json(Map.of("name", "가".repeat(51), "hashtags", List.of("항공권")))))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.name").doesNotExist())
+                .andExpect(jsonPath("$.data.hashtags").value(contains("항공권")));
         mvc.perform(get("/tag-groups").with(as(me)))
-                .andExpect(jsonPath("$.data[0].name").value("유럽 여행 준비"))
-                .andExpect(jsonPath("$.data[0].hashtags").value(contains("로마", "파리")));
-    }
-
-    @Test
-    @DisplayName("그룹 수정에 name 을 안 보내면 이름은 그대로, 보내면 바뀐다 (앞뒤 공백이 있어도 글자가 있으면 통과)")
-    void nameIsOptionalOnUpdate() throws Exception {
-        Member me = member("sprout");
-        TagGroup europe = group(me, "유럽 여행 준비", List.of("로마", "파리"), 0);
-
-        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me)).with(json(Map.of("hashtags", List.of("파리")))))
-                .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.name").value("유럽 여행 준비"))
-                .andExpect(jsonPath("$.data.hashtags").value(contains("파리")));
-        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me)).with(json("{\"name\": null}")))
-                .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.name").value("유럽 여행 준비"));
-        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me)).with(json(Map.of("name", " 파리만 "))))
-                .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.name").value(" 파리만 "));
-
-        mvc.perform(get("/tag-groups").with(as(me)))
-                .andExpect(jsonPath("$.data[0].name").value(" 파리만 "))
-                .andExpect(jsonPath("$.data[0].hashtags").value(contains("파리")));
+                .andExpect(jsonPath("$.data[*].name").doesNotExist())
+                .andExpect(jsonPath("$.data[*].hashtags[0]").value(contains("항공권", "파리")));
     }
 
     @Test
@@ -349,12 +313,12 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         List<String> eleven = List.of("a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "a9", "a10", "a11");
 
-        mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of("name", "많음", "hashtags", eleven))))
+        mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of("hashtags", eleven))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "해시태그는 최대 10개까지 추가할 수 있습니다."));
-        mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of("name", "형식", "hashtags", List.of("#로마")))))
+        mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of("hashtags", List.of("#로마")))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST,
                         "해시태그는 한글, 영문, 숫자만 사용할 수 있으며 최대 10자까지 입력 가능합니다."));
-        mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of("name", "중복", "hashtags", List.of("Rome", "rome")))))
+        mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of("hashtags", List.of("Rome", "rome")))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "이미 등록된 해시태그입니다."));
 
         mvc.perform(get("/tag-groups").with(as(me))).andExpect(jsonPath("$.data", hasSize(0)));
@@ -364,15 +328,15 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     @DisplayName("해시태그 없이 그룹을 만들면(빈 배열 · 누락 · null) 400 이고 그룹이 안 생기며 기존 그룹 위치도 그대로다")
     void createGroupRequiresHashtag() throws Exception {
         Member me = member("sprout");
-        TagGroup europe = group(me, "유럽", List.of("로마"), 0);
+        TagGroup europe = group(me, List.of("로마"), 0);
 
         mvc.perform(post("/tag-groups").with(as(me))
-                        .with(json(Map.of("name", "빈 그룹", "hashtags", List.of(), "position", 0))))
+                        .with(json(Map.of("hashtags", List.of(), "position", 0))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, HASHTAG_REQUIRED));
-        mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of("name", "빈 그룹", "position", 0))))
+        mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of("position", 0))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, HASHTAG_REQUIRED));
         mvc.perform(post("/tag-groups").with(as(me))
-                        .with(json("{\"name\": \"빈 그룹\", \"hashtags\": null, \"position\": 0}")))
+                        .with(json("{\"hashtags\": null, \"position\": 0}")))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, HASHTAG_REQUIRED));
 
         mvc.perform(get("/tag-groups").with(as(me)))
@@ -381,29 +345,27 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("그룹 해시태그를 빈 배열로 수정하면 400 이고 이름 · 해시태그는 그대로다")
+    @DisplayName("그룹 해시태그를 빈 배열로 수정하면 400 이고 해시태그는 그대로다")
     void updateGroupRejectsEmptyHashtags() throws Exception {
         Member me = member("sprout");
-        TagGroup europe = group(me, "유럽 여행 준비", List.of("로마", "파리"), 0);
+        TagGroup europe = group(me, List.of("로마", "파리"), 0);
 
         mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me))
-                        .with(json(Map.of("name", "새 이름", "hashtags", List.of()))))
+                        .with(json(Map.of("hashtags", List.of()))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, HASHTAG_REQUIRED));
 
         mvc.perform(get("/tag-groups").with(as(me)))
-                .andExpect(jsonPath("$.data[0].name").value("유럽 여행 준비"))
                 .andExpect(jsonPath("$.data[0].hashtags").value(contains("로마", "파리")));
     }
 
     @Test
-    @DisplayName("그룹 수정에 hashtags 를 안 보내면(이름만 변경) 해시태그는 그대로다")
+    @DisplayName("그룹 수정에 hashtags 를 안 보내면(빈 요청) 해시태그는 그대로다")
     void updateGroupWithoutHashtagsKeepsThem() throws Exception {
         Member me = member("sprout");
-        TagGroup europe = group(me, "유럽 여행 준비", List.of("로마", "파리"), 0);
+        TagGroup europe = group(me, List.of("로마", "파리"), 0);
 
-        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me)).with(json(Map.of("name", "새 이름"))))
+        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me)).with(json("{}")))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.name").value("새 이름"))
                 .andExpect(jsonPath("$.data.hashtags").value(contains("로마", "파리")));
     }
 
@@ -411,7 +373,7 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     @DisplayName("다른 사람 그룹은 내 그룹 보기에 안 나오고, 수정 · 삭제하면 404 '해시태그 그룹을 찾을 수 없습니다.'")
     void foreignGroupIsInvisible() throws Exception {
         Member me = member("sprout");
-        TagGroup foreign = group(member("wanderer"), "프라하", List.of("프라하"), 0);
+        TagGroup foreign = group(member("wanderer"), List.of("프라하"), 0);
 
         mvc.perform(get("/tag-groups").with(as(me))).andExpect(jsonPath("$.data", hasSize(0)));
         mvc.perform(patch("/tag-groups/{id}", foreign.getId()).with(as(me)).with(json(Map.of("hashtags", List.of("로마")))))

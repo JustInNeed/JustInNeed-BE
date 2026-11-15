@@ -6,7 +6,6 @@ import java.util.List;
 
 public record TagGroupResponse(
         Long id,
-        String name,
         List<String> hashtags,
         int position,
         List<SessionListResponse> sessions
@@ -15,7 +14,6 @@ public record TagGroupResponse(
     public static TagGroupResponse from(TagGroup group, List<SessionListResponse> sessions) {
         return new TagGroupResponse(
                 group.getId(),
-                group.getName(),
                 group.getHashtags(),
                 group.getPosition(),
                 sessions
