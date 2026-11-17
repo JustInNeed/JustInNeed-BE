@@ -1,0 +1,6376 @@
+{
+  "components" : {
+    "schemas" : {
+      "AccountWithdrawRequest" : {
+        "properties" : {
+          "confirmText" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "reason" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "confirmText" ],
+        "type" : "object"
+      },
+      "AccountWithdrawResponse" : {
+        "properties" : {
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "extensionLogin" : {
+            "type" : "boolean"
+          },
+          "userId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "withdrawn" : {
+            "type" : "boolean"
+          },
+          "withdrawnAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AiAnalysisFailure" : {
+        "properties" : {
+          "reason" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AiAnalysisInput" : {
+        "properties" : {
+          "globalModel" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          },
+          "previousSessions" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "session" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          },
+          "sessionId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "userId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "userModel" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          }
+        },
+        "type" : "object"
+      },
+      "AiAnalysisResult" : {
+        "properties" : {
+          "analysis" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          },
+          "essay" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          },
+          "mindmap" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          },
+          "modelSource" : {
+            "type" : "string"
+          },
+          "pageVisits" : {
+            "items" : {
+              "additionalProperties" : { },
+              "type" : "object"
+            },
+            "type" : "array"
+          },
+          "pages" : {
+            "items" : {
+              "additionalProperties" : { },
+              "type" : "object"
+            },
+            "type" : "array"
+          },
+          "scoreMethod" : {
+            "type" : "string"
+          },
+          "selected" : {
+            "items" : {
+              "additionalProperties" : { },
+              "type" : "object"
+            },
+            "type" : "array"
+          },
+          "state" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          }
+        },
+        "type" : "object"
+      },
+      "AiSessionHistory" : {
+        "properties" : {
+          "unitFeatures" : {
+            "items" : {
+              "additionalProperties" : { },
+              "type" : "object"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "AnalyticsResponseExploration" : {
+        "properties" : {
+          "avgDwellSec" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "avgSessionMinutes" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "avgUrlsPerSession" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "note" : {
+            "$ref" : "#/components/schemas/Note"
+          },
+          "type" : {
+            "enum" : [ "DISTRACTED", "FOCUSED", "BROAD", "QUICK_CHECK" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AnalyticsResponseRecommendations" : {
+        "properties" : {
+          "recommendations" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Recommendation"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseAccountWithdrawResponse" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/AccountWithdrawResponse"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseAiAnalysisInput" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/AiAnalysisInput"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseAiSessionHistory" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/AiSessionHistory"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseAnalyticsResponseExploration" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/AnalyticsResponseExploration"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseAnalyticsResponseRecommendations" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/AnalyticsResponseRecommendations"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseBioView" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/BioView"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseBookmarkQueryServiceMindmaps" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/BookmarkQueryServiceMindmaps"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseBookmarkView" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/BookmarkView"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseBundles" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/Bundles"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseCardReactionServiceExploringView" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/CardReactionServiceExploringView"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseCardReactionServiceLikeView" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/CardReactionServiceLikeView"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseCardSessionsServiceMindmaps" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/CardSessionsServiceMindmaps"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseCategories" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/Categories"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseChunkUploadResponse" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/ChunkUploadResponse"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseCommunitySearchServiceMindmaps" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/CommunitySearchServiceMindmaps"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseDeletedInterest" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/DeletedInterest"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseExcludedUrlCreateResponse" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/ExcludedUrlCreateResponse"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseExcludedUrlDeleteResponse" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/ExcludedUrlDeleteResponse"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseExcludedUrlListResponse" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/ExcludedUrlListResponse"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseExcludedUrlSelectionUpdateResponse" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/ExcludedUrlSelectionUpdateResponse"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseExtensionCodeResponse" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/ExtensionCodeResponse"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseExtensionSettingResponse" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/ExtensionSettingResponse"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseFollowView" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/FollowView"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseHashtagResponse" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/HashtagResponse"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseHashtags" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/Hashtags"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseHomeResponse" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/HomeResponse"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseIntegrationEmailRegisterResponse" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/IntegrationEmailRegisterResponse"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseIntegrationGuideResponse" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/IntegrationGuideResponse"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseIntegrationStatusResponse" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/IntegrationStatusResponse"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseInteractionServiceExploringView" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/InteractionServiceExploringView"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseInteractionServiceLikeView" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/InteractionServiceLikeView"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseInterestView" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/InterestView"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseListInterestView" : {
+        "properties" : {
+          "data" : {
+            "items" : {
+              "$ref" : "#/components/schemas/InterestView"
+            },
+            "type" : "array"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseListNodeResponse" : {
+        "properties" : {
+          "data" : {
+            "items" : {
+              "$ref" : "#/components/schemas/NodeResponse"
+            },
+            "type" : "array"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseListString" : {
+        "properties" : {
+          "data" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseListTagGroupResponse" : {
+        "properties" : {
+          "data" : {
+            "items" : {
+              "$ref" : "#/components/schemas/TagGroupResponse"
+            },
+            "type" : "array"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseListTagView" : {
+        "properties" : {
+          "data" : {
+            "items" : {
+              "$ref" : "#/components/schemas/TagView"
+            },
+            "type" : "array"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseLoginTokenResponse" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/LoginTokenResponse"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseMemberResponse" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/MemberResponse"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseMyCards" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/MyCards"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseMyProfile" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/MyProfile"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseMySessions" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/MySessions"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseNicknameAvailabilityResponse" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/NicknameAvailabilityResponse"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseOrderView" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/OrderView"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseOriginal" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/Original"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponsePinView" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/PinView"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseProfile" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/Profile"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseProfiles" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/Profiles"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponsePublicGraphServiceGraph" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/PublicGraphServiceGraph"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseReadingBehavior" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/ReadingBehavior"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseRecommendationServiceRecommendations" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/RecommendationServiceRecommendations"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseSaved" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/Saved"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseSessionDetailResponse" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/SessionDetailResponse"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseSessionMindmapResponse" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/SessionMindmapResponse"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseSessionPageResponse" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/SessionPageResponse"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseSessionView" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/SessionView"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseSessions" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/Sessions"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseSharedSessionView" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/SharedSessionView"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseSharedSessions" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/SharedSessions"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseSimilarPeople" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/SimilarPeople"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseTagGroupResponse" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/TagGroupResponse"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseTagView" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/TagView"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseTimePatterns" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/TimePatterns"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseTokenResponse" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/TokenResponse"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseTrends" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/Trends"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseVisibilityResponse" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/VisibilityResponse"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseVoid" : {
+        "properties" : {
+          "data" : { },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiResponseWeekSessions" : {
+        "properties" : {
+          "data" : {
+            "$ref" : "#/components/schemas/WeekSessions"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "BioRequest" : {
+        "properties" : {
+          "bio" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "bio" ],
+        "type" : "object"
+      },
+      "BioView" : {
+        "properties" : {
+          "bio" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "BookmarkQueryServiceMindmaps" : {
+        "properties" : {
+          "hasNext" : {
+            "type" : "boolean"
+          },
+          "mindmaps" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Mindmap"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "BookmarkRequest" : {
+        "properties" : {
+          "bookmarked" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "bookmarked" ],
+        "type" : "object"
+      },
+      "BookmarkSnapshotEdge" : {
+        "properties" : {
+          "from" : {
+            "type" : "string"
+          },
+          "to" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "BookmarkSnapshotNode" : {
+        "properties" : {
+          "content" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "nodeId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "sourceUrl" : {
+            "type" : "string"
+          },
+          "visibilityScope" : {
+            "enum" : [ "URL_ONLY", "CONTENT" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "BookmarkView" : {
+        "properties" : {
+          "bookmarkCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "bookmarkId" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "Bundle" : {
+        "properties" : {
+          "bookmarkId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "hashtags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "saveType" : {
+            "enum" : [ "HASHTAG_BUNDLE", "MINI_MINDMAP" ],
+            "type" : "string"
+          },
+          "savedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "sourceMindmapId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "targetIds" : {
+            "items" : {
+              "format" : "int64",
+              "type" : "integer"
+            },
+            "type" : "array"
+          },
+          "targetType" : {
+            "enum" : [ "NODE", "HASHTAG" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Bundles" : {
+        "properties" : {
+          "bundles" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Bundle"
+            },
+            "type" : "array"
+          },
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "hasNext" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "CardReactionControllerExploringRequest" : {
+        "properties" : {
+          "exploring" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "exploring" ],
+        "type" : "object"
+      },
+      "CardReactionControllerLikeRequest" : {
+        "properties" : {
+          "liked" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "liked" ],
+        "type" : "object"
+      },
+      "CardReactionServiceExploringView" : {
+        "properties" : {
+          "exploringByMe" : {
+            "type" : "boolean"
+          },
+          "exploringCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "CardReactionServiceLikeView" : {
+        "properties" : {
+          "likeCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "likedByMe" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "CardSessionsServiceMindmaps" : {
+        "properties" : {
+          "hasNext" : {
+            "type" : "boolean"
+          },
+          "mindmaps" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ProfileCard"
+            },
+            "type" : "array"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "Categories" : {
+        "properties" : {
+          "categories" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Category"
+            },
+            "type" : "array"
+          },
+          "note" : {
+            "$ref" : "#/components/schemas/Note"
+          }
+        },
+        "type" : "object"
+      },
+      "Category" : {
+        "properties" : {
+          "count" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "pct" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ChunkUploadRequest" : {
+        "properties" : {
+          "final" : {
+            "type" : "boolean"
+          },
+          "maxN" : {
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "n" : {
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "payload" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          },
+          "sessionId" : {
+            "maxLength" : 64,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "stopReason" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "n", "payload", "sessionId" ],
+        "type" : "object"
+      },
+      "ChunkUploadResponse" : {
+        "properties" : {
+          "duplicate" : {
+            "type" : "boolean"
+          },
+          "ignored" : {
+            "type" : "boolean"
+          },
+          "n" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "receivedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "sessionId" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Citation" : {
+        "properties" : {
+          "excerpt" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "url" : {
+            "type" : "string"
+          },
+          "visitedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "CommunityCard" : {
+        "properties" : {
+          "bookmarkCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "bookmarkId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "exploringByMe" : {
+            "type" : "boolean"
+          },
+          "exploringCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "hashtags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "lastActivityAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "likeCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "likedByMe" : {
+            "type" : "boolean"
+          },
+          "mindmapId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "nodeCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "owner" : {
+            "$ref" : "#/components/schemas/Owner"
+          },
+          "relatedUrls" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RelatedUrl"
+            },
+            "type" : "array"
+          },
+          "snippet" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "CommunitySearchServiceMindmaps" : {
+        "properties" : {
+          "hasNext" : {
+            "type" : "boolean"
+          },
+          "mindmaps" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CommunityCard"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "DayActivity" : {
+        "properties" : {
+          "day" : {
+            "type" : "string"
+          },
+          "minutes" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "DeletedInterest" : {
+        "properties" : {
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "interestId" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ExcludedUrlCreateRequest" : {
+        "properties" : {
+          "url" : {
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "url" ],
+        "type" : "object"
+      },
+      "ExcludedUrlCreateResponse" : {
+        "properties" : {
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "domain" : {
+            "type" : "string"
+          },
+          "excludedUrlId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "isDefault" : {
+            "type" : "boolean"
+          },
+          "isExcluded" : {
+            "type" : "boolean"
+          },
+          "url" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ExcludedUrlDeleteRequest" : {
+        "properties" : {
+          "excludedUrlIds" : {
+            "items" : {
+              "format" : "int64",
+              "type" : "integer"
+            },
+            "minItems" : 1,
+            "type" : "array"
+          }
+        },
+        "required" : [ "excludedUrlIds" ],
+        "type" : "object"
+      },
+      "ExcludedUrlDeleteResponse" : {
+        "properties" : {
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "deletedCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "deletedUrlIds" : {
+            "items" : {
+              "format" : "int64",
+              "type" : "integer"
+            },
+            "type" : "array"
+          },
+          "uncheckedDefaultUrlIds" : {
+            "items" : {
+              "format" : "int64",
+              "type" : "integer"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "ExcludedUrlItem" : {
+        "properties" : {
+          "domain" : {
+            "type" : "string"
+          },
+          "excludedUrlId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "isDefault" : {
+            "type" : "boolean"
+          },
+          "isExcluded" : {
+            "type" : "boolean"
+          },
+          "url" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ExcludedUrlListResponse" : {
+        "properties" : {
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "excludedUrls" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ExcludedUrlItem"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "ExcludedUrlSelectionUpdateRequest" : {
+        "properties" : {
+          "excludedUrlIds" : {
+            "items" : {
+              "format" : "int64",
+              "type" : "integer"
+            },
+            "minItems" : 1,
+            "type" : "array"
+          },
+          "isExcluded" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "excludedUrlIds", "isExcluded" ],
+        "type" : "object"
+      },
+      "ExcludedUrlSelectionUpdateResponse" : {
+        "properties" : {
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "isExcluded" : {
+            "type" : "boolean"
+          },
+          "updatedCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "updatedUrlIds" : {
+            "items" : {
+              "format" : "int64",
+              "type" : "integer"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "ExtensionCodeResponse" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "expiresInSeconds" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ExtensionSettingResponse" : {
+        "properties" : {
+          "autoEndNotificationEnabled" : {
+            "type" : "boolean"
+          },
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "manualScrapEnabled" : {
+            "type" : "boolean"
+          },
+          "popupVisible" : {
+            "type" : "boolean"
+          },
+          "updatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "userId" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ExtensionToggleUpdateRequest" : {
+        "properties" : {
+          "enabled" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "enabled" ],
+        "type" : "object"
+      },
+      "FollowRequest" : {
+        "properties" : {
+          "following" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "following" ],
+        "type" : "object"
+      },
+      "FollowView" : {
+        "properties" : {
+          "following" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "Hashtag" : {
+        "properties" : {
+          "hashtagId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "HashtagResponse" : {
+        "properties" : {
+          "hashtag" : {
+            "type" : "string"
+          },
+          "isPublic" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "HashtagVisibilityControllerRequest" : {
+        "properties" : {
+          "hashtag" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "isPublic" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "hashtag", "isPublic" ],
+        "type" : "object"
+      },
+      "Hashtags" : {
+        "properties" : {
+          "hashtags" : {
+            "items" : {
+              "$ref" : "#/components/schemas/TagCount"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "HomeResponse" : {
+        "properties" : {
+          "graph" : {
+            "$ref" : "#/components/schemas/HomeResponseGraph"
+          },
+          "sessions" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SessionListResponse"
+            },
+            "type" : "array"
+          },
+          "stats" : {
+            "$ref" : "#/components/schemas/Stats"
+          },
+          "todayTimeline" : {
+            "items" : {
+              "$ref" : "#/components/schemas/TimelineSlot"
+            },
+            "type" : "array"
+          },
+          "topTags" : {
+            "items" : {
+              "$ref" : "#/components/schemas/HomeResponseTopTag"
+            },
+            "type" : "array"
+          },
+          "weekActivity" : {
+            "$ref" : "#/components/schemas/WeekActivity"
+          },
+          "weekSessions" : {
+            "items" : {
+              "$ref" : "#/components/schemas/WeekSession"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "HomeResponseGraph" : {
+        "properties" : {
+          "edges" : {
+            "items" : {
+              "items" : {
+                "type" : "string"
+              },
+              "type" : "array"
+            },
+            "type" : "array"
+          },
+          "filterTags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "nodeMeta" : {
+            "additionalProperties" : {
+              "$ref" : "#/components/schemas/NodeMeta"
+            },
+            "type" : "object"
+          },
+          "nodes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/HomeResponseNode"
+            },
+            "type" : "array"
+          },
+          "tagGroups" : {
+            "items" : {
+              "$ref" : "#/components/schemas/HomeResponseTagGroup"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "HomeResponseNode" : {
+        "properties" : {
+          "group" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "HomeResponseTagGroup" : {
+        "properties" : {
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "tags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "HomeResponseTopTag" : {
+        "properties" : {
+          "count" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tag" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "IntegrationEmailRegisterRequest" : {
+        "properties" : {
+          "email" : {
+            "format" : "email",
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "email" ],
+        "type" : "object"
+      },
+      "IntegrationEmailRegisterResponse" : {
+        "properties" : {
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "connectedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "isConnected" : {
+            "type" : "boolean"
+          },
+          "provider" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "IntegrationGuideResponse" : {
+        "properties" : {
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "guideSteps" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "guideTitle" : {
+            "type" : "string"
+          },
+          "guideUrl" : {
+            "type" : "string"
+          },
+          "provider" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "IntegrationItemResponse" : {
+        "properties" : {
+          "connectedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "isConnected" : {
+            "type" : "boolean"
+          },
+          "provider" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "IntegrationStatusResponse" : {
+        "properties" : {
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "integrations" : {
+            "items" : {
+              "$ref" : "#/components/schemas/IntegrationItemResponse"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "InteractionControllerExploringRequest" : {
+        "properties" : {
+          "exploring" : {
+            "type" : "boolean"
+          },
+          "targetId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "targetType" : {
+            "enum" : [ "NODE", "HASHTAG" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "exploring", "targetId", "targetType" ],
+        "type" : "object"
+      },
+      "InteractionControllerLikeRequest" : {
+        "properties" : {
+          "liked" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "liked" ],
+        "type" : "object"
+      },
+      "InteractionServiceExploringView" : {
+        "properties" : {
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "exploring" : {
+            "type" : "boolean"
+          },
+          "exploringCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "targetId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "targetType" : {
+            "enum" : [ "NODE", "HASHTAG" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "InteractionServiceLikeView" : {
+        "properties" : {
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "likeCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "liked" : {
+            "type" : "boolean"
+          },
+          "userId" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "InterestControllerRequest" : {
+        "properties" : {
+          "hashtag" : {
+            "minLength" : 1,
+            "pattern" : "^[가-힣a-zA-Z0-9]{1,10}$",
+            "type" : "string"
+          }
+        },
+        "required" : [ "hashtag" ],
+        "type" : "object"
+      },
+      "InterestView" : {
+        "properties" : {
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "hashtag" : {
+            "type" : "string"
+          },
+          "interestCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "interestId" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "LoginTokenResponse" : {
+        "properties" : {
+          "accessToken" : {
+            "type" : "string"
+          },
+          "needsNickname" : {
+            "type" : "boolean"
+          },
+          "refreshToken" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "LogoutRequest" : {
+        "properties" : {
+          "refreshToken" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "MemberResponse" : {
+        "properties" : {
+          "email" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "joinedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "nickname" : {
+            "type" : "string"
+          },
+          "socialProvider" : {
+            "enum" : [ "GOOGLE", "NAVER", "KAKAO" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Mindmap" : {
+        "properties" : {
+          "bookmarkId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "cardBookmark" : {
+            "type" : "boolean"
+          },
+          "edges" : {
+            "items" : {
+              "$ref" : "#/components/schemas/BookmarkSnapshotEdge"
+            },
+            "type" : "array"
+          },
+          "hashtags" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Hashtag"
+            },
+            "type" : "array"
+          },
+          "likeCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "nodeCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "nodes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/BookmarkSnapshotNode"
+            },
+            "type" : "array"
+          },
+          "owner" : {
+            "$ref" : "#/components/schemas/Owner"
+          },
+          "saveType" : {
+            "enum" : [ "HASHTAG_BUNDLE", "MINI_MINDMAP" ],
+            "type" : "string"
+          },
+          "savedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "sessionId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "snippet" : {
+            "type" : "string"
+          },
+          "sourceMindmapId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "targetIds" : {
+            "items" : {
+              "format" : "int64",
+              "type" : "integer"
+            },
+            "type" : "array"
+          },
+          "targetType" : {
+            "enum" : [ "NODE", "HASHTAG" ],
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "MyCard" : {
+        "properties" : {
+          "bookmarkCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "bookmarkId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "exploringByMe" : {
+            "type" : "boolean"
+          },
+          "exploringCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "hashtags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "isPinned" : {
+            "type" : "boolean"
+          },
+          "isPublic" : {
+            "type" : "boolean"
+          },
+          "lastActivityAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "likeCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "likedByMe" : {
+            "type" : "boolean"
+          },
+          "mindmapId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "nodeCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "owner" : {
+            "$ref" : "#/components/schemas/Owner"
+          },
+          "relatedUrls" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RelatedUrl"
+            },
+            "type" : "array"
+          },
+          "snippet" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "MyCards" : {
+        "properties" : {
+          "hasNext" : {
+            "type" : "boolean"
+          },
+          "mindmaps" : {
+            "items" : {
+              "$ref" : "#/components/schemas/MyCard"
+            },
+            "type" : "array"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "MyInterest" : {
+        "properties" : {
+          "hashtag" : {
+            "type" : "string"
+          },
+          "interestId" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "MyProfile" : {
+        "properties" : {
+          "bio" : {
+            "type" : "string"
+          },
+          "hashtags" : {
+            "items" : {
+              "$ref" : "#/components/schemas/TagView"
+            },
+            "type" : "array"
+          },
+          "interests" : {
+            "items" : {
+              "$ref" : "#/components/schemas/MyInterest"
+            },
+            "type" : "array"
+          },
+          "likeCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "nickname" : {
+            "type" : "string"
+          },
+          "pinnedSessions" : {
+            "items" : {
+              "$ref" : "#/components/schemas/MySession"
+            },
+            "type" : "array"
+          },
+          "sharedSessionCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "topHashtags" : {
+            "items" : {
+              "$ref" : "#/components/schemas/TagView"
+            },
+            "type" : "array"
+          },
+          "totalNodeCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "userId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "visibility" : {
+            "enum" : [ "URL_ONLY", "CONTENT" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "MySession" : {
+        "properties" : {
+          "endedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "isFavorite" : {
+            "type" : "boolean"
+          },
+          "isPinned" : {
+            "type" : "boolean"
+          },
+          "isPublic" : {
+            "type" : "boolean"
+          },
+          "pageCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "startedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "COLLECTING", "READY", "ANALYZING", "COMPLETED", "FAILED" ],
+            "type" : "string"
+          },
+          "tags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "MySessions" : {
+        "properties" : {
+          "hasNext" : {
+            "type" : "boolean"
+          },
+          "sessions" : {
+            "items" : {
+              "$ref" : "#/components/schemas/MySession"
+            },
+            "type" : "array"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "NicknameAvailabilityResponse" : {
+        "properties" : {
+          "available" : {
+            "type" : "boolean"
+          },
+          "nickname" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "NicknameUpdateRequest" : {
+        "properties" : {
+          "nickname" : {
+            "minLength" : 1,
+            "pattern" : "^\\s*$|^[a-zA-Z][a-zA-Z0-9]{2,15}$",
+            "type" : "string"
+          }
+        },
+        "required" : [ "nickname" ],
+        "type" : "object"
+      },
+      "NodeMeta" : {
+        "properties" : {
+          "seen" : {
+            "type" : "string"
+          },
+          "sessionId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "tags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "NodeResponse" : {
+        "properties" : {
+          "hashtag" : {
+            "type" : "string"
+          },
+          "sessions" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SharedSessionView"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "Note" : {
+        "properties" : {
+          "analysis" : {
+            "type" : "string"
+          },
+          "recommendation" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "OrderRequest" : {
+        "properties" : {
+          "sessionIds" : {
+            "items" : {
+              "format" : "int64",
+              "type" : "integer"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "sessionIds" ],
+        "type" : "object"
+      },
+      "OrderView" : {
+        "properties" : {
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "sessionIds" : {
+            "items" : {
+              "format" : "int64",
+              "type" : "integer"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "Original" : {
+        "properties" : {
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "highlightedNodeIds" : {
+            "items" : {
+              "format" : "int64",
+              "type" : "integer"
+            },
+            "type" : "array"
+          },
+          "mindmap" : {
+            "$ref" : "#/components/schemas/PublicGraphServiceGraph"
+          },
+          "sourceAvailable" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "Owner" : {
+        "properties" : {
+          "nickname" : {
+            "type" : "string"
+          },
+          "userId" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PinRequest" : {
+        "properties" : {
+          "sessionId" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "sessionId" ],
+        "type" : "object"
+      },
+      "PinView" : {
+        "properties" : {
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "isPinned" : {
+            "type" : "boolean"
+          },
+          "isPublic" : {
+            "type" : "boolean"
+          },
+          "order" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "sessionId" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "Profile" : {
+        "properties" : {
+          "bio" : {
+            "type" : "string"
+          },
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "exploringCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "following" : {
+            "type" : "boolean"
+          },
+          "interests" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "likeCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "likedByMe" : {
+            "type" : "boolean"
+          },
+          "nickname" : {
+            "type" : "string"
+          },
+          "sharedSessionCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "topHashtags" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PublicGraphServiceTopTag"
+            },
+            "type" : "array"
+          },
+          "totalNodeCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "userId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "visibility" : {
+            "enum" : [ "URL_ONLY", "CONTENT" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ProfileCard" : {
+        "properties" : {
+          "bookmarkCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "bookmarkId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "exploringByMe" : {
+            "type" : "boolean"
+          },
+          "exploringCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "hashtags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "isPinned" : {
+            "type" : "boolean"
+          },
+          "lastActivityAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "likeCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "likedByMe" : {
+            "type" : "boolean"
+          },
+          "mindmapId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "nodeCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "owner" : {
+            "$ref" : "#/components/schemas/Owner"
+          },
+          "relatedUrls" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RelatedUrl"
+            },
+            "type" : "array"
+          },
+          "snippet" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ProfileItem" : {
+        "properties" : {
+          "hashtags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "mindmapCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "nickname" : {
+            "type" : "string"
+          },
+          "userId" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ProfileRequest" : {
+        "properties" : {
+          "bio" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "hiddenHashtagIds" : {
+            "items" : {
+              "format" : "int64",
+              "type" : "integer"
+            },
+            "type" : "array"
+          },
+          "interests" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "pinnedSessionIds" : {
+            "items" : {
+              "format" : "int64",
+              "type" : "integer"
+            },
+            "type" : "array"
+          },
+          "visibility" : {
+            "enum" : [ "URL_ONLY", "CONTENT" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "bio", "hiddenHashtagIds", "interests", "pinnedSessionIds", "visibility" ],
+        "type" : "object"
+      },
+      "Profiles" : {
+        "properties" : {
+          "hasNext" : {
+            "type" : "boolean"
+          },
+          "profiles" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ProfileItem"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "PublicGraphServiceGraph" : {
+        "properties" : {
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "edges" : {
+            "items" : {
+              "$ref" : "#/components/schemas/BookmarkSnapshotEdge"
+            },
+            "type" : "array"
+          },
+          "hashtags" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Tag"
+            },
+            "type" : "array"
+          },
+          "mindmapId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "nickname" : {
+            "type" : "string"
+          },
+          "nodes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/BookmarkSnapshotNode"
+            },
+            "type" : "array"
+          },
+          "ownerId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "topHashtags" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PublicGraphServiceTopTag"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "PublicGraphServiceTopTag" : {
+        "properties" : {
+          "hashtagId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "nodeCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PublicRequest" : {
+        "properties" : {
+          "isPublic" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "isPublic" ],
+        "type" : "object"
+      },
+      "ReadingBehavior" : {
+        "properties" : {
+          "note" : {
+            "$ref" : "#/components/schemas/Note"
+          },
+          "shares" : {
+            "additionalProperties" : {
+              "format" : "int32",
+              "type" : "integer"
+            },
+            "type" : "object"
+          }
+        },
+        "type" : "object"
+      },
+      "Recommendation" : {
+        "properties" : {
+          "body" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "RecommendationServiceRecommendations" : {
+        "properties" : {
+          "basisHashtags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "mindmaps" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CommunityCard"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "RelatedUrl" : {
+        "properties" : {
+          "title" : {
+            "type" : "string"
+          },
+          "url" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SaveRequest" : {
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "saveType" : {
+            "enum" : [ "HASHTAG_BUNDLE", "MINI_MINDMAP" ],
+            "type" : "string"
+          },
+          "sourceMindmapId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "targetIds" : {
+            "items" : {
+              "format" : "int64",
+              "type" : "integer"
+            },
+            "maxItems" : 100,
+            "minItems" : 0,
+            "type" : "array"
+          },
+          "targetType" : {
+            "enum" : [ "NODE", "HASHTAG" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "saveType", "targetIds", "targetType" ],
+        "type" : "object"
+      },
+      "Saved" : {
+        "properties" : {
+          "bookmarkId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "saveType" : {
+            "enum" : [ "HASHTAG_BUNDLE", "MINI_MINDMAP" ],
+            "type" : "string"
+          },
+          "targetIds" : {
+            "items" : {
+              "format" : "int64",
+              "type" : "integer"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "SessionDetailResponse" : {
+        "properties" : {
+          "endedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "isFavorite" : {
+            "type" : "boolean"
+          },
+          "isOwner" : {
+            "type" : "boolean"
+          },
+          "isPublic" : {
+            "type" : "boolean"
+          },
+          "pageCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "sources" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Source"
+            },
+            "type" : "array"
+          },
+          "startedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "COLLECTING", "READY", "ANALYZING", "COMPLETED", "FAILED" ],
+            "type" : "string"
+          },
+          "summary" : {
+            "$ref" : "#/components/schemas/SummaryResponse"
+          },
+          "tags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SessionListResponse" : {
+        "properties" : {
+          "endedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "isFavorite" : {
+            "type" : "boolean"
+          },
+          "isPublic" : {
+            "type" : "boolean"
+          },
+          "pageCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "startedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "COLLECTING", "READY", "ANALYZING", "COMPLETED", "FAILED" ],
+            "type" : "string"
+          },
+          "tags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SessionMindmapResponse" : {
+        "properties" : {
+          "edges" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SessionMindmapResponseEdge"
+            },
+            "type" : "array"
+          },
+          "nodes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SessionMindmapResponseNode"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "SessionMindmapResponseEdge" : {
+        "properties" : {
+          "from" : {
+            "type" : "string"
+          },
+          "primary" : {
+            "type" : "boolean"
+          },
+          "to" : {
+            "type" : "string"
+          },
+          "type" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SessionMindmapResponseNode" : {
+        "properties" : {
+          "childCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "citation" : {
+            "$ref" : "#/components/schemas/Citation"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "keyword" : {
+            "type" : "string"
+          },
+          "score" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "type" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SessionPageResponse" : {
+        "properties" : {
+          "favoriteCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "hasNext" : {
+            "type" : "boolean"
+          },
+          "sessions" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SessionListResponse"
+            },
+            "type" : "array"
+          },
+          "totalCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "SessionUpdateRequest" : {
+        "properties" : {
+          "draft" : {
+            "type" : "boolean"
+          },
+          "editedMarkdown" : {
+            "type" : "string"
+          },
+          "isFavorite" : {
+            "type" : "boolean"
+          },
+          "isPublic" : {
+            "type" : "boolean"
+          },
+          "tags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "title" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SessionView" : {
+        "properties" : {
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "hashtags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "nickname" : {
+            "type" : "string"
+          },
+          "ownerId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "sessionId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "summary" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "urls" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "visibilityScope" : {
+            "enum" : [ "URL_ONLY", "CONTENT" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Sessions" : {
+        "properties" : {
+          "sessions" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SessionListResponse"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "SharedSessionView" : {
+        "properties" : {
+          "endedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "isPinned" : {
+            "type" : "boolean"
+          },
+          "markdown" : {
+            "type" : "string"
+          },
+          "pageCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "sources" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Source"
+            },
+            "type" : "array"
+          },
+          "startedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "COLLECTING", "READY", "ANALYZING", "COMPLETED", "FAILED" ],
+            "type" : "string"
+          },
+          "tags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "urls" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "SharedSessions" : {
+        "properties" : {
+          "hasNext" : {
+            "type" : "boolean"
+          },
+          "sessions" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SharedSessionView"
+            },
+            "type" : "array"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "SimilarPeople" : {
+        "properties" : {
+          "people" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SimilarPeopleServicePerson"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "SimilarPeopleServicePerson" : {
+        "properties" : {
+          "following" : {
+            "type" : "boolean"
+          },
+          "matchedHashtags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "nickname" : {
+            "type" : "string"
+          },
+          "userId" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "Source" : {
+        "properties" : {
+          "excerpt" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "url" : {
+            "type" : "string"
+          },
+          "visitedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Stats" : {
+        "properties" : {
+          "avgSessionMinutes" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "deepReadingDelta" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "deepReadingPct" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "hashtagCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "nodeDelta" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "sessionDelta" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalNodes" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "weekSessions" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "SummaryResponse" : {
+        "properties" : {
+          "markdown" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Tag" : {
+        "properties" : {
+          "hashtagId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "ownerId" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "TagCount" : {
+        "properties" : {
+          "count" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "tag" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "TagGroupCreateRequest" : {
+        "properties" : {
+          "hashtags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "position" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "TagGroupOrderRequest" : {
+        "properties" : {
+          "groupIds" : {
+            "items" : {
+              "format" : "int64",
+              "type" : "integer"
+            },
+            "minItems" : 1,
+            "type" : "array"
+          }
+        },
+        "required" : [ "groupIds" ],
+        "type" : "object"
+      },
+      "TagGroupResponse" : {
+        "properties" : {
+          "hashtags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "position" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "sessions" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SessionListResponse"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "TagGroupUpdateRequest" : {
+        "properties" : {
+          "hashtags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "TagView" : {
+        "properties" : {
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "hashtag" : {
+            "type" : "string"
+          },
+          "hashtagId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "isPublic" : {
+            "type" : "boolean"
+          },
+          "nodeCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "TimePatterns" : {
+        "properties" : {
+          "focus" : {
+            "items" : {
+              "items" : {
+                "format" : "double",
+                "type" : "number"
+              },
+              "type" : "array"
+            },
+            "type" : "array"
+          },
+          "note" : {
+            "$ref" : "#/components/schemas/Note"
+          },
+          "surfing" : {
+            "items" : {
+              "items" : {
+                "format" : "double",
+                "type" : "number"
+              },
+              "type" : "array"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "TimelineSlot" : {
+        "properties" : {
+          "endTime" : {
+            "type" : "string"
+          },
+          "sites" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "startTime" : {
+            "type" : "string"
+          },
+          "tags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "TokenExchangeRequest" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "TokenRefreshRequest" : {
+        "properties" : {
+          "refreshToken" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "TokenResponse" : {
+        "properties" : {
+          "accessToken" : {
+            "type" : "string"
+          },
+          "refreshToken" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Trend" : {
+        "properties" : {
+          "count" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "rank" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "trend" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "Trends" : {
+        "properties" : {
+          "hashtags" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Trend"
+            },
+            "type" : "array"
+          },
+          "period" : {
+            "enum" : [ "TODAY", "WEEK" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "VisibilityRequest" : {
+        "properties" : {
+          "visibility" : {
+            "enum" : [ "URL_ONLY", "CONTENT" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "visibility" ],
+        "type" : "object"
+      },
+      "VisibilityResponse" : {
+        "properties" : {
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "updatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "visibilityScope" : {
+            "enum" : [ "URL_ONLY", "CONTENT" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Visit" : {
+        "properties" : {
+          "domain" : {
+            "type" : "string"
+          },
+          "dwellSec" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "WeekActivity" : {
+        "properties" : {
+          "days" : {
+            "items" : {
+              "$ref" : "#/components/schemas/DayActivity"
+            },
+            "type" : "array"
+          },
+          "range" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "WeekSession" : {
+        "properties" : {
+          "dayOffset" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "startedAt" : {
+            "type" : "string"
+          },
+          "tags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "visits" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Visit"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "WeekSessions" : {
+        "properties" : {
+          "sessions" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SessionListResponse"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      }
+    }
+  },
+  "info" : {
+    "title" : "OpenAPI definition",
+    "version" : "v0"
+  },
+  "openapi" : "3.1.0",
+  "paths" : {
+    "/analytics/categories" : {
+      "get" : {
+        "operationId" : "getCategories",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseCategories"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "analytics-controller" ]
+      }
+    },
+    "/analytics/exploration" : {
+      "get" : {
+        "operationId" : "getExploration",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseAnalyticsResponseExploration"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "analytics-controller" ]
+      }
+    },
+    "/analytics/reading-behavior" : {
+      "get" : {
+        "operationId" : "getReadingBehavior",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseReadingBehavior"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "analytics-controller" ]
+      }
+    },
+    "/analytics/recommendations" : {
+      "get" : {
+        "operationId" : "getRecommendations",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseAnalyticsResponseRecommendations"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "analytics-controller" ]
+      }
+    },
+    "/analytics/time-patterns" : {
+      "get" : {
+        "operationId" : "getTimePatterns",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseTimePatterns"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "analytics-controller" ]
+      }
+    },
+    "/analytics/week-sessions" : {
+      "get" : {
+        "operationId" : "getWeekSessions",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseWeekSessions"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "analytics-controller" ]
+      }
+    },
+    "/auth/extension-code" : {
+      "post" : {
+        "operationId" : "extensionCode",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "Authorization",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseExtensionCodeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/auth/logout" : {
+      "post" : {
+        "operationId" : "logout",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "Authorization",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LogoutRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/auth/refresh" : {
+      "post" : {
+        "operationId" : "refresh",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TokenRefreshRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseTokenResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/auth/token" : {
+      "post" : {
+        "operationId" : "token",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TokenExchangeRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseLoginTokenResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/community/bookmarks" : {
+      "post" : {
+        "operationId" : "save_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SaveRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseSaved"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "bookmark-command-controller" ]
+      }
+    },
+    "/community/bookmarks/{bookmarkId}" : {
+      "delete" : {
+        "operationId" : "delete_3",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "bookmarkId",
+          "required" : true,
+          "schema" : {
+            "exclusiveMinimum" : 0,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "bookmark-command-controller" ]
+      }
+    },
+    "/community/exploring" : {
+      "get" : {
+        "operationId" : "status",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "targetType",
+          "required" : true,
+          "schema" : {
+            "enum" : [ "NODE", "HASHTAG" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "targetId",
+          "required" : true,
+          "schema" : {
+            "exclusiveMinimum" : 0,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseInteractionServiceExploringView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "interaction-controller" ]
+      },
+      "patch" : {
+        "operationId" : "exploring_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InteractionControllerExploringRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseInteractionServiceExploringView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "interaction-controller" ]
+      }
+    },
+    "/community/me/bookmarks/hashtag-bundles" : {
+      "get" : {
+        "operationId" : "bundles",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 10,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseBundles"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "bookmark-query-controller" ]
+      }
+    },
+    "/community/me/bookmarks/mindmaps" : {
+      "get" : {
+        "operationId" : "mindmaps_3",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 10,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseBookmarkQueryServiceMindmaps"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "bookmark-query-controller" ]
+      }
+    },
+    "/community/me/bookmarks/{bookmarkId}/original" : {
+      "get" : {
+        "operationId" : "original",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "bookmarkId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseOriginal"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "public-graph-controller" ]
+      }
+    },
+    "/community/me/hashtags" : {
+      "get" : {
+        "operationId" : "get_2",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseListTagView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "hashtag-visibility-controller" ]
+      }
+    },
+    "/community/me/hashtags/visibility" : {
+      "patch" : {
+        "operationId" : "update_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/HashtagVisibilityControllerRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseHashtagResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "hashtag-visibility-controller" ]
+      }
+    },
+    "/community/me/hashtags/{hashtagId}/visibility" : {
+      "patch" : {
+        "operationId" : "visibility",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "hashtagId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PublicRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseTagView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "profile-edit-controller" ]
+      }
+    },
+    "/community/me/interests" : {
+      "get" : {
+        "operationId" : "mine",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseListInterestView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "interest-controller" ]
+      },
+      "post" : {
+        "operationId" : "add",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InterestControllerRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseInterestView"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "interest-controller" ]
+      }
+    },
+    "/community/me/interests/by-name/{hashtag}" : {
+      "delete" : {
+        "operationId" : "delete_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "hashtag",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseListString"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "interest-delete-controller" ]
+      }
+    },
+    "/community/me/interests/{hashtag}" : {
+      "delete" : {
+        "operationId" : "delete_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "hashtag",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseListString"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "interest-delete-controller" ]
+      }
+    },
+    "/community/me/interests/{interestId}" : {
+      "delete" : {
+        "operationId" : "deleteId",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "interestId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseDeletedInterest"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "interest-delete-controller" ]
+      }
+    },
+    "/community/me/mindmap" : {
+      "get" : {
+        "operationId" : "mindmap",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponsePublicGraphServiceGraph"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "my-profile-controller" ]
+      }
+    },
+    "/community/me/mindmaps" : {
+      "get" : {
+        "operationId" : "mindmaps_2",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 12,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseMyCards"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "my-profile-controller" ]
+      }
+    },
+    "/community/me/mindmaps/{id}/sessions" : {
+      "get" : {
+        "operationId" : "related",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseSessions"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "my-profile-controller" ]
+      }
+    },
+    "/community/me/pinned-sessions" : {
+      "post" : {
+        "operationId" : "pin",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PinRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponsePinView"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "profile-edit-controller" ]
+      }
+    },
+    "/community/me/pinned-sessions/order" : {
+      "patch" : {
+        "operationId" : "order",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/OrderRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseOrderView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "profile-edit-controller" ]
+      }
+    },
+    "/community/me/pinned-sessions/{sessionId}" : {
+      "delete" : {
+        "operationId" : "unpin",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "sessionId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponsePinView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "profile-edit-controller" ]
+      }
+    },
+    "/community/me/profile" : {
+      "get" : {
+        "operationId" : "profile",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseMyProfile"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "my-profile-controller" ]
+      },
+      "patch" : {
+        "operationId" : "bio",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BioRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseBioView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "profile-edit-controller" ]
+      },
+      "put" : {
+        "operationId" : "save",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ProfileRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "profile-edit-controller" ]
+      }
+    },
+    "/community/me/sessions" : {
+      "get" : {
+        "operationId" : "sessions_1",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 12,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "publicOnly",
+          "required" : false,
+          "schema" : {
+            "default" : false,
+            "type" : "boolean"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseMySessions"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "my-profile-controller" ]
+      }
+    },
+    "/community/me/visibility" : {
+      "get" : {
+        "operationId" : "get",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseVisibilityResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "visibility-controller" ]
+      },
+      "patch" : {
+        "operationId" : "update",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/VisibilityRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseVisibilityResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "visibility-controller" ]
+      }
+    },
+    "/community/mindmaps/{id}/sessions" : {
+      "get" : {
+        "operationId" : "sessions",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseSessions"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "card-sessions-controller" ]
+      }
+    },
+    "/community/mindmaps/{mindmapId}/bookmark" : {
+      "patch" : {
+        "operationId" : "bookmark",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "mindmapId",
+          "required" : true,
+          "schema" : {
+            "exclusiveMinimum" : 0,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BookmarkRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseBookmarkView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "card-reaction-controller" ]
+      }
+    },
+    "/community/mindmaps/{mindmapId}/exploring" : {
+      "patch" : {
+        "operationId" : "exploring",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "mindmapId",
+          "required" : true,
+          "schema" : {
+            "exclusiveMinimum" : 0,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CardReactionControllerExploringRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseCardReactionServiceExploringView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "card-reaction-controller" ]
+      }
+    },
+    "/community/mindmaps/{mindmapId}/like" : {
+      "patch" : {
+        "operationId" : "like_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "mindmapId",
+          "required" : true,
+          "schema" : {
+            "exclusiveMinimum" : 0,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CardReactionControllerLikeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseCardReactionServiceLikeView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "card-reaction-controller" ]
+      }
+    },
+    "/community/profiles/{userId}" : {
+      "get" : {
+        "operationId" : "profile_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "userId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseProfile"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "public-graph-controller" ]
+      }
+    },
+    "/community/profiles/{userId}/follow" : {
+      "patch" : {
+        "operationId" : "follow",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "userId",
+          "required" : true,
+          "schema" : {
+            "exclusiveMinimum" : 0,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/FollowRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseFollowView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "follow-controller" ]
+      }
+    },
+    "/community/profiles/{userId}/interests" : {
+      "get" : {
+        "operationId" : "get_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "userId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseListString"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "interest-controller" ]
+      }
+    },
+    "/community/profiles/{userId}/like" : {
+      "patch" : {
+        "operationId" : "like",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "userId",
+          "required" : true,
+          "schema" : {
+            "exclusiveMinimum" : 0,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InteractionControllerLikeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseInteractionServiceLikeView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "interaction-controller" ]
+      }
+    },
+    "/community/profiles/{userId}/mindmap" : {
+      "get" : {
+        "operationId" : "graph",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "userId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "hashtagId",
+          "required" : false,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponsePublicGraphServiceGraph"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "public-graph-controller" ]
+      }
+    },
+    "/community/profiles/{userId}/mindmaps" : {
+      "get" : {
+        "operationId" : "mindmaps_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "userId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 10,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseCardSessionsServiceMindmaps"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "card-sessions-controller" ]
+      }
+    },
+    "/community/profiles/{userId}/nodes" : {
+      "get" : {
+        "operationId" : "nodes",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "userId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseListNodeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "visibility-controller" ]
+      }
+    },
+    "/community/profiles/{userId}/shared-sessions" : {
+      "get" : {
+        "operationId" : "list",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "userId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 12,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseSharedSessions"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "shared-session-controller" ]
+      }
+    },
+    "/community/profiles/{userId}/shared-sessions/{sessionId}" : {
+      "get" : {
+        "operationId" : "detail",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "userId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "sessionId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseSharedSessionView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "shared-session-controller" ]
+      }
+    },
+    "/community/recommendations/hashtags/trending" : {
+      "get" : {
+        "operationId" : "trending",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "period",
+          "required" : false,
+          "schema" : {
+            "default" : "today",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "limit",
+          "required" : false,
+          "schema" : {
+            "default" : 10,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseTrends"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "recommendation-controller" ]
+      }
+    },
+    "/community/recommendations/mindmaps/interests" : {
+      "get" : {
+        "operationId" : "interests",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "limit",
+          "required" : false,
+          "schema" : {
+            "default" : 3,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseRecommendationServiceRecommendations"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "recommendation-controller" ]
+      }
+    },
+    "/community/recommendations/mindmaps/recent-bookmarks" : {
+      "get" : {
+        "operationId" : "recent",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "limit",
+          "required" : false,
+          "schema" : {
+            "default" : 3,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseRecommendationServiceRecommendations"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "recommendation-controller" ]
+      }
+    },
+    "/community/recommendations/profiles/similar" : {
+      "get" : {
+        "operationId" : "similar",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "limit",
+          "required" : false,
+          "schema" : {
+            "default" : 3,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseSimilarPeople"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "similar-people-controller" ]
+      }
+    },
+    "/community/search/hashtags" : {
+      "get" : {
+        "operationId" : "hashtags",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "q",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "limit",
+          "required" : false,
+          "schema" : {
+            "default" : 5,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseHashtags"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "community-search-controller" ]
+      }
+    },
+    "/community/search/mindmaps" : {
+      "get" : {
+        "operationId" : "mindmaps",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "q",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 10,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseCommunitySearchServiceMindmaps"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "community-search-controller" ]
+      }
+    },
+    "/community/search/profiles" : {
+      "get" : {
+        "operationId" : "profiles",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "q",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 10,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseProfiles"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "community-search-controller" ]
+      }
+    },
+    "/community/sessions/{sessionId}" : {
+      "get" : {
+        "operationId" : "session",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "sessionId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseSessionView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "profile-edit-controller" ]
+      }
+    },
+    "/home" : {
+      "get" : {
+        "operationId" : "getHome",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseHomeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "home-controller" ]
+      }
+    },
+    "/internal/ai/sessions/{sessionId}/failure" : {
+      "post" : {
+        "operationId" : "receiveFailure",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "X-Internal-Token",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "sessionId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AiAnalysisFailure"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "ai-callback-controller" ]
+      }
+    },
+    "/internal/ai/sessions/{sessionId}/history" : {
+      "get" : {
+        "operationId" : "getHistory",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "X-Internal-Token",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "sessionId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseAiSessionHistory"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "ai-internal-controller" ]
+      }
+    },
+    "/internal/ai/sessions/{sessionId}/input" : {
+      "get" : {
+        "operationId" : "getInput",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "X-Internal-Token",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "sessionId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseAiAnalysisInput"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "ai-internal-controller" ]
+      }
+    },
+    "/internal/ai/sessions/{sessionId}/result" : {
+      "post" : {
+        "operationId" : "receiveResult",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "X-Internal-Token",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "sessionId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AiAnalysisResult"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "ai-callback-controller" ]
+      }
+    },
+    "/members/me" : {
+      "get" : {
+        "operationId" : "getMe",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseMemberResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "member-controller" ]
+      }
+    },
+    "/members/me/nickname" : {
+      "patch" : {
+        "operationId" : "updateNickname",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/NicknameUpdateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseMemberResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "member-controller" ]
+      }
+    },
+    "/members/nickname/available" : {
+      "get" : {
+        "operationId" : "checkNicknameAvailability",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "request",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/NicknameUpdateRequest"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseNicknameAvailabilityResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "member-controller" ]
+      }
+    },
+    "/sessions" : {
+      "get" : {
+        "operationId" : "getSessions",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 10,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "favorite",
+          "required" : false,
+          "schema" : {
+            "default" : false,
+            "type" : "boolean"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseSessionPageResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "session-controller" ]
+      }
+    },
+    "/sessions/chunks" : {
+      "post" : {
+        "operationId" : "upload",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChunkUploadRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseChunkUploadResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "session-chunk-controller" ]
+      }
+    },
+    "/sessions/hashtags" : {
+      "get" : {
+        "operationId" : "getHashtags",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseListString"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "session-controller" ]
+      }
+    },
+    "/sessions/{id}" : {
+      "delete" : {
+        "operationId" : "deleteSession",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "session-controller" ]
+      },
+      "get" : {
+        "operationId" : "getSession",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseSessionDetailResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "session-controller" ]
+      },
+      "patch" : {
+        "operationId" : "updateSession",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SessionUpdateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseSessionDetailResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "session-controller" ]
+      }
+    },
+    "/sessions/{id}/mindmap" : {
+      "get" : {
+        "operationId" : "getMindmap",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseSessionMindmapResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "session-controller" ]
+      }
+    },
+    "/sessions/{id}/reanalyze" : {
+      "post" : {
+        "operationId" : "reanalyze",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseSessionDetailResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "session-controller" ]
+      }
+    },
+    "/settings/account" : {
+      "delete" : {
+        "operationId" : "withdraw",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "Authorization",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AccountWithdrawRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseAccountWithdrawResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-settings-controller" ]
+      }
+    },
+    "/settings/collection/excluded-urls" : {
+      "delete" : {
+        "operationId" : "delete",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ExcludedUrlDeleteRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseExcludedUrlDeleteResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "collection-settings-controller" ]
+      },
+      "get" : {
+        "operationId" : "getExcludedUrls",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseExcludedUrlListResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "collection-settings-controller" ]
+      },
+      "post" : {
+        "operationId" : "create",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ExcludedUrlCreateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseExcludedUrlCreateResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "collection-settings-controller" ]
+      }
+    },
+    "/settings/collection/excluded-urls/selections" : {
+      "patch" : {
+        "operationId" : "updateSelections",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ExcludedUrlSelectionUpdateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseExcludedUrlSelectionUpdateResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "collection-settings-controller" ]
+      }
+    },
+    "/settings/extension" : {
+      "get" : {
+        "operationId" : "getSettings",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseExtensionSettingResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "extension-setting-controller" ]
+      }
+    },
+    "/settings/extension/auto-end-notification" : {
+      "patch" : {
+        "operationId" : "updateAutoEndNotification",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ExtensionToggleUpdateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseExtensionSettingResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "extension-setting-controller" ]
+      }
+    },
+    "/settings/extension/manual-scrap" : {
+      "patch" : {
+        "operationId" : "updateManualScrap",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ExtensionToggleUpdateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseExtensionSettingResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "extension-setting-controller" ]
+      }
+    },
+    "/settings/extension/popup-visible" : {
+      "patch" : {
+        "operationId" : "updatePopupVisible",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ExtensionToggleUpdateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseExtensionSettingResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "extension-setting-controller" ]
+      }
+    },
+    "/settings/integrations" : {
+      "get" : {
+        "operationId" : "getStatuses",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "provider",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseIntegrationStatusResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "external-integration-controller" ]
+      }
+    },
+    "/settings/integrations/{provider}/email" : {
+      "post" : {
+        "operationId" : "registerEmail",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "provider",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/IntegrationEmailRegisterRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseIntegrationEmailRegisterResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "external-integration-controller" ]
+      }
+    },
+    "/settings/integrations/{provider}/guide" : {
+      "get" : {
+        "operationId" : "getGuide",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "provider",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseIntegrationGuideResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "external-integration-controller" ]
+      }
+    },
+    "/tag-groups" : {
+      "get" : {
+        "operationId" : "getTagGroups",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseListTagGroupResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "tag-group-controller" ]
+      },
+      "post" : {
+        "operationId" : "createTagGroup",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TagGroupCreateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseTagGroupResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "tag-group-controller" ]
+      }
+    },
+    "/tag-groups/order" : {
+      "patch" : {
+        "operationId" : "updateOrder",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TagGroupOrderRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseListTagGroupResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "tag-group-controller" ]
+      }
+    },
+    "/tag-groups/{id}" : {
+      "delete" : {
+        "operationId" : "deleteTagGroup",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "tag-group-controller" ]
+      },
+      "patch" : {
+        "operationId" : "updateTagGroup",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TagGroupUpdateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseTagGroupResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "tag-group-controller" ]
+      }
+    }
+  }
+}
