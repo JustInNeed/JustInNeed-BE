@@ -214,7 +214,8 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
 
         mvc.perform(get(MINDMAPS, wanderer.id()).param("page", "0").param("size", "2").with(as(me)))
                 .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(wanderer.prague(), wanderer.cafe()))))
-                .andExpect(jsonPath("$.data.hasNext").value(true));
+                .andExpect(jsonPath("$.data.hasNext").value(true))
+                .andExpect(jsonPath("$.data.totalPages").value(3));
         mvc.perform(get(MINDMAPS, wanderer.id()).param("page", "1").param("size", "2").with(as(me)))
                 .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(wanderer.nightjet(), tie))))
                 .andExpect(jsonPath("$.data.hasNext").value(true));

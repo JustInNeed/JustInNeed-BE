@@ -77,6 +77,8 @@ public class PublicGraphService {
         var sessions = sharing.visibleSessions(profile);
         var aiMaps = aiNodes ? mindmaps.of(sessions) : Map.<Long, SessionMindmapResponse>of();
         for (var session : sessions) {
+            // 태그가 모두 비공개인 공개 세션은 노드도 숨긴다 (QA-048). 비공개 태그가 섞여 있으면 세션은 보이고 태그만 뺀다
+            if (!session.getTags().isEmpty() && sharing.visibleTags(profile, session.getTags()).isEmpty()) continue;
             var sessionTags = sharing.visibleTags(profile, session.getTags()).stream().map(CommunityTags::key).distinct()
                     .map(tagIndex::get).filter(Objects::nonNull).toList();
             if (hashtagId != null && sessionTags.stream().noneMatch(t -> t.getId().equals(hashtagId))) continue;

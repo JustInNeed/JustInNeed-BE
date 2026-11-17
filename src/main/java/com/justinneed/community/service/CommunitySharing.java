@@ -57,7 +57,8 @@ public class CommunitySharing {
         ordered.retainAll(new HashSet<>(ids));
         ordered.addAll(ids);
         List<Long> found = ordered.stream().skip(paging.getOffset()).limit(paging.getPageSize() + 1L).toList();
-        return new PinnedPage(found.stream().limit(paging.getPageSize()).toList(), found.size() > paging.getPageSize());
+        return new PinnedPage(found.stream().limit(paging.getPageSize()).toList(), found.size() > paging.getPageSize(),
+                totalPages(ordered.size(), paging.getPageSize()));
     }
 
     // 방문자에게 보이는 태그
@@ -84,6 +85,11 @@ public class CommunitySharing {
         return session.getEndedAt() != null ? session.getEndedAt() : session.getStartedAt();
     }
 
-    public record PinnedPage(List<Long> ids, boolean hasNext) {
+    // 페이지 번호용 전체 페이지 수. 항목이 없으면 0
+    public static int totalPages(long total, int size) {
+        return (int) ((total + size - 1) / size);
+    }
+
+    public record PinnedPage(List<Long> ids, boolean hasNext, int totalPages) {
     }
 }

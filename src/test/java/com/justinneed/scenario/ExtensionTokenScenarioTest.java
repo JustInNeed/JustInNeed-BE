@@ -129,6 +129,45 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
+    @DisplayName("웹에서 로그아웃하면 확장이 알림을 못 받았어도 확장의 access 토큰이 바로 막힌다 (QA-045)")
+    void webLogoutBlocksExtensionAccessToken() throws Exception {
+        TokenResponse web = authTokenService.issue(member("sprout").getId());
+        TokenResponse extension = refreshed(connect(web));
+        mvc.perform(get("/members/me").with(bearerToken(extension.accessToken()))).andExpect(okEnvelope());
+
+        logout(web).andExpect(okEnvelope());
+
+        mvc.perform(get("/members/me").with(bearerToken(extension.accessToken())))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("확장에서 로그아웃하면 웹의 access 토큰도 바로 막힌다 (QA-045)")
+    void extensionLogoutBlocksWebAccessToken() throws Exception {
+        TokenResponse web = authTokenService.issue(member("sprout").getId());
+        TokenResponse extension = connect(web);
+
+        logout(extension).andExpect(okEnvelope());
+
+        mvc.perform(get("/members/me").with(bearerToken(web.accessToken())))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("로그아웃해도 다른 기기 묶음의 access 토큰은 계속 쓸 수 있다 (QA-045)")
+    void logoutKeepsOtherGroupsAccessToken() throws Exception {
+        Member me = member("sprout");
+        TokenResponse laptop = authTokenService.issue(me.getId());
+        TokenResponse desktop = authTokenService.issue(me.getId());
+        TokenResponse desktopExtension = connect(desktop);
+
+        logout(laptop).andExpect(okEnvelope());
+
+        mvc.perform(get("/members/me").with(bearerToken(desktop.accessToken()))).andExpect(okEnvelope());
+        mvc.perform(get("/members/me").with(bearerToken(desktopExtension.accessToken()))).andExpect(okEnvelope());
+    }
+
+    @Test
     @DisplayName("로그아웃은 묶음 하나만 끝낸다: 다른 기기 로그인과 그 확장은 유지된다")
     void logoutKeepsOtherGroups() throws Exception {
         Member me = member("sprout");

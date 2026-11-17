@@ -172,6 +172,7 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
                         ids(wanderer.prague(), wanderer.cafe(), wanderer.nightjet(), wanderer.vienna()))))
                 .andExpect(jsonPath("$.data.sessions[*].isPinned").value(contains(true, true, true, false)))
                 .andExpect(jsonPath("$.data.hasNext").value(false))
+                .andExpect(jsonPath("$.data.totalPages").value(1))
                 .andExpect(jsonPath("$.data.sessions[0].tags").value(contains("프라하", "카를교", "체코")))
                 .andExpect(jsonPath("$.data.sessions[0].urls").value(contains(PRAGUE_CASTLE, "https://www.prague.eu/en")))
                 .andExpect(jsonPath("$.data.sessions[0].title").doesNotExist())
@@ -428,19 +429,18 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("태그가 전부 비공개인 공개 세션: 세션 · 카드 · 노드는 남아 노드 수에 들고, 태그 없이 보이며 태그 연결선 · 상위 해시태그에는 없다")
+    @DisplayName("태그가 전부 비공개인 공개 세션: 세션 · 카드는 태그 없이 남지만, 노드는 마인드맵 · 노드 수에 나오지 않는다 (QA-048)")
     void sessionWithOnlyHiddenTags() throws Exception {
         String url = "https://locked.example.com/a";
         BrowsingSession locked = publicSession(wanderer.member(), "잠긴 세션", List.of("카페"), url);
-        Long node = nodeId(me, wanderer.member(), url);
 
         mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me)))
-                .andExpect(jsonPath("$.data.totalNodeCount").value(8))
+                .andExpect(jsonPath("$.data.totalNodeCount").value(7))
                 .andExpect(jsonPath("$.data.sharedSessionCount").value(5))
                 .andExpect(jsonPath("$.data.topHashtags[*].name").value(not(hasItem("카페"))));
         mvc.perform(get("/community/profiles/{id}/mindmap", wanderer.id()).with(as(me)))
-                .andExpect(jsonPath("$.data.nodes", hasSize(8)))
-                .andExpect(jsonPath("$.data.edges[?(@.to == 'node:" + node + "')]", hasSize(0)))
+                .andExpect(jsonPath("$.data.nodes", hasSize(7)))
+                .andExpect(jsonPath("$.data.nodes[*].sourceUrl").value(not(hasItem(url))))
                 .andExpect(jsonPath("$.data.hashtags[*].name").value(not(hasItem("카페"))));
         mvc.perform(get("/community/profiles/{id}/shared-sessions", wanderer.id()).with(as(me)))
                 .andExpect(jsonPath("$.data.sessions[?(@.id == " + locked.getId() + ")].tags[*]", hasSize(0)));
