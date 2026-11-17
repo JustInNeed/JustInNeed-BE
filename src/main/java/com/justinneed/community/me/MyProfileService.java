@@ -90,7 +90,7 @@ public class MyProfileService {
         var shown = mine.sessions().stream().filter(session -> !publicOnly || session.isPublicSession()).toList();
         var found = page(shown, page, size);
         return new MySessions(found.items().stream().map(session -> MySession.of(session, mine.isPinned(session))).toList(),
-                found.hasNext());
+                found.hasNext(), found.totalPages());
     }
 
     public MyCards mindmaps(Long userId, int page, int size) {
@@ -100,7 +100,8 @@ public class MyProfileService {
         var numbers = counts.counts(found.items().stream().map(BrowsingSession::getId).toList(), userId);
         var owner = new Owner(userId, nickname(userId));
         return new MyCards(found.items().stream().map(session -> MyCard.of(session, owner, maps.get(session.getId()).nodes().size(),
-                numbers.getOrDefault(session.getId(), CardCounts.Count.ZERO), mine.isPinned(session))).toList(), found.hasNext());
+                numbers.getOrDefault(session.getId(), CardCounts.Count.ZERO), mine.isPinned(session))).toList(), found.hasNext(),
+                found.totalPages());
     }
 
     /** 그 세션 + 태그가 겹치는 내 다른 세션. 공개 세션 · 공개 태그로 좁히지 않는다. */
@@ -156,7 +157,8 @@ public class MyProfileService {
 
     private static <T> Page<T> page(List<T> items, int page, int size) {
         long offset = BookmarkQueryService.paging(page, size).getOffset();
-        return new Page<>(items.stream().skip(offset).limit(size).toList(), items.size() > offset + size);
+        return new Page<>(items.stream().skip(offset).limit(size).toList(), items.size() > offset + size,
+                CommunitySharing.totalPages(items.size(), size));
     }
 
     private String nickname(Long userId) {
@@ -170,14 +172,14 @@ public class MyProfileService {
     private record Ordered(List<BrowsingSession> sessions, Set<Long> pinned) {
         boolean isPinned(BrowsingSession session) { return pinned.contains(session.getId()); }
     }
-    private record Page<T>(List<T> items, boolean hasNext) { }
+    private record Page<T>(List<T> items, boolean hasNext, int totalPages) { }
 
     public record MyInterest(Long interestId, String hashtag) { }
     public record MyProfile(Long userId, String nickname, String bio, NodeVisibility visibility, long totalNodeCount,
             long sharedSessionCount, long likeCount, List<TagView> topHashtags, List<TagView> hashtags,
             List<MyInterest> interests, List<MySession> pinnedSessions) { }
-    public record MySessions(List<MySession> sessions, boolean hasNext) { }
-    public record MyCards(List<MyCard> mindmaps, boolean hasNext) { }
+    public record MySessions(List<MySession> sessions, boolean hasNext, int totalPages) { }
+    public record MyCards(List<MyCard> mindmaps, boolean hasNext, int totalPages) { }
 
     /** SessionListResponse + isPinned. */
     public record MySession(Long id, String title, LocalDateTime startedAt, LocalDateTime endedAt, int pageCount,

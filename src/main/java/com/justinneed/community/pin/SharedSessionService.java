@@ -64,7 +64,7 @@ public class SharedSessionService {
                 .map(BrowsingSession::getId).toList();
         var found = sharing.pinnedFirst(profile, newest, paging);
         return new SharedSessions(found.ids().stream()
-                .map(id -> sharing.project(profile, viewerId, byId.get(id))).toList(), found.hasNext());
+                .map(id -> sharing.project(profile, viewerId, byId.get(id))).toList(), found.hasNext(), found.totalPages());
     }
 
     public SharedSessionView detail(Long userId, Long viewerId, Long sessionId) {
@@ -94,6 +94,6 @@ public class SharedSessionService {
         return profile.getPinnedSessionIds().stream().filter(visible::containsKey).map(visible::get).toList();
     }
 
-    public record SharedSessions(List<SharedSessionView> sessions, boolean hasNext) {
+    public record SharedSessions(List<SharedSessionView> sessions, boolean hasNext, int totalPages) {
     }
 }

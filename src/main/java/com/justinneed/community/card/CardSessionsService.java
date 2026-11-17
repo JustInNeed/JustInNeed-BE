@@ -69,7 +69,7 @@ public class CardSessionsService {
         var found = sharing.pinnedFirst(owner, cards.findSessionIdsByOwnerId(ownerId, NEWEST_CARD_FIRST), paging);
         Set<Long> pinned = Set.copyOf(owner.getPinnedSessionIds());
         return new Mindmaps(reader.cards(found.ids(), viewerId).stream()
-                .map(card -> new ProfileCard(card, pinned.contains(card.mindmapId()))).toList(), found.hasNext());
+                .map(card -> new ProfileCard(card, pinned.contains(card.mindmapId()))).toList(), found.hasNext(), found.totalPages());
     }
 
     private Set<String> publicTagKeys(CommunityProfile owner, BrowsingSession session) {
@@ -79,7 +79,7 @@ public class CardSessionsService {
     public record Sessions(List<SessionListResponse> sessions) {
     }
 
-    public record Mindmaps(List<ProfileCard> mindmaps, boolean hasNext) {
+    public record Mindmaps(List<ProfileCard> mindmaps, boolean hasNext, int totalPages) {
     }
 
     /** 프로필 카드 = 커뮤니티 카드 + 고정 여부. 피드 · 검색의 CommunityCard 에는 고정이 없다. */

@@ -197,7 +197,8 @@ class MyProfileScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.topHashtags", empty()))
                 .andExpect(jsonPath("$.data.hashtags", empty()))
                 .andExpect(jsonPath("$.data.interests", empty()));
-        mySessions("").andExpect(jsonPath("$.data.sessions", empty())).andExpect(jsonPath("$.data.hasNext").value(false));
+        mySessions("").andExpect(jsonPath("$.data.sessions", empty())).andExpect(jsonPath("$.data.hasNext").value(false))
+                .andExpect(jsonPath("$.data.totalPages").value(0));
         mvc.perform(get("/community/me/mindmaps").with(as(me))).andExpect(jsonPath("$.data.mindmaps", empty()));
         mvc.perform(get("/community/me/mindmap").with(as(me)))
                 .andExpect(okEnvelope())
@@ -312,26 +313,30 @@ class MyProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("페이지: hasNext 는 남은 세션이 있을 때만 true 이고, 기본 크기는 12, 범위를 벗어나면 400 이다")
+    @DisplayName("페이지: hasNext 는 남은 세션이 있을 때만 true 이고, totalPages 는 전체 페이지 수, 기본 크기는 12, 범위를 벗어나면 400 이다")
     void paging() throws Exception {
         MockSessions mock = seedMockSessions(me);
 
         mySessions("?page=0&size=3").andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(mock.rome(), mock.flight(), mock.paris()))))
-                .andExpect(jsonPath("$.data.hasNext").value(true));
+                .andExpect(jsonPath("$.data.hasNext").value(true))
+                .andExpect(jsonPath("$.data.totalPages").value(3));
         mySessions("?page=2&size=3").andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(mock.prague()))))
                 .andExpect(jsonPath("$.data.hasNext").value(false));
-        mySessions("?page=3&size=3").andExpect(jsonPath("$.data.sessions", empty()));
+        // QA-044-1: 범위를 넘은 페이지도 전체 페이지 수는 그대로 알려준다
+        mySessions("?page=3&size=3").andExpect(jsonPath("$.data.sessions", empty())).andExpect(jsonPath("$.data.totalPages").value(3));
         // 마지막 페이지가 꽉 차도 다음이 없다
         mySessions("?size=7").andExpect(jsonPath("$.data.hasNext").value(false));
         mySessions("?size=6").andExpect(jsonPath("$.data.hasNext").value(true));
         mvc.perform(get("/community/me/mindmaps?page=1&size=5").with(as(me)))
                 .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(mock.visa(), mock.prague()))))
-                .andExpect(jsonPath("$.data.hasNext").value(false));
+                .andExpect(jsonPath("$.data.hasNext").value(false))
+                .andExpect(jsonPath("$.data.totalPages").value(2));
         mvc.perform(get("/community/me/mindmaps?size=2").with(as(me))).andExpect(jsonPath("$.data.hasNext").value(true));
         for (int i = 0; i < 6; i++) {
             tagged("세션 " + i, "2026-05-0" + (i + 1) + "T10:00:00");
         }
-        mySessions("").andExpect(jsonPath("$.data.sessions", hasSize(12))).andExpect(jsonPath("$.data.hasNext").value(true));
+        mySessions("").andExpect(jsonPath("$.data.sessions", hasSize(12))).andExpect(jsonPath("$.data.hasNext").value(true))
+                .andExpect(jsonPath("$.data.totalPages").value(2));
 
         for (String wrong : List.of("?size=0", "?size=101", "?page=-1")) {
             mySessions(wrong).andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "페이지 값이 올바르지 않습니다."));

@@ -172,6 +172,7 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
                         ids(wanderer.prague(), wanderer.cafe(), wanderer.nightjet(), wanderer.vienna()))))
                 .andExpect(jsonPath("$.data.sessions[*].isPinned").value(contains(true, true, true, false)))
                 .andExpect(jsonPath("$.data.hasNext").value(false))
+                .andExpect(jsonPath("$.data.totalPages").value(1))
                 .andExpect(jsonPath("$.data.sessions[0].tags").value(contains("프라하", "카를교", "체코")))
                 .andExpect(jsonPath("$.data.sessions[0].urls").value(contains(PRAGUE_CASTLE, "https://www.prague.eu/en")))
                 .andExpect(jsonPath("$.data.sessions[0].title").doesNotExist())
