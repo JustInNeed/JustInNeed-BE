@@ -4,10 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-/**
- * 요약 마크다운 → 카드 미리보기: 제목 · 코드 블록 · 구분선을 건너뛴 첫 문단을 일반 텍스트로 바꿔 120자로 자른다.
- * 본문이 없으면 null.
- */
+/** 요약 마크다운 → 카드 미리보기: 제목 · 코드 블록 · 구분선을 건너뛴 첫 문단을 일반 텍스트로 바꿔 120자로 자른다. 본문이 없으면 null. */
 public final class CardSnippet {
 
     static final int MAX_LENGTH = 120;
@@ -17,11 +14,11 @@ public final class CardSnippet {
     private static final Pattern LINE_PREFIX = Pattern.compile("^(>\\s*)+|^([-*+]|\\d+[.)])\\s+");
     private static final Pattern IMAGE = Pattern.compile("!\\[[^]]*]\\([^)]*\\)");
     private static final Pattern LINK = Pattern.compile("\\[([^]]*)]\\([^)]*\\)");
-    private static final Pattern STAR_EMPHASIS = Pattern.compile("(?<![\\w*])\\*(?=\\S)(.+?)(?<=\\S)\\*(?![\\w*])");
+    private static final Pattern STAR_EMPHASIS =
+            Pattern.compile("(?<![\\w*])\\*(?=\\S)(.+?)(?<=\\S)\\*(?![\\w*])");
     private static final Pattern MARKS = Pattern.compile("\\*\\*|__|~~|`");
 
-    private CardSnippet() {
-    }
+    private CardSnippet() {}
 
     public static String of(String markdown) {
         if (markdown == null) {
@@ -37,7 +34,9 @@ public final class CardSnippet {
                 }
                 inCode = !inCode;
             } else if (!inCode) {
-                if (line.isEmpty() || HEADING.matcher(line).matches() || RULE.matcher(line).matches()) {
+                if (line.isEmpty()
+                        || HEADING.matcher(line).matches()
+                        || RULE.matcher(line).matches()) {
                     if (!paragraph.isEmpty()) {
                         break;
                     }
@@ -66,7 +65,10 @@ public final class CardSnippet {
         if (text.length() <= MAX_LENGTH) {
             return text;
         }
-        int end = Character.isHighSurrogate(text.charAt(MAX_LENGTH - 1)) ? MAX_LENGTH - 1 : MAX_LENGTH;
+        int end =
+                Character.isHighSurrogate(text.charAt(MAX_LENGTH - 1))
+                        ? MAX_LENGTH - 1
+                        : MAX_LENGTH;
         return text.substring(0, end).trim();
     }
 }

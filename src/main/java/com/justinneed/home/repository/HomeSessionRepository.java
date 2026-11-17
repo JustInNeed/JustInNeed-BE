@@ -8,9 +8,11 @@ import org.springframework.data.repository.query.Param;
 
 public interface HomeSessionRepository extends Repository<BrowsingSession, Long> {
 
-    // 내 완료 세션 전체, 시작 시각 최신순. 쓰는 컬럼만 읽어 unit_features · selected_units · analysis_units · 요약은 조회하지 않는다.
+    // 내 완료 세션 전체, 시작 시각 최신순. 쓰는 컬럼만 읽어 unit_features · selected_units · analysis_units · 요약은 조회하지
+    // 않는다.
     // 분석 결과 행이 없는 완료 세션도 세션 통계에 들어가므로 left join 한다
-    @Query("""
+    @Query(
+            """
             select new com.justinneed.home.repository.HomeSessionRow(
                        session.id,
                        session.title,

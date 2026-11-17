@@ -22,7 +22,9 @@ public class HashtagVisibilityService {
     private final CommunitySharing sharing;
     private final BrowsingSessionRepository sessions;
 
-    public HashtagVisibilityService(CommunityProfiles profiles, CommunitySharing sharing,
+    public HashtagVisibilityService(
+            CommunityProfiles profiles,
+            CommunitySharing sharing,
             BrowsingSessionRepository sessions) {
         this.profiles = profiles;
         this.sharing = sharing;
@@ -32,7 +34,8 @@ public class HashtagVisibilityService {
     public List<HashtagResponse> get(Long userId) {
         CommunityProfile profile = profiles.read(userId);
         return tags(profile).values().stream()
-                .map(tag -> new HashtagResponse(tag, !sharing.isHidden(profile, tag))).toList();
+                .map(tag -> new HashtagResponse(tag, !sharing.isHidden(profile, tag)))
+                .toList();
     }
 
     @Transactional
@@ -55,13 +58,21 @@ public class HashtagVisibilityService {
     private Map<String, String> tags(CommunityProfile profile) {
         Map<String, String> result = new LinkedHashMap<>();
         sessions.findByUserIdAndDeletedAtIsNullOrderByEndedAtDescStartedAtDesc(profile.getUserId())
-                .forEach(session -> session.getTags().forEach(tag ->
-                        result.putIfAbsent(tag.toLowerCase(Locale.ROOT), tag)));
-        profile.getInterests().forEach(tag -> result.putIfAbsent(tag.toLowerCase(Locale.ROOT), tag));
+                .forEach(
+                        session ->
+                                session.getTags()
+                                        .forEach(
+                                                tag ->
+                                                        result.putIfAbsent(
+                                                                tag.toLowerCase(Locale.ROOT),
+                                                                tag)));
+        profile.getInterests()
+                .forEach(tag -> result.putIfAbsent(tag.toLowerCase(Locale.ROOT), tag));
         // Keep preferences discoverable after the last session with a hidden tag is removed.
-        profile.getHiddenHashtags().forEach(tag -> result.putIfAbsent(tag.toLowerCase(Locale.ROOT), tag));
+        profile.getHiddenHashtags()
+                .forEach(tag -> result.putIfAbsent(tag.toLowerCase(Locale.ROOT), tag));
         return result;
     }
 
-    public record HashtagResponse(String hashtag, boolean isPublic) { }
+    public record HashtagResponse(String hashtag, boolean isPublic) {}
 }

@@ -55,18 +55,22 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.ResourceAccessException;
 
 /**
- * POST /sessions/{id}/reanalyze 와 AI 요청 경로. 커밋 뒤 비동기로 나가는 요청을 봐야 해서 테스트 트랜잭션을 쓰지 않고 DB 를 따로 쓴다
- * (만든 행은 매번 지운다).
+ * POST /sessions/{id}/reanalyze 와 AI 요청 경로. 커밋 뒤 비동기로 나가는 요청을 봐야 해서 테스트 트랜잭션을 쓰지 않고 DB 를 따로 쓴다 (만든
+ * 행은 매번 지운다).
  */
-@TestPropertySource(properties = "spring.datasource.url=jdbc:h2:mem:session-reanalyze;MODE=PostgreSQL;"
-        + "DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000")
+@TestPropertySource(
+        properties =
+                "spring.datasource.url=jdbc:h2:mem:session-reanalyze;MODE=PostgreSQL;"
+                        + "DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000")
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @DisplayName("세션 재분석")
 class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
 
     private static final String NOT_FAILED = "분석에 실패한 세션만 다시 분석할 수 있습니다.";
-    private static final Map<String, Object> RAW = Map.of("kind", "rbc-session", "pages", List.of());
-    private static final String RESULT = """
+    private static final Map<String, Object> RAW =
+            Map.of("kind", "rbc-session", "pages", List.of());
+    private static final String RESULT =
+            """
             {"modelSource": "global", "scoreMethod": "C", "state": {"unitFeatures": []},
              "mindmap": {"structureSource": "llm",
                          "nodes": [{"id": "root:1", "type": "root", "keyword": "로마", "score": 1.0, "childCount": 0}],
@@ -75,26 +79,19 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
              "selected": [], "analysis": {"units": [], "summary": {}}, "pages": []}
             """;
 
-    @MockitoBean
-    private AiAnalysisClient aiClient;
+    @MockitoBean private AiAnalysisClient aiClient;
 
-    @Autowired
-    private AnalysisRequestService requests;
+    @Autowired private AnalysisRequestService requests;
 
-    @Autowired
-    private SessionRawPayloadRepository rawPayloads;
+    @Autowired private SessionRawPayloadRepository rawPayloads;
 
-    @Autowired
-    private SessionCollectionRepository collections;
+    @Autowired private SessionCollectionRepository collections;
 
-    @Autowired
-    private AiInternalToken internalToken;
+    @Autowired private AiInternalToken internalToken;
 
-    @Autowired
-    private JdbcTemplate jdbc;
+    @Autowired private JdbcTemplate jdbc;
 
-    @Autowired
-    private PlatformTransactionManager transactionManager;
+    @Autowired private PlatformTransactionManager transactionManager;
 
     private Member me;
 
@@ -105,14 +102,28 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
 
     @AfterEach
     void cleanUp() {
-        for (String table : List.of("summaries", "session_results", "session_raw_payloads", "session_collections",
-                "sessions", "members")) {
+        for (String table :
+                List.of(
+                        "summaries",
+                        "session_results",
+                        "session_raw_payloads",
+                        "session_collections",
+                        "sessions",
+                        "members")) {
             jdbc.update("delete from " + table);
         }
     }
 
     private Long session(SessionStatus status, boolean raw) {
-        Long id = sessionWithStatus(me, "실패한 세션", "2026-10-30T09:00:00", "2026-10-30T10:00:00", status, List.of()).getId();
+        Long id =
+                sessionWithStatus(
+                                me,
+                                "실패한 세션",
+                                "2026-10-30T09:00:00",
+                                "2026-10-30T10:00:00",
+                                status,
+                                List.of())
+                        .getId();
         if (raw) {
             rawPayloads.save(new SessionRawPayload(id, me.getId(), RAW, LocalDateTime.now()));
         }
@@ -181,9 +192,10 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
         reanalyze(id, me).andExpect(okEnvelope());
         verify(aiClient, timeout(3000)).requestAnalysis(any());
 
-        mvc.perform(post("/internal/ai/sessions/{id}/result", id)
-                        .header(AiInternalToken.HEADER, internalToken.value())
-                        .with(json(RESULT)))
+        mvc.perform(
+                        post("/internal/ai/sessions/{id}/result", id)
+                                .header(AiInternalToken.HEADER, internalToken.value())
+                                .with(json(RESULT)))
                 .andExpect(okEnvelope());
 
         BrowsingSession session = sessions.findById(id).orElseThrow();
@@ -233,14 +245,15 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("AI 요청이 실패해도 ANALYZING 으로 두고 재전송 규칙을 따른다")
     void aiRequestFails() throws Exception {
-        doThrow(new ResourceAccessException("connection refused")).when(aiClient).requestAnalysis(any());
+        doThrow(new ResourceAccessException("connection refused"))
+                .when(aiClient)
+                .requestAnalysis(any());
         Long id = session(SessionStatus.FAILED, true);
 
         reanalyze(id, me).andExpect(okEnvelope());
 
         verify(aiClient, timeout(3000)).requestAnalysis(any());
-        await().atMost(3, TimeUnit.SECONDS)
-                .until(() -> status(id) == SessionStatus.ANALYZING);
+        await().atMost(3, TimeUnit.SECONDS).until(() -> status(id) == SessionStatus.ANALYZING);
     }
 
     @Test
@@ -249,13 +262,15 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
         Long id = session(SessionStatus.FAILED, true);
         ExecutorService pool = Executors.newFixedThreadPool(2);
         CountDownLatch start = new CountDownLatch(1);
-        Callable<Integer> click = () -> {
-            start.await();
-            return reanalyze(id, me).andReturn().getResponse().getStatus();
-        };
+        Callable<Integer> click =
+                () -> {
+                    start.await();
+                    return reanalyze(id, me).andReturn().getResponse().getStatus();
+                };
 
         try {
-            List<Future<Integer>> clicks = new ArrayList<>(List.of(pool.submit(click), pool.submit(click)));
+            List<Future<Integer>> clicks =
+                    new ArrayList<>(List.of(pool.submit(click), pool.submit(click)));
             start.countDown();
             List<Integer> statuses = new ArrayList<>();
             for (Future<Integer> response : clicks) {
@@ -284,13 +299,19 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
     @DisplayName("AI 요청이 시간 초과로 실패해도 그 사이 온 결과(COMPLETED)를 FAILED 로 덮지 않는다")
     void lateRequestFailureKeepsCompletedResult() throws Exception {
         Long id = session(SessionStatus.READY, true);
-        doAnswer(invocation -> {
-            mvc.perform(post("/internal/ai/sessions/{id}/result", id)
-                            .header(AiInternalToken.HEADER, internalToken.value())
-                            .with(json(RESULT)))
-                    .andExpect(okEnvelope());
-            throw new ResourceAccessException("read timed out");
-        }).when(aiClient).requestAnalysis(any());
+        doAnswer(
+                        invocation -> {
+                            mvc.perform(
+                                            post("/internal/ai/sessions/{id}/result", id)
+                                                    .header(
+                                                            AiInternalToken.HEADER,
+                                                            internalToken.value())
+                                                    .with(json(RESULT)))
+                                    .andExpect(okEnvelope());
+                            throw new ResourceAccessException("read timed out");
+                        })
+                .when(aiClient)
+                .requestAnalysis(any());
 
         requests.requestAnalysis(id);
 
@@ -301,10 +322,14 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
     @DisplayName("AI 요청 중에 지운 세션은 요청이 실패해도 상태를 바꾸지 않는다")
     void requestFailureLeavesDeletedSession() throws Exception {
         Long id = session(SessionStatus.READY, true);
-        doAnswer(invocation -> {
-            mvc.perform(delete("/sessions/{id}", id).with(as(me))).andExpect(okEnvelope());
-            throw new ResourceAccessException("connection refused");
-        }).when(aiClient).requestAnalysis(any());
+        doAnswer(
+                        invocation -> {
+                            mvc.perform(delete("/sessions/{id}", id).with(as(me)))
+                                    .andExpect(okEnvelope());
+                            throw new ResourceAccessException("connection refused");
+                        })
+                .when(aiClient)
+                .requestAnalysis(any());
 
         requests.requestAnalysis(id);
 
@@ -328,10 +353,12 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
     void favouriteThenFinishCollection() throws Exception {
         Long id = session(SessionStatus.COLLECTING, true);
 
-        favouriteThen(id, () -> {
-            requests.finishCollection(id);
-            return null;
-        });
+        favouriteThen(
+                id,
+                () -> {
+                    requests.finishCollection(id);
+                    return null;
+                });
 
         await().atMost(3, TimeUnit.SECONDS).until(() -> status(id) == SessionStatus.ANALYZING);
         assertThat(sessions.findById(id).orElseThrow().isFavorite()).isTrue();
@@ -342,10 +369,12 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
     void favouriteThenStartAnalysis() throws Exception {
         Long id = session(SessionStatus.READY, true);
 
-        favouriteThen(id, () -> {
-            requests.requestAnalysis(id);
-            return null;
-        });
+        favouriteThen(
+                id,
+                () -> {
+                    requests.requestAnalysis(id);
+                    return null;
+                });
 
         assertThat(status(id)).isEqualTo(SessionStatus.ANALYZING);
         assertThat(sessions.findById(id).orElseThrow().isFavorite()).isTrue();
@@ -357,25 +386,33 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
         Long id = session(SessionStatus.READY, true);
         requests.requestAnalysis(id);
         LocalDateTime requestedAt = collections.findById(id).orElseThrow().getAiRequestedAt();
-        doThrow(new ResourceAccessException("connection refused")).when(aiClient).requestAnalysis(any());
+        doThrow(new ResourceAccessException("connection refused"))
+                .when(aiClient)
+                .requestAnalysis(any());
         requests.resendIfDue(id, requestedAt.plusMinutes(1));
         CountDownLatch sending = new CountDownLatch(1);
         CountDownLatch fail = new CountDownLatch(1);
-        doAnswer(invocation -> {
-            sending.countDown();
-            fail.await(10, TimeUnit.SECONDS);
-            throw new ResourceAccessException("connection refused");
-        }).when(aiClient).requestAnalysis(any());
+        doAnswer(
+                        invocation -> {
+                            sending.countDown();
+                            fail.await(10, TimeUnit.SECONDS);
+                            throw new ResourceAccessException("connection refused");
+                        })
+                .when(aiClient)
+                .requestAnalysis(any());
         ExecutorService requester = Executors.newSingleThreadExecutor();
 
         try {
-            Future<?> request = requester.submit(() -> requests.resendIfDue(id, requestedAt.plusMinutes(3)));
+            Future<?> request =
+                    requester.submit(() -> requests.resendIfDue(id, requestedAt.plusMinutes(3)));
             assertThat(sending.await(5, TimeUnit.SECONDS)).isTrue();
-            favouriteThen(id, () -> {
-                fail.countDown();
-                request.get(20, TimeUnit.SECONDS);
-                return null;
-            });
+            favouriteThen(
+                    id,
+                    () -> {
+                        fail.countDown();
+                        request.get(20, TimeUnit.SECONDS);
+                        return null;
+                    });
         } finally {
             fail.countDown();
             requester.shutdownNow();
@@ -390,14 +427,30 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
         ExecutorService pool = Executors.newFixedThreadPool(2);
         try {
             List<Future<?>> done = new ArrayList<>();
-            new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
-                jdbc.queryForObject("select id from sessions where id = ? for update", Long.class, id);
-                done.add(pool.submit(() -> mvc.perform(patch("/sessions/{id}", id).with(as(me))
-                        .with(json(Map.of("isFavorite", true)))).andExpect(okEnvelope())));
-                pause();
-                done.add(pool.submit(writer));
-                pause();
-            });
+            new TransactionTemplate(transactionManager)
+                    .executeWithoutResult(
+                            status -> {
+                                jdbc.queryForObject(
+                                        "select id from sessions where id = ? for update",
+                                        Long.class,
+                                        id);
+                                done.add(
+                                        pool.submit(
+                                                () ->
+                                                        mvc.perform(
+                                                                        patch("/sessions/{id}", id)
+                                                                                .with(as(me))
+                                                                                .with(
+                                                                                        json(
+                                                                                                Map
+                                                                                                        .of(
+                                                                                                                "isFavorite",
+                                                                                                                true))))
+                                                                .andExpect(okEnvelope())));
+                                pause();
+                                done.add(pool.submit(writer));
+                                pause();
+                            });
             for (Future<?> response : done) {
                 response.get(20, TimeUnit.SECONDS);
             }

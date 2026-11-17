@@ -18,11 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class ExternalIntegrationServiceTest {
 
-    @Autowired
-    private ExternalIntegrationService externalIntegrationService;
+    @Autowired private ExternalIntegrationService externalIntegrationService;
 
-    @Autowired
-    private ExternalIntegrationRepository externalIntegrationRepository;
+    @Autowired private ExternalIntegrationRepository externalIntegrationRepository;
 
     @BeforeEach
     void setUp() {
@@ -46,7 +44,10 @@ class ExternalIntegrationServiceTest {
     void rejectsDuplicateEmailForSameProvider() {
         externalIntegrationService.registerEmail(1L, "notion", "user@example.com");
 
-        assertThatThrownBy(() -> externalIntegrationService.registerEmail(2L, "notion", "USER@example.com"))
+        assertThatThrownBy(
+                        () ->
+                                externalIntegrationService.registerEmail(
+                                        2L, "notion", "USER@example.com"))
                 .isInstanceOf(CustomException.class)
                 .extracting(exception -> ((CustomException) exception).getErrorCode())
                 .isEqualTo(ErrorCode.DUPLICATE_INTEGRATION_EMAIL);
@@ -56,8 +57,8 @@ class ExternalIntegrationServiceTest {
     void reconnectsProviderWithAChangedEmail() {
         externalIntegrationService.registerEmail(1L, "googleDocs", "old@example.com");
 
-        IntegrationEmailRegisterResponse response = externalIntegrationService
-                .registerEmail(1L, "googleDocs", "new@example.com");
+        IntegrationEmailRegisterResponse response =
+                externalIntegrationService.registerEmail(1L, "googleDocs", "new@example.com");
 
         assertThat(response.email()).isEqualTo("new@example.com");
         assertThat(externalIntegrationRepository.count()).isEqualTo(1);

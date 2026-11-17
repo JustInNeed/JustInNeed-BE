@@ -21,7 +21,11 @@ class SessionChunkSameJsonTest {
     @Test
     @DisplayName("객체는 키 순서와 상관없고, 배열은 순서까지 같아야 같다")
     void mapsIgnoreOrderListsDoNot() {
-        assertThat(SessionChunkService.sameJson(Map.of("a", 1, "b", List.of(1, 2)), Map.of("b", List.of(1L, 2L), "a", 1L))).isTrue();
+        assertThat(
+                        SessionChunkService.sameJson(
+                                Map.of("a", 1, "b", List.of(1, 2)),
+                                Map.of("b", List.of(1L, 2L), "a", 1L)))
+                .isTrue();
         assertThat(SessionChunkService.sameJson(List.of(1, 2), List.of(2, 1))).isFalse();
         assertThat(SessionChunkService.sameJson(Map.of("a", 1), Map.of("a", 1, "b", 2))).isFalse();
         assertThat(SessionChunkService.sameJson(Map.of("a", "x"), Map.of("a", "y"))).isFalse();

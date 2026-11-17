@@ -36,9 +36,9 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
- * 소셜 로그인 (/login → 카카오 · 네이버 → /oauth/callback?code= → POST /auth/token).
- * 프로바이더 호출(토큰 · 프로필 조회)은 건너뛰고, 프로필 응답 JSON 으로 회원 조회 · 생성 단계부터 확인한다.
- * FE: src/app/oauth/callback (code 를 받아 POST /auth/token 으로 토큰 교환).
+ * 소셜 로그인 (/login → 카카오 · 네이버 → /oauth/callback?code= → POST /auth/token). 프로바이더 호출(토큰 · 프로필 조회)은
+ * 건너뛰고, 프로필 응답 JSON 으로 회원 조회 · 생성 단계부터 확인한다. FE: src/app/oauth/callback (code 를 받아 POST /auth/token
+ * 으로 토큰 교환).
  */
 @DisplayName("소셜 로그인")
 class LoginScenarioTest extends ScenarioTestSupport {
@@ -47,23 +47,17 @@ class LoginScenarioTest extends ScenarioTestSupport {
     private static final String FAILURE_REDIRECT = "http://localhost:3000/login?error=oauth";
     private static final String INVALID_LOGIN_CODE_MESSAGE = "로그인 정보가 만료되었어요. 다시 로그인해 주세요.";
 
-    @Autowired
-    private CustomOAuth2UserService oAuth2UserService;
+    @Autowired private CustomOAuth2UserService oAuth2UserService;
 
-    @Autowired
-    private OAuth2SuccessHandler successHandler;
+    @Autowired private OAuth2SuccessHandler successHandler;
 
-    @Autowired
-    private LoginCodeRepository loginCodes;
+    @Autowired private LoginCodeRepository loginCodes;
 
-    @Autowired
-    private LoginCodeCleanupScheduler loginCodeCleanupScheduler;
+    @Autowired private LoginCodeCleanupScheduler loginCodeCleanupScheduler;
 
-    @Autowired
-    private LegacyWithdrawnMemberCleanup legacyWithdrawnMemberCleanup;
+    @Autowired private LegacyWithdrawnMemberCleanup legacyWithdrawnMemberCleanup;
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    @PersistenceContext private EntityManager entityManager;
 
     private static Map<String, Object> kakaoProfile(long id, String email) {
         Map<String, Object> account = new HashMap<>();
@@ -88,40 +82,53 @@ class LoginScenarioTest extends ScenarioTestSupport {
     }
 
     private static Long memberIdOf(OAuth2User principal) {
-        return ((Number) principal.getAttributes().get(CustomOAuth2UserService.ATTR_MEMBER_ID)).longValue();
+        return ((Number) principal.getAttributes().get(CustomOAuth2UserService.ATTR_MEMBER_ID))
+                .longValue();
     }
 
     private static boolean needsNickname(OAuth2User principal) {
-        return Boolean.TRUE.equals(principal.getAttributes().get(CustomOAuth2UserService.ATTR_NEEDS_NICKNAME));
+        return Boolean.TRUE.equals(
+                principal.getAttributes().get(CustomOAuth2UserService.ATTR_NEEDS_NICKNAME));
     }
 
     /** 로그인 성공 후 SuccessHandler 가 보내는 FE 콜백 리다이렉트 URL. */
     private String successRedirect(OAuth2User principal) throws Exception {
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/login/oauth2/code/kakao");
+        MockHttpServletRequest request =
+                new MockHttpServletRequest("GET", "/login/oauth2/code/kakao");
         MockHttpServletResponse response = new MockHttpServletResponse();
-        successHandler.onAuthenticationSuccess(request, response,
+        successHandler.onAuthenticationSuccess(
+                request,
+                response,
                 new OAuth2AuthenticationToken(principal, principal.getAuthorities(), "kakao"));
         return response.getRedirectedUrl();
     }
 
     /** 로그인 → 리다이렉트 URL 의 일회용 코드. */
     private String loginCode(OAuth2User principal) throws Exception {
-        return UriComponentsBuilder.fromUriString(successRedirect(principal)).build().getQueryParams().getFirst("code");
+        return UriComponentsBuilder.fromUriString(successRedirect(principal))
+                .build()
+                .getQueryParams()
+                .getFirst("code");
     }
 
     private ResultActions exchange(String code) throws Exception {
-        return mvc.perform(post("/auth/token").with(json(code == null ? "{}" : Map.of("code", code))));
+        return mvc.perform(
+                post("/auth/token").with(json(code == null ? "{}" : Map.of("code", code))));
     }
 
     private void withdraw(Member member) throws Exception {
-        mvc.perform(delete("/settings/account").with(as(member)).with(json(Map.of("confirmText", "WITHDRAW"))))
+        mvc.perform(
+                        delete("/settings/account")
+                                .with(as(member))
+                                .with(json(Map.of("confirmText", "WITHDRAW"))))
                 .andExpect(okEnvelope());
     }
 
     /** 익명화 도입 전 방식으로 탈퇴한 행: withdrawn_at 만 채워지고 소셜 식별자 · 닉네임 · 이메일은 그대로 남아 있다. */
     private void withdrawLikeBefore(Member member) {
         entityManager.flush();
-        entityManager.createQuery(
+        entityManager
+                .createQuery(
                         "update Member m set m.withdrawnAt = :now, m.withdrawalReason = :reason where m.id = :id")
                 .setParameter("now", LocalDateTime.now())
                 .setParameter("reason", "예전 탈퇴")
@@ -131,14 +138,20 @@ class LoginScenarioTest extends ScenarioTestSupport {
     }
 
     private boolean nicknameAvailable(Member viewer, String nickname) throws Exception {
-        return read(mvc.perform(get("/members/nickname/available").param("nickname", nickname).with(as(viewer)))
-                .andExpect(okEnvelope()), "$.data.available");
+        return read(
+                mvc.perform(
+                                get("/members/nickname/available")
+                                        .param("nickname", nickname)
+                                        .with(as(viewer)))
+                        .andExpect(okEnvelope()),
+                "$.data.available");
     }
 
     /** 저장된 코드 행의 만료 시각을 지난 시각으로 돌린다 (60초 기다리는 대신). */
     private void expireLoginCodes() {
         entityManager.flush();
-        entityManager.createQuery("update LoginCode c set c.expiresAt = :past")
+        entityManager
+                .createQuery("update LoginCode c set c.expiresAt = :past")
                 .setParameter("past", LocalDateTime.now().minusSeconds(1))
                 .executeUpdate();
     }
@@ -184,14 +197,19 @@ class LoginScenarioTest extends ScenarioTestSupport {
         assertThat(needsNickname(beforeNickname)).isTrue();
 
         Member member = members.findById(memberId).orElseThrow();
-        mvc.perform(patch("/members/me/nickname").with(as(member)).with(json(Map.of("nickname", "sprout"))))
+        mvc.perform(
+                        patch("/members/me/nickname")
+                                .with(as(member))
+                                .with(json(Map.of("nickname", "sprout"))))
                 .andExpect(okEnvelope());
 
         OAuth2User afterNickname = login("kakao", kakaoProfile(4100000002L, null));
         assertThat(memberIdOf(afterNickname)).isEqualTo(memberId);
         assertThat(needsNickname(afterNickname)).isFalse();
         assertThat(members.findBySocialProviderAndProviderId(SocialProvider.KAKAO, "4100000002"))
-                .get().extracting(Member::getId).isEqualTo(memberId);
+                .get()
+                .extracting(Member::getId)
+                .isEqualTo(memberId);
     }
 
     @Test
@@ -217,12 +235,16 @@ class LoginScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("소셜 로그인 진입(/oauth2/authorization/kakao)은 카카오 인가 페이지로 302")
     void authorizationEntryRedirectsToProvider() throws Exception {
-        String location = mvc.perform(get("/oauth2/authorization/kakao"))
-                .andExpect(status().isFound())
-                .andReturn().getResponse().getRedirectedUrl();
+        String location =
+                mvc.perform(get("/oauth2/authorization/kakao"))
+                        .andExpect(status().isFound())
+                        .andReturn()
+                        .getResponse()
+                        .getRedirectedUrl();
 
         assertThat(location).startsWith("https://example.com/kakao/authorize");
-        assertThat(location).contains("client_id=test-kakao-client-id", "response_type=code", "state=");
+        assertThat(location)
+                .contains("client_id=test-kakao-client-id", "response_type=code", "state=");
     }
 
     @Test
@@ -231,7 +253,8 @@ class LoginScenarioTest extends ScenarioTestSupport {
         String redirect = successRedirect(login("kakao", kakaoProfile(4100000010L, null)));
 
         assertThat(redirect).startsWith(SUCCESS_REDIRECT + "?code=");
-        MultiValueMap<String, String> query = UriComponentsBuilder.fromUriString(redirect).build().getQueryParams();
+        MultiValueMap<String, String> query =
+                UriComponentsBuilder.fromUriString(redirect).build().getQueryParams();
         assertThat(query.keySet()).containsExactly("code");
         assertThat(redirect).doesNotContain("accessToken", "refreshToken", "needsNickname");
         // 32바이트 난수 → base64url(패딩 없음) 43자
@@ -243,17 +266,19 @@ class LoginScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("처음 가입한 회원: 코드를 POST /auth/token 으로 바꾸면 토큰과 needsNickname=true 가 오고, 그 토큰으로 내 정보를 연다")
+    @DisplayName(
+            "처음 가입한 회원: 코드를 POST /auth/token 으로 바꾸면 토큰과 needsNickname=true 가 오고, 그 토큰으로 내 정보를 연다")
     void exchangeCodeForNewMember() throws Exception {
         OAuth2User principal = login("kakao", kakaoProfile(4100000011L, null));
         String code = loginCode(principal);
 
-        var exchanged = exchange(code)
-                .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.message").value(nullValue()))
-                .andExpect(jsonPath("$.data.accessToken").isString())
-                .andExpect(jsonPath("$.data.refreshToken").isString())
-                .andExpect(jsonPath("$.data.needsNickname").value(true));
+        var exchanged =
+                exchange(code)
+                        .andExpect(okEnvelope())
+                        .andExpect(jsonPath("$.message").value(nullValue()))
+                        .andExpect(jsonPath("$.data.accessToken").isString())
+                        .andExpect(jsonPath("$.data.refreshToken").isString())
+                        .andExpect(jsonPath("$.data.needsNickname").value(true));
         String accessToken = read(exchanged, "$.data.accessToken");
         String refreshToken = read(exchanged, "$.data.refreshToken");
 
@@ -269,15 +294,21 @@ class LoginScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("닉네임을 정한 회원: 다시 로그인해 코드를 바꾸면 needsNickname=false 라 바로 홈으로 간다")
     void exchangeCodeForReturningMember() throws Exception {
-        Member member = members.findById(memberIdOf(login("naver", naverProfile("naver-back", null)))).orElseThrow();
-        mvc.perform(patch("/members/me/nickname").with(as(member)).with(json(Map.of("nickname", "sprout"))))
+        Member member =
+                members.findById(memberIdOf(login("naver", naverProfile("naver-back", null))))
+                        .orElseThrow();
+        mvc.perform(
+                        patch("/members/me/nickname")
+                                .with(as(member))
+                                .with(json(Map.of("nickname", "sprout"))))
                 .andExpect(okEnvelope());
 
         String code = loginCode(login("naver", naverProfile("naver-back", null)));
 
-        var exchanged = exchange(code)
-                .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.needsNickname").value(false));
+        var exchanged =
+                exchange(code)
+                        .andExpect(okEnvelope())
+                        .andExpect(jsonPath("$.data.needsNickname").value(false));
         mvc.perform(get("/members/me").with(bearerToken(read(exchanged, "$.data.accessToken"))))
                 .andExpect(jsonPath("$.data.nickname").value("sprout"));
     }
@@ -288,7 +319,8 @@ class LoginScenarioTest extends ScenarioTestSupport {
         String code = loginCode(login("kakao", kakaoProfile(4100000012L, null)));
 
         exchange(code).andExpect(okEnvelope());
-        exchange(code).andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_LOGIN_CODE_MESSAGE));
+        exchange(code)
+                .andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_LOGIN_CODE_MESSAGE));
     }
 
     @Test
@@ -297,7 +329,8 @@ class LoginScenarioTest extends ScenarioTestSupport {
         String code = loginCode(login("kakao", kakaoProfile(4100000013L, null)));
         expireLoginCodes();
 
-        exchange(code).andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_LOGIN_CODE_MESSAGE));
+        exchange(code)
+                .andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_LOGIN_CODE_MESSAGE));
     }
 
     @Test
@@ -309,7 +342,8 @@ class LoginScenarioTest extends ScenarioTestSupport {
 
         withdraw(member);
 
-        exchange(code).andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_LOGIN_CODE_MESSAGE));
+        exchange(code)
+                .andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_LOGIN_CODE_MESSAGE));
     }
 
     @Test
@@ -317,10 +351,13 @@ class LoginScenarioTest extends ScenarioTestSupport {
     void missingOrUnknownCodeIsRejected() throws Exception {
         mvc.perform(post("/auth/token"))
                 .andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_LOGIN_CODE_MESSAGE));
-        exchange(null).andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_LOGIN_CODE_MESSAGE));
+        exchange(null)
+                .andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_LOGIN_CODE_MESSAGE));
         exchange("").andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_LOGIN_CODE_MESSAGE));
-        exchange("   ").andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_LOGIN_CODE_MESSAGE));
-        exchange("not-issued-code").andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_LOGIN_CODE_MESSAGE));
+        exchange("   ")
+                .andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_LOGIN_CODE_MESSAGE));
+        exchange("not-issued-code")
+                .andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_LOGIN_CODE_MESSAGE));
     }
 
     @Test
@@ -342,7 +379,10 @@ class LoginScenarioTest extends ScenarioTestSupport {
     void withdrawnAccountSignsUpAgain() throws Exception {
         Long oldId = memberIdOf(login("kakao", kakaoProfile(4100000020L, "sprout@kakao.com")));
         Member old = members.findById(oldId).orElseThrow();
-        mvc.perform(patch("/members/me/nickname").with(as(old)).with(json(Map.of("nickname", "sprout"))))
+        mvc.perform(
+                        patch("/members/me/nickname")
+                                .with(as(old))
+                                .with(json(Map.of("nickname", "sprout"))))
                 .andExpect(okEnvelope());
         withdraw(old);
 
@@ -361,14 +401,18 @@ class LoginScenarioTest extends ScenarioTestSupport {
         assertThat(rejoined.getNickname()).isNull();
         assertThat(rejoined.getEmail()).isEqualTo("sprout@kakao.com");
 
-        var exchanged = exchange(loginCode(again))
-                .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.needsNickname").value(true));
+        var exchanged =
+                exchange(loginCode(again))
+                        .andExpect(okEnvelope())
+                        .andExpect(jsonPath("$.data.needsNickname").value(true));
         String accessToken = read(exchanged, "$.data.accessToken");
         mvc.perform(get("/members/me").with(bearerToken(accessToken)))
                 .andExpect(jsonPath("$.data.id").value(newId))
                 .andExpect(jsonPath("$.data.nickname").value(nullValue()));
-        mvc.perform(patch("/members/me/nickname").with(bearerToken(accessToken)).with(json(Map.of("nickname", "sprout"))))
+        mvc.perform(
+                        patch("/members/me/nickname")
+                                .with(bearerToken(accessToken))
+                                .with(json(Map.of("nickname", "sprout"))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.nickname").value("sprout"));
     }
@@ -376,7 +420,10 @@ class LoginScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("익명화 전에 탈퇴해 소셜 id · 닉네임이 남은 행도, 다시 로그인하면 그 행을 비우고 새 회원으로 가입시켜 예전 닉네임이 풀린다")
     void legacyWithdrawnAccountSignsUpAgain() throws Exception {
-        Member legacy = members.saveAndFlush(new Member(SocialProvider.NAVER, "naver-legacy", "oldname", "old@naver.com"));
+        Member legacy =
+                members.saveAndFlush(
+                        new Member(
+                                SocialProvider.NAVER, "naver-legacy", "oldname", "old@naver.com"));
         Member someone = member(null);
         withdrawLikeBefore(legacy);
         assertThat(nicknameAvailable(someone, "oldname")).isFalse();
@@ -397,9 +444,15 @@ class LoginScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("앱 시작 시 익명화 전에 탈퇴한 행을 한 번에 익명화한다 (활동 중 · 이미 익명화된 회원은 그대로, 여러 번 돌려도 같음)")
     void startupCleanupAnonymizesLegacyWithdrawnMembers() throws Exception {
-        Member legacy = members.saveAndFlush(new Member(SocialProvider.KAKAO, "4100000030", "legacy1", "l@kakao.com"));
-        Member active = members.saveAndFlush(new Member(SocialProvider.KAKAO, "4100000031", "active1", "a@kakao.com"));
-        Member recent = members.saveAndFlush(new Member(SocialProvider.KAKAO, "4100000032", "recent1", null));
+        Member legacy =
+                members.saveAndFlush(
+                        new Member(SocialProvider.KAKAO, "4100000030", "legacy1", "l@kakao.com"));
+        Member active =
+                members.saveAndFlush(
+                        new Member(SocialProvider.KAKAO, "4100000031", "active1", "a@kakao.com"));
+        Member recent =
+                members.saveAndFlush(
+                        new Member(SocialProvider.KAKAO, "4100000032", "recent1", null));
         withdraw(recent);
         withdrawLikeBefore(legacy);
 

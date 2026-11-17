@@ -37,17 +37,13 @@ class SessionChunkControllerTest {
     private static final Long OTHER_USER_ID = 2L;
     private static final String SESSION = "1731a8f1-668b-4efe-b524-ff9a13913058";
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @Autowired private ObjectMapper objectMapper;
 
-    @Autowired
-    private SessionRawChunkRepository chunkRepository;
+    @Autowired private SessionRawChunkRepository chunkRepository;
 
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
+    @Autowired private JwtTokenProvider jwtTokenProvider;
 
     @BeforeEach
     void setUp() {
@@ -65,20 +61,27 @@ class SessionChunkControllerTest {
     // payload.memberId 가 없으면 보내는 회원 id 를 넣는다 (확장은 늘 넣는다). 일부러 빼거나 다르게 할 때는 테스트가 직접 넣는다
     @SuppressWarnings("unchecked")
     private ResultActions send(Long userId, Map<String, Object> body) throws Exception {
-        if (body.get("payload") instanceof Map<?, ?> p && !p.containsKey("memberId") && !body.containsKey("noMember")) {
+        if (body.get("payload") instanceof Map<?, ?> p
+                && !p.containsKey("memberId")
+                && !body.containsKey("noMember")) {
             var withMember = new HashMap<String, Object>((Map<String, Object>) p);
             withMember.put("memberId", userId);
             body.put("payload", withMember);
         }
         body.remove("noMember");
-        return mockMvc.perform(post("/sessions/chunks")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + jwtTokenProvider.createAccessToken(userId))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(body)));
+        return mockMvc.perform(
+                post("/sessions/chunks")
+                        .header(
+                                HttpHeaders.AUTHORIZATION,
+                                "Bearer " + jwtTokenProvider.createAccessToken(userId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)));
     }
 
     private SessionRawChunk stored(Long userId, int n) {
-        return chunkRepository.findByUserIdAndCollectorSessionIdAndN(userId, SESSION, n).orElseThrow();
+        return chunkRepository
+                .findByUserIdAndCollectorSessionIdAndN(userId, SESSION, n)
+                .orElseThrow();
     }
 
     @Test
@@ -120,7 +123,9 @@ class SessionChunkControllerTest {
         var first = stored(USER_ID, 1);
 
         var changed = chunk(SESSION, 1);
-        changed.put("payload", Map.of("records", List.of(Map.of("t", 1200, "scrollY", 340), Map.of("t", 1350))));
+        changed.put(
+                "payload",
+                Map.of("records", List.of(Map.of("t", 1200, "scrollY", 340), Map.of("t", 1350))));
         send(USER_ID, changed)
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("같은 번호의 청크가 다른 내용으로 이미 저장돼 있습니다."));
@@ -152,7 +157,8 @@ class SessionChunkControllerTest {
         other.put("payload", Map.of("memberId", OTHER_USER_ID, "records", List.of()));
         send(USER_ID, other)
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message").value("청크의 회원 id(payload.memberId)가 로그인한 회원과 다릅니다."));
+                .andExpect(
+                        jsonPath("$.message").value("청크의 회원 id(payload.memberId)가 로그인한 회원과 다릅니다."));
 
         assertThat(chunkRepository.count()).isZero();
     }
@@ -274,9 +280,10 @@ class SessionChunkControllerTest {
     @Test
     @DisplayName("로그인하지 않으면 401")
     void requiresAuthentication() throws Exception {
-        mockMvc.perform(post("/sessions/chunks")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(chunk(SESSION, 1))))
+        mockMvc.perform(
+                        post("/sessions/chunks")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(chunk(SESSION, 1))))
                 .andExpect(status().isUnauthorized());
         assertThat(chunkRepository.count()).isZero();
     }
@@ -284,10 +291,28 @@ class SessionChunkControllerTest {
     @Test
     @DisplayName("DB 유니크 키가 (회원, 세션 id, 번호) 중복을 막는다 — 동시에 같은 청크가 들어와도 하나만 남는다")
     void uniqueKeyRejectsDuplicateRow() {
-        chunkRepository.saveAndFlush(new SessionRawChunk(USER_ID, SESSION, 1, false, null, null,
-                Map.of("a", 1), LocalDateTime.now()));
-        assertThatThrownBy(() -> chunkRepository.saveAndFlush(new SessionRawChunk(USER_ID, SESSION, 1, false, null, null,
-                Map.of("b", 2), LocalDateTime.now())))
+        chunkRepository.saveAndFlush(
+                new SessionRawChunk(
+                        USER_ID,
+                        SESSION,
+                        1,
+                        false,
+                        null,
+                        null,
+                        Map.of("a", 1),
+                        LocalDateTime.now()));
+        assertThatThrownBy(
+                        () ->
+                                chunkRepository.saveAndFlush(
+                                        new SessionRawChunk(
+                                                USER_ID,
+                                                SESSION,
+                                                1,
+                                                false,
+                                                null,
+                                                null,
+                                                Map.of("b", 2),
+                                                LocalDateTime.now())))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 }

@@ -2,12 +2,11 @@ package com.justinneed.community;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import com.justinneed.community.graph.PublicGraphService;
+
 import com.justinneed.community.domain.CommunityProfile;
+import com.justinneed.community.graph.PublicGraphService;
 import com.justinneed.session.management.domain.Source;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -15,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 class PublicGraphTest extends CommunityTestSupport {
     @Autowired PublicGraphService graph;
+
     @Test
     void countsOnlyPublicLeavesRanksFiveTagsAndKeepsStableIds() throws Exception {
         var s = session(ownerId, true, "Java", "Spring", "AI", "Web", "Data", "Six");
@@ -25,11 +25,16 @@ class PublicGraphTest extends CommunityTestSupport {
         assertThat(first.nodes().get(0).content()).isNull();
         assertThat(first.nodes().get(0).label()).isEqualTo("https://example.com");
         var id = first.nodes().get(0).nodeId();
-        s.replaceSources(List.of(new Source("new", "https://new.example.com", "text"),
-                new Source("old", "https://example.com", "secret"), new Source("unsafe", "javascript:alert(1)", "bad")));
+        s.replaceSources(
+                List.of(
+                        new Source("new", "https://new.example.com", "text"),
+                        new Source("old", "https://example.com", "secret"),
+                        new Source("unsafe", "javascript:alert(1)", "bad")));
         cardSync.sync(s);
         assertThat(graph.graph(ownerId, null).nodes()).extracting(n -> n.nodeId()).contains(id);
-        mvc.perform(get("/community/profiles/{id}", ownerId).header("Authorization", auth(viewerId)))
+        mvc.perform(
+                        get("/community/profiles/{id}", ownerId)
+                                .header("Authorization", auth(viewerId)))
                 .andExpect(jsonPath("$.data.totalNodeCount").value(2))
                 .andExpect(jsonPath("$.data.topHashtags.length()").value(5));
     }
@@ -38,15 +43,21 @@ class PublicGraphTest extends CommunityTestSupport {
     void hiddenMixedTagStaysOutOfGraphAndCannotBeUsedAsFilter() throws Exception {
         session(ownerId, true, "Java", "Secret");
         var initial = graph.graph(ownerId, null);
-        var secret = initial.hashtags().stream().filter(t -> t.name().equals("Secret")).findFirst().orElseThrow();
+        var secret =
+                initial.hashtags().stream()
+                        .filter(t -> t.name().equals("Secret"))
+                        .findFirst()
+                        .orElseThrow();
         var profile = new CommunityProfile(ownerId);
         profile.replaceHiddenHashtags(List.of("secret"));
         profiles.saveAndFlush(profile);
         var hidden = graph.graph(ownerId, null);
         assertThat(hidden.nodes()).hasSize(1);
         assertThat(hidden.hashtags()).extracting(t -> t.name()).containsExactly("Java");
-        mvc.perform(get("/community/profiles/{id}/mindmap", ownerId)
-                .param("hashtagId", secret.hashtagId().toString())
-                .header("Authorization", auth(viewerId))).andExpect(status().isNotFound());
+        mvc.perform(
+                        get("/community/profiles/{id}/mindmap", ownerId)
+                                .param("hashtagId", secret.hashtagId().toString())
+                                .header("Authorization", auth(viewerId)))
+                .andExpect(status().isNotFound());
     }
 }

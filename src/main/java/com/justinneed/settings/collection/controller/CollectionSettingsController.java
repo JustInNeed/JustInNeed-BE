@@ -33,28 +33,26 @@ public class CollectionSettingsController {
 
     @GetMapping
     public ApiResponse<ExcludedUrlListResponse> getExcludedUrls(
-            @AuthenticationPrincipal Long memberId
-    ) {
-        return new ApiResponse<>(true,
-                excludedUrlService.getExcludedUrls(memberId),
-                "수집 제외 URL 목록을 조회했습니다.");
+            @AuthenticationPrincipal Long memberId) {
+        return new ApiResponse<>(
+                true, excludedUrlService.getExcludedUrls(memberId), "수집 제외 URL 목록을 조회했습니다.");
     }
 
     @PatchMapping("/selections")
     public ApiResponse<ExcludedUrlSelectionUpdateResponse> updateSelections(
             @AuthenticationPrincipal Long memberId,
-            @Valid @RequestBody ExcludedUrlSelectionUpdateRequest request
-    ) {
-        return new ApiResponse<>(true,
-                excludedUrlService.updateSelections(memberId, request.excludedUrlIds(), request.isExcluded()),
+            @Valid @RequestBody ExcludedUrlSelectionUpdateRequest request) {
+        return new ApiResponse<>(
+                true,
+                excludedUrlService.updateSelections(
+                        memberId, request.excludedUrlIds(), request.isExcluded()),
                 "URL 선택 상태가 변경되었습니다.");
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse<ExcludedUrlCreateResponse>> create(
             @AuthenticationPrincipal Long memberId,
-            @Valid @RequestBody ExcludedUrlCreateRequest request
-    ) {
+            @Valid @RequestBody ExcludedUrlCreateRequest request) {
         ExcludedUrlCreateResponse response = excludedUrlService.create(memberId, request.url());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ApiResponse<>(true, response, "수집 제외 URL이 추가되었습니다."));
@@ -63,9 +61,9 @@ public class CollectionSettingsController {
     @DeleteMapping
     public ApiResponse<ExcludedUrlDeleteResponse> delete(
             @AuthenticationPrincipal Long memberId,
-            @Valid @RequestBody ExcludedUrlDeleteRequest request
-    ) {
-        return new ApiResponse<>(true,
+            @Valid @RequestBody ExcludedUrlDeleteRequest request) {
+        return new ApiResponse<>(
+                true,
                 excludedUrlService.delete(memberId, request.excludedUrlIds()),
                 "선택한 URL이 삭제되었습니다.");
     }

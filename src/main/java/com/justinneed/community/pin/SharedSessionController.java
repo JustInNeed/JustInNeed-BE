@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
 @RestController
 @RequestMapping("/community")
 public class SharedSessionController {
@@ -22,18 +23,29 @@ public class SharedSessionController {
 
     @GetMapping("/profiles/{userId}/shared-sessions")
     public ApiResponse<SharedSessionService.SharedSessions> list(
-            @PathVariable Long userId, @AuthenticationPrincipal Long viewerId,
-            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "12") int size) {
+            @PathVariable Long userId,
+            @AuthenticationPrincipal Long viewerId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size) {
         return ApiResponse.ok(service.list(userId, viewerId, page, size));
     }
 
     @GetMapping("/profiles/{userId}/shared-sessions/{sessionId}")
-    public ApiResponse<SharedSessionView> detail(@PathVariable Long userId, @PathVariable Long sessionId,
+    public ApiResponse<SharedSessionView> detail(
+            @PathVariable Long userId,
+            @PathVariable Long sessionId,
             @AuthenticationPrincipal Long viewerId) {
         return ApiResponse.ok(service.detail(userId, viewerId, sessionId));
     }
 
-    public record PinRequest(@NotNull(message = "세션을 선택해 주세요.") @Positive(message = "세션이 올바르지 않습니다.") Long sessionId) { }
-    public record OrderRequest(@NotNull(message = "정렬할 세션 목록을 입력해 주세요.")
-            List<@NotNull(message = "세션이 올바르지 않습니다.") @Positive(message = "세션이 올바르지 않습니다.") Long> sessionIds) { }
+    public record PinRequest(
+            @NotNull(message = "세션을 선택해 주세요.") @Positive(message = "세션이 올바르지 않습니다.")
+                    Long sessionId) {}
+
+    public record OrderRequest(
+            @NotNull(message = "정렬할 세션 목록을 입력해 주세요.")
+                    List<
+                                    @NotNull(message = "세션이 올바르지 않습니다.")
+                                    @Positive(message = "세션이 올바르지 않습니다.") Long>
+                            sessionIds) {}
 }

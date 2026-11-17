@@ -24,30 +24,26 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.TestPropertySource;
 
 /**
- * 홈 조회의 SQL 수가 세션 수와 상관없이 같은지 센다. 집계가 세션 전체를 훑으므로 N+1 이 나면 세션 수만큼 늘어난다.
- * unit_features 처럼 무거운 컬럼을 읽지 않도록 엔티티가 아니라 필요한 컬럼만 프로젝션으로 읽는다.
- * Hibernate 통계 설정 · DB 는 SessionListQueryCountTest 와 같다.
+ * 홈 조회의 SQL 수가 세션 수와 상관없이 같은지 센다. 집계가 세션 전체를 훑으므로 N+1 이 나면 세션 수만큼 늘어난다. unit_features 처럼 무거운 컬럼을 읽지
+ * 않도록 엔티티가 아니라 필요한 컬럼만 프로젝션으로 읽는다. Hibernate 통계 설정 · DB 는 SessionListQueryCountTest 와 같다.
  */
-@TestPropertySource(properties = {
-        "spring.datasource.url=jdbc:h2:mem:query-count;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;"
-                + "DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1",
-        "spring.jpa.properties.hibernate.generate_statistics=true",
-        "logging.level.org.hibernate.engine.internal.StatisticalLoggingSessionEventListener=WARN"
-})
+@TestPropertySource(
+        properties = {
+            "spring.datasource.url=jdbc:h2:mem:query-count;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;"
+                    + "DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1",
+            "spring.jpa.properties.hibernate.generate_statistics=true",
+            "logging.level.org.hibernate.engine.internal.StatisticalLoggingSessionEventListener=WARN"
+        })
 @DisplayName("홈 조회 쿼리 수")
 class HomeQueryCountTest extends ScenarioTestSupport {
 
-    @Autowired
-    private EntityManager entityManager;
+    @Autowired private EntityManager entityManager;
 
-    @Autowired
-    private EntityManagerFactory entityManagerFactory;
+    @Autowired private EntityManagerFactory entityManagerFactory;
 
-    @Autowired
-    private SessionResultRepository results;
+    @Autowired private SessionResultRepository results;
 
-    @Autowired
-    private TagGroupRepository tagGroups;
+    @Autowired private TagGroupRepository tagGroups;
 
     @Test
     @DisplayName("세션이 1개든 30개든 SQL 수가 같다 — 토큰 확인 1 + 탈퇴 확인 1 + 세션 · 분석 결과 1 + 태그 그룹 1")
@@ -65,7 +61,8 @@ class HomeQueryCountTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("세션 · 요약 · 분석 결과 엔티티를 읽지 않는다 (unit_features · selected_units · analysis_units · 요약을 조회하지 않음)")
+    @DisplayName(
+            "세션 · 요약 · 분석 결과 엔티티를 읽지 않는다 (unit_features · selected_units · analysis_units · 요약을 조회하지 않음)")
     void doesNotLoadHeavyEntities() throws Exception {
         Member me = member("sprout");
         seedAnalyzedSessions(me, 0, 3);
@@ -73,8 +70,10 @@ class HomeQueryCountTest extends ScenarioTestSupport {
         Statistics statistics = statistics();
         statementsFor(me, 3);
 
-        assertThat(statistics.getEntityStatistics(BrowsingSession.class.getName()).getLoadCount()).isZero();
-        assertThat(statistics.getEntityStatistics(SessionResult.class.getName()).getLoadCount()).isZero();
+        assertThat(statistics.getEntityStatistics(BrowsingSession.class.getName()).getLoadCount())
+                .isZero();
+        assertThat(statistics.getEntityStatistics(SessionResult.class.getName()).getLoadCount())
+                .isZero();
         assertThat(statistics.getEntityStatistics(Summary.class.getName()).getLoadCount()).isZero();
     }
 
@@ -98,12 +97,25 @@ class HomeQueryCountTest extends ScenarioTestSupport {
     private void seedAnalyzedSessions(Member owner, int from, int to) {
         LocalDateTime base = LocalDateTime.parse("2026-04-01T10:00:00");
         for (int i = from; i < to; i++) {
-            BrowsingSession session = session(owner, "세션 " + i, base.plusDays(i), base.plusDays(i).plusMinutes(30), 3,
-                    false, false, List.of("로마"), List.of(), "# 세션 " + i);
+            BrowsingSession session =
+                    session(
+                            owner,
+                            "세션 " + i,
+                            base.plusDays(i),
+                            base.plusDays(i).plusMinutes(30),
+                            3,
+                            false,
+                            false,
+                            List.of("로마"),
+                            List.of(),
+                            "# 세션 " + i);
             SessionResult result = new SessionResult(session.getId(), owner.getId());
             result.replace(
-                    Map.of("nodes", List.of(Map.of("id", "root:1", "type", "root", "keyword", "로마 " + i)),
-                            "edges", List.of()),
+                    Map.of(
+                            "nodes",
+                            List.of(Map.of("id", "root:1", "type", "root", "keyword", "로마 " + i)),
+                            "edges",
+                            List.of()),
                     List.of(Map.of("unitKey", "https://a#p1")),
                     List.of(Map.of("unitKey", "https://a#p1")),
                     Map.of("Deep Reading", Map.of("units", 1, "dwellMs", 1000)),

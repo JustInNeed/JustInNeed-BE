@@ -9,17 +9,19 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * revoked_access_tokens 테이블에서 토큰 자체가 만료된 행을 주기적으로 삭제한다.
- * (만료된 access 토큰은 JWT 검증 단계에서 이미 거부되므로 보안 목적이 아니라 테이블 비대화 방지 목적)
+ * revoked_access_tokens 테이블에서 토큰 자체가 만료된 행을 주기적으로 삭제한다. (만료된 access 토큰은 JWT 검증 단계에서 이미 거부되므로 보안 목적이
+ * 아니라 테이블 비대화 방지 목적)
  */
 @Component
 public class RevokedAccessTokenCleanupScheduler {
 
-    private static final Logger log = LoggerFactory.getLogger(RevokedAccessTokenCleanupScheduler.class);
+    private static final Logger log =
+            LoggerFactory.getLogger(RevokedAccessTokenCleanupScheduler.class);
 
     private final RevokedAccessTokenRepository revokedAccessTokenRepository;
 
-    public RevokedAccessTokenCleanupScheduler(RevokedAccessTokenRepository revokedAccessTokenRepository) {
+    public RevokedAccessTokenCleanupScheduler(
+            RevokedAccessTokenRepository revokedAccessTokenRepository) {
         this.revokedAccessTokenRepository = revokedAccessTokenRepository;
     }
 

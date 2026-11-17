@@ -30,8 +30,7 @@ public class TagGroup extends BaseEntity {
     @Column(nullable = false)
     private int position;
 
-    protected TagGroup() {
-    }
+    protected TagGroup() {}
 
     public TagGroup(Long userId, List<String> hashtags, int position) {
         this.userId = userId;
@@ -56,7 +55,6 @@ public class TagGroup extends BaseEntity {
     public Long getUserId() {
         return userId;
     }
-
 
     public List<String> getHashtags() {
         return hashtags;

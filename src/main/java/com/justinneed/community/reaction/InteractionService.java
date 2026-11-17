@@ -5,11 +5,11 @@ import com.justinneed.community.activity.ActivityRecorder;
 import com.justinneed.community.bookmark.TargetType;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 @Service
 @Transactional
@@ -19,11 +19,20 @@ public class InteractionService {
     private final ExplorationRepository explorations;
     private final TargetResolver targets;
     private final ActivityRecorder activity;
-    public InteractionService(InteractionLocks locks, ProfileLikeRepository likes, ExplorationRepository explorations,
-            TargetResolver targets, ActivityRecorder activity) {
-        this.locks = locks; this.likes = likes; this.explorations = explorations;
-        this.targets = targets; this.activity = activity;
+
+    public InteractionService(
+            InteractionLocks locks,
+            ProfileLikeRepository likes,
+            ExplorationRepository explorations,
+            TargetResolver targets,
+            ActivityRecorder activity) {
+        this.locks = locks;
+        this.likes = likes;
+        this.explorations = explorations;
+        this.targets = targets;
+        this.activity = activity;
     }
+
     public LikeView like(Long actor, Long profileId, boolean liked) {
         if (actor.equals(profileId)) throw new CustomException(ErrorCode.SELF_LIKE_NOT_ALLOWED);
         locks.acquire(actor, List.of(profileId));
@@ -33,12 +42,14 @@ public class InteractionService {
         likes.flush();
         return new LikeView(200, profileId, liked, likes.countByProfileId(profileId));
     }
+
     public ExploringView exploring(Long actor, TargetType type, Long id, boolean exploring) {
         locks.acquire(actor, List.of(targets.owner(type, id)));
         var existing = explorations.findByActorIdAndTargetTypeAndTargetId(actor, type, id);
         TargetResolver.Resolved target;
-        try { target = targets.resolve(type, id); }
-        catch (ResponseStatusException error) {
+        try {
+            target = targets.resolve(type, id);
+        } catch (ResponseStatusException error) {
             if (exploring || error.getStatusCode().value() != 404) throw error;
             existing.ifPresent(explorations::delete);
             return new ExploringView(200, type, id, false, 0);
@@ -49,17 +60,29 @@ public class InteractionService {
         }
         if (!exploring) existing.ifPresent(explorations::delete);
         explorations.flush();
-        return new ExploringView(200, type, id, exploring, explorations.countByTargetTypeAndTargetId(type, id));
+        return new ExploringView(
+                200, type, id, exploring, explorations.countByTargetTypeAndTargetId(type, id));
     }
+
     @Transactional(readOnly = true)
     public ExploringView status(Long actor, TargetType type, Long id) {
         targets.resolve(type, id);
-        return new ExploringView(200, type, id,
+        return new ExploringView(
+                200,
+                type,
+                id,
                 explorations.findByActorIdAndTargetTypeAndTargetId(actor, type, id).isPresent(),
                 explorations.countByTargetTypeAndTargetId(type, id));
     }
+
     @Schema(name = "InteractionServiceLikeView")
-    public record LikeView(int code, Long userId, boolean liked, long likeCount) { }
+    public record LikeView(int code, Long userId, boolean liked, long likeCount) {}
+
     @Schema(name = "InteractionServiceExploringView")
-    public record ExploringView(int code, TargetType targetType, Long targetId, boolean exploring, long exploringCount) { }
+    public record ExploringView(
+            int code,
+            TargetType targetType,
+            Long targetId,
+            boolean exploring,
+            long exploringCount) {}
 }

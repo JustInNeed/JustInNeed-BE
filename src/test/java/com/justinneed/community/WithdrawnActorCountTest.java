@@ -7,8 +7,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.justinneed.auth.domain.Member;
 import com.justinneed.auth.domain.SocialProvider;
-import com.justinneed.community.activity.ActivityKind;
-import com.justinneed.community.activity.CommunityActivity;
 import com.justinneed.community.activity.CommunityActivityRepository;
 import com.justinneed.community.bookmark.TargetType;
 import com.justinneed.community.graph.PublicGraphService;
@@ -16,7 +14,6 @@ import com.justinneed.community.reaction.ExplorationRepository;
 import com.justinneed.community.reaction.InteractionService;
 import com.justinneed.community.reaction.ProfileLikeRepository;
 import jakarta.persistence.EntityManager;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,7 +32,11 @@ class WithdrawnActorCountTest extends CommunityTestSupport {
 
     @BeforeEach
     void createLeaver() {
-        leaverId = members.saveAndFlush(new Member(SocialProvider.KAKAO, "community-leaver", "Leaver", null)).getId();
+        leaverId =
+                members.saveAndFlush(
+                                new Member(
+                                        SocialProvider.KAKAO, "community-leaver", "Leaver", null))
+                        .getId();
     }
 
     private void withdrawLeaver() {
@@ -52,7 +53,9 @@ class WithdrawnActorCountTest extends CommunityTestSupport {
         withdrawLeaver();
 
         assertThat(graphs.profile(ownerId, viewerId).likeCount()).isEqualTo(1);
-        mvc.perform(get("/community/profiles/{id}", ownerId).header("Authorization", auth(viewerId)))
+        mvc.perform(
+                        get("/community/profiles/{id}", ownerId)
+                                .header("Authorization", auth(viewerId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.likeCount").value(1))
                 .andExpect(jsonPath("$.data.likedByMe").value(true));
@@ -68,15 +71,18 @@ class WithdrawnActorCountTest extends CommunityTestSupport {
         var node = graphs.graph(ownerId, null).nodes().get(0).nodeId();
         interactions.exploring(viewerId, TargetType.NODE, node, true);
         interactions.exploring(leaverId, TargetType.NODE, node, true);
-        assertThat(interactions.status(viewerId, TargetType.NODE, node).exploringCount()).isEqualTo(2);
+        assertThat(interactions.status(viewerId, TargetType.NODE, node).exploringCount())
+                .isEqualTo(2);
 
         withdrawLeaver();
 
         var status = interactions.status(viewerId, TargetType.NODE, node);
         assertThat(status.exploringCount()).isEqualTo(1);
         assertThat(status.exploring()).isTrue();
-        assertThat(interactions.exploring(viewerId, TargetType.NODE, node, true).exploringCount()).isEqualTo(1);
-        assertThat(interactions.exploring(viewerId, TargetType.NODE, node, false).exploringCount()).isZero();
+        assertThat(interactions.exploring(viewerId, TargetType.NODE, node, true).exploringCount())
+                .isEqualTo(1);
+        assertThat(interactions.exploring(viewerId, TargetType.NODE, node, false).exploringCount())
+                .isZero();
         assertThat(explorations.count()).isEqualTo(1);
     }
 }

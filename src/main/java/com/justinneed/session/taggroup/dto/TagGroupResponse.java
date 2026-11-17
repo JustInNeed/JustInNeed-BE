@@ -5,18 +5,10 @@ import com.justinneed.session.taggroup.domain.TagGroup;
 import java.util.List;
 
 public record TagGroupResponse(
-        Long id,
-        List<String> hashtags,
-        int position,
-        List<SessionListResponse> sessions
-) {
+        Long id, List<String> hashtags, int position, List<SessionListResponse> sessions) {
 
     public static TagGroupResponse from(TagGroup group, List<SessionListResponse> sessions) {
         return new TagGroupResponse(
-                group.getId(),
-                group.getHashtags(),
-                group.getPosition(),
-                sessions
-        );
+                group.getId(), group.getHashtags(), group.getPosition(), sessions);
     }
 }

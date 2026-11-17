@@ -2,9 +2,9 @@ package com.justinneed.community;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.justinneed.community.activity.ActivityKind;
 import com.justinneed.community.activity.ActivityRecorder;
 import com.justinneed.community.activity.CommunityActivity;
@@ -18,7 +18,6 @@ import com.justinneed.community.recommend.RecommendationService;
 import com.justinneed.community.recommend.TrendingService;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.Period;
 import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -27,13 +26,20 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+
 @Import(RecommendationTest.TimeConfig.class)
 class RecommendationTest extends CommunityTestSupport {
     static final Instant NOW = Instant.parse("2026-09-30T03:00:00Z");
+
     @TestConfiguration
     static class TimeConfig {
-        @Bean @Primary Clock fixedClock() { return Clock.fixed(NOW, ZoneOffset.UTC); }
+        @Bean
+        @Primary
+        Clock fixedClock() {
+            return Clock.fixed(NOW, ZoneOffset.UTC);
+        }
     }
+
     @Autowired RecommendationService recommendations;
     @Autowired TrendingService trending;
     @Autowired PublicGraphService graphs;
@@ -51,10 +57,13 @@ class RecommendationTest extends CommunityTestSupport {
         assertThat(result.basisHashtags()).containsExactly("java");
         assertThat(result.mindmaps()).hasSize(1);
         assertThat(result.mindmaps().get(0).owner().userId()).isEqualTo(ownerId);
-        assertThat(result.mindmaps().get(0).relatedUrls()).extracting(url -> url.url()).containsExactly("https://example.com");
+        assertThat(result.mindmaps().get(0).relatedUrls())
+                .extracting(url -> url.url())
+                .containsExactly("https://example.com");
         assertThat(recommendations.recent(viewerId, 3).mindmaps()).isEmpty();
         var tag = graphs.graph(ownerId, null).hashtags().get(0).hashtagId();
-        bookmarks.save(viewerId, TargetType.HASHTAG, List.of(tag), SaveType.HASHTAG_BUNDLE, null, null);
+        bookmarks.save(
+                viewerId, TargetType.HASHTAG, List.of(tag), SaveType.HASHTAG_BUNDLE, null, null);
         assertThat(recommendations.recent(viewerId, 3).mindmaps()).hasSize(1);
         assertThat(recommendations.recent(ownerId, 3).basisHashtags()).isEmpty();
         publicSession.update(null, null, false, null, null);
@@ -80,7 +89,8 @@ class RecommendationTest extends CommunityTestSupport {
         viewerProfile.replaceInterests(List.of("Secret"));
         assertThat(recommendations.interests(viewerId, 3).mindmaps()).isEmpty();
         viewerProfile.replaceInterests(List.of("Other"));
-        assertThat(recommendations.interests(viewerId, 3).mindmaps().get(0).hashtags()).containsExactly("Other");
+        assertThat(recommendations.interests(viewerId, 3).mindmaps().get(0).hashtags())
+                .containsExactly("Other");
     }
 
     @Test
@@ -118,20 +128,41 @@ class RecommendationTest extends CommunityTestSupport {
 
     @Test
     void recommendationEndpointsValidateAndRequireJwt() throws Exception {
-        mvc.perform(get("/community/recommendations/mindmaps/interests")).andExpect(status().isUnauthorized());
-        mvc.perform(get("/community/recommendations/mindmaps/interests").header("Authorization", auth(viewerId)))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.data.mindmaps").isEmpty());
-        mvc.perform(get("/community/recommendations/mindmaps/recent-bookmarks").param("limit", "0")
-                .header("Authorization", auth(viewerId))).andExpect(status().isBadRequest());
-        mvc.perform(get("/community/recommendations/hashtags/trending").param("period", "MONTH")
-                .header("Authorization", auth(viewerId))).andExpect(status().isBadRequest());
-        mvc.perform(get("/community/recommendations/hashtags/trending").param("limit", "101")
-                .header("Authorization", auth(viewerId))).andExpect(status().isBadRequest());
+        mvc.perform(get("/community/recommendations/mindmaps/interests"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(
+                        get("/community/recommendations/mindmaps/interests")
+                                .header("Authorization", auth(viewerId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.mindmaps").isEmpty());
+        mvc.perform(
+                        get("/community/recommendations/mindmaps/recent-bookmarks")
+                                .param("limit", "0")
+                                .header("Authorization", auth(viewerId)))
+                .andExpect(status().isBadRequest());
+        mvc.perform(
+                        get("/community/recommendations/hashtags/trending")
+                                .param("period", "MONTH")
+                                .header("Authorization", auth(viewerId)))
+                .andExpect(status().isBadRequest());
+        mvc.perform(
+                        get("/community/recommendations/hashtags/trending")
+                                .param("limit", "101")
+                                .header("Authorization", auth(viewerId)))
+                .andExpect(status().isBadRequest());
     }
 
-    private void event(Long actor, TargetType type, Long target, Long tag, ActivityKind kind, String time) {
+    private void event(
+            Long actor, TargetType type, Long target, Long tag, ActivityKind kind, String time) {
         var instant = Instant.parse(time);
-        activity.saveAndFlush(new CommunityActivity(actor, type, target, tag, kind, instant,
-                instant.atZone(ActivityRecorder.ZONE).toLocalDate()));
+        activity.saveAndFlush(
+                new CommunityActivity(
+                        actor,
+                        type,
+                        target,
+                        tag,
+                        kind,
+                        instant,
+                        instant.atZone(ActivityRecorder.ZONE).toLocalDate()));
     }
 }

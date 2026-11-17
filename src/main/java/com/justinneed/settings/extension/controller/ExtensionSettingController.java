@@ -23,31 +23,32 @@ public class ExtensionSettingController {
     }
 
     @GetMapping
-    public ApiResponse<ExtensionSettingResponse> getSettings(@AuthenticationPrincipal Long memberId) {
+    public ApiResponse<ExtensionSettingResponse> getSettings(
+            @AuthenticationPrincipal Long memberId) {
         return ApiResponse.ok(extensionSettingService.getSettings(memberId));
     }
 
     @PatchMapping("/popup-visible")
     public ApiResponse<ExtensionSettingResponse> updatePopupVisible(
             @AuthenticationPrincipal Long memberId,
-            @Valid @RequestBody ExtensionToggleUpdateRequest request
-    ) {
-        return ApiResponse.ok(extensionSettingService.updatePopupVisible(memberId, request.enabled()));
+            @Valid @RequestBody ExtensionToggleUpdateRequest request) {
+        return ApiResponse.ok(
+                extensionSettingService.updatePopupVisible(memberId, request.enabled()));
     }
 
     @PatchMapping("/auto-end-notification")
     public ApiResponse<ExtensionSettingResponse> updateAutoEndNotification(
             @AuthenticationPrincipal Long memberId,
-            @Valid @RequestBody ExtensionToggleUpdateRequest request
-    ) {
-        return ApiResponse.ok(extensionSettingService.updateAutoEndNotification(memberId, request.enabled()));
+            @Valid @RequestBody ExtensionToggleUpdateRequest request) {
+        return ApiResponse.ok(
+                extensionSettingService.updateAutoEndNotification(memberId, request.enabled()));
     }
 
     @PatchMapping("/manual-scrap")
     public ApiResponse<ExtensionSettingResponse> updateManualScrap(
             @AuthenticationPrincipal Long memberId,
-            @Valid @RequestBody ExtensionToggleUpdateRequest request
-    ) {
-        return ApiResponse.ok(extensionSettingService.updateManualScrap(memberId, request.enabled()));
+            @Valid @RequestBody ExtensionToggleUpdateRequest request) {
+        return ApiResponse.ok(
+                extensionSettingService.updateManualScrap(memberId, request.enabled()));
     }
 }

@@ -6,20 +6,29 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
 @RestController
 @RequestMapping("/community/me/bookmarks")
 public class BookmarkQueryController {
     private final BookmarkQueryService service;
-    public BookmarkQueryController(BookmarkQueryService service) { this.service = service; }
+
+    public BookmarkQueryController(BookmarkQueryService service) {
+        this.service = service;
+    }
 
     @GetMapping("/hashtag-bundles")
-    public ApiResponse<BookmarkQueryService.Bundles> bundles(@AuthenticationPrincipal Long userId,
-            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+    public ApiResponse<BookmarkQueryService.Bundles> bundles(
+            @AuthenticationPrincipal Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
         return ApiResponse.ok(service.bundles(userId, page, size));
     }
+
     @GetMapping("/mindmaps")
-    public ApiResponse<BookmarkQueryService.Mindmaps> mindmaps(@AuthenticationPrincipal Long userId,
-            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+    public ApiResponse<BookmarkQueryService.Mindmaps> mindmaps(
+            @AuthenticationPrincipal Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
         return ApiResponse.ok(service.mindmaps(userId, page, size));
     }
 }

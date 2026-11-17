@@ -8,9 +8,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 로그아웃 · 탈퇴로 만료 전에 무효화한 access 토큰의 denylist.
- * DB 테이블(revoked_access_tokens)에 토큰 SHA-256 해시와 토큰 만료 시각을 저장하므로 배포 · 재시작 후에도 유지된다.
- * 만료 시각이 지난 행은 조회에서 무시하고, RevokedAccessTokenCleanupScheduler 가 주기적으로 지운다.
+ * 로그아웃 · 탈퇴로 만료 전에 무효화한 access 토큰의 denylist. DB 테이블(revoked_access_tokens)에 토큰 SHA-256 해시와 토큰 만료
+ * 시각을 저장하므로 배포 · 재시작 후에도 유지된다. 만료 시각이 지난 행은 조회에서 무시하고, RevokedAccessTokenCleanupScheduler 가 주기적으로
+ * 지운다.
  */
 @Component
 public class TokenDenylist {
@@ -23,9 +23,10 @@ public class TokenDenylist {
 
     @Transactional
     public void deny(String token, long expiryEpochSecond) {
-        LocalDateTime expiresAt = Instant.ofEpochSecond(expiryEpochSecond)
-                .atZone(ZoneId.systemDefault())
-                .toLocalDateTime();
+        LocalDateTime expiresAt =
+                Instant.ofEpochSecond(expiryEpochSecond)
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDateTime();
         revokedAccessTokenRepository.insertIfAbsent(TokenHashes.sha256(token), expiresAt);
     }
 

@@ -30,7 +30,10 @@ final class TagTally {
     }
 
     List<TagCount> top(int limit) {
-        return counts.entrySet().stream().map(entry -> new TagCount(names.get(entry.getKey()), entry.getValue()))
-                .sorted(MOST_FIRST).limit(limit).toList();
+        return counts.entrySet().stream()
+                .map(entry -> new TagCount(names.get(entry.getKey()), entry.getValue()))
+                .sorted(MOST_FIRST)
+                .limit(limit)
+                .toList();
     }
 }

@@ -40,13 +40,13 @@ import org.springframework.test.context.ActiveProfiles;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * 실제 서버 · 실제 스레드로 보내는 인증 요청. 동시 요청은 트랜잭션이 각각 커밋돼야 재현되므로
- * ScenarioTestSupport(@Transactional) 를 쓰지 않고, 전용 H2 DB 에 커밋한다.
- * 동시 요청이 겹치는 정도는 매번 달라서 한 판이 아니라 여러 판을 돌린다.
+ * 실제 서버 · 실제 스레드로 보내는 인증 요청. 동시 요청은 트랜잭션이 각각 커밋돼야 재현되므로 ScenarioTestSupport(@Transactional) 를 쓰지
+ * 않고, 전용 H2 DB 에 커밋한다. 동시 요청이 겹치는 정도는 매번 달라서 한 판이 아니라 여러 판을 돌린다.
  */
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = "spring.datasource.url=jdbc:h2:mem:auth-concurrency;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000")
+        properties =
+                "spring.datasource.url=jdbc:h2:mem:auth-concurrency;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000")
 @ActiveProfiles("test")
 @DisplayName("실제 서버로 확인하는 인증 요청")
 class AuthOverHttpTest {
@@ -54,23 +54,17 @@ class AuthOverHttpTest {
     private static final int ROUNDS = 10;
     private static final String INVALID_REFRESH_MESSAGE = "유효하지 않은 리프레시 토큰입니다.";
 
-    @LocalServerPort
-    private int port;
+    @LocalServerPort private int port;
 
-    @Autowired
-    private MemberRepository members;
+    @Autowired private MemberRepository members;
 
-    @Autowired
-    private RefreshTokenRepository refreshTokens;
+    @Autowired private RefreshTokenRepository refreshTokens;
 
-    @Autowired
-    private AuthTokenService authTokenService;
+    @Autowired private AuthTokenService authTokenService;
 
-    @Autowired
-    private JwtTokenProvider jwt;
+    @Autowired private JwtTokenProvider jwt;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @Autowired private ObjectMapper objectMapper;
 
     private final HttpClient client = HttpClient.newHttpClient();
     private ExecutorService pool;
@@ -92,12 +86,14 @@ class AuthOverHttpTest {
             Long memberId = newMember().getId();
             String refreshToken = authTokenService.issue(memberId).refreshToken();
 
-            List<HttpResponse<String>> responses = race(refresh(refreshToken), refresh(refreshToken));
+            List<HttpResponse<String>> responses =
+                    race(refresh(refreshToken), refresh(refreshToken));
 
             assertThat(statuses(responses)).containsExactly(200, 401);
             HttpResponse<String> loser = responses.get(1);
             assertThat(JsonPath.<Boolean>read(loser.body(), "$.success")).isFalse();
-            assertThat(JsonPath.<String>read(loser.body(), "$.message")).isEqualTo(INVALID_REFRESH_MESSAGE);
+            assertThat(JsonPath.<String>read(loser.body(), "$.message"))
+                    .isEqualTo(INVALID_REFRESH_MESSAGE);
             assertThat(refreshRowsOf(memberId)).hasSize(1);
 
             String newRefreshToken = JsonPath.read(responses.get(0).body(), "$.data.refreshToken");
@@ -115,10 +111,13 @@ class AuthOverHttpTest {
             String groupId = jwt.getGroupId(web.accessToken());
             TokenResponse extension = authTokenService.issue(memberId, groupId);
 
-            List<HttpResponse<String>> responses = race(refresh(web.refreshToken()), refresh(extension.refreshToken()));
+            List<HttpResponse<String>> responses =
+                    race(refresh(web.refreshToken()), refresh(extension.refreshToken()));
 
             assertThat(statuses(responses)).containsExactly(200, 200);
-            assertThat(refreshRowsOf(memberId)).hasSize(2).allMatch(row -> groupId.equals(row.getGroupId()));
+            assertThat(refreshRowsOf(memberId))
+                    .hasSize(2)
+                    .allMatch(row -> groupId.equals(row.getGroupId()));
         }
     }
 
@@ -142,27 +141,32 @@ class AuthOverHttpTest {
         for (int round = 0; round < ROUNDS; round++) {
             String nickname = "race" + round;
 
-            List<HttpResponse<String>> responses = race(
-                    updateNickname(newMember(), nickname),
-                    updateNickname(newMember(), nickname));
+            List<HttpResponse<String>> responses =
+                    race(
+                            updateNickname(newMember(), nickname),
+                            updateNickname(newMember(), nickname));
 
             assertThat(statuses(responses)).containsExactly(200, 409);
-            assertThat(JsonPath.<String>read(responses.get(0).body(), "$.data.nickname")).isEqualTo(nickname);
-            assertThat(responses.get(1).body())
-                    .isEqualTo(errorJson("이미 사용 중인 닉네임입니다."));
-            assertThat(members.findAll()).filteredOn(member -> nickname.equals(member.getNickname())).hasSize(1);
+            assertThat(JsonPath.<String>read(responses.get(0).body(), "$.data.nickname"))
+                    .isEqualTo(nickname);
+            assertThat(responses.get(1).body()).isEqualTo(errorJson("이미 사용 중인 닉네임입니다."));
+            assertThat(members.findAll())
+                    .filteredOn(member -> nickname.equals(member.getNickname()))
+                    .hasSize(1);
         }
     }
 
     @Test
     @DisplayName("실제 서버(Tomcat)의 401 도 UTF-8 JSON 공통 에러 응답이고, FE 출처면 CORS 헤더가 붙는다")
     void unauthorizedOverRealServer() throws Exception {
-        HttpRequest request = HttpRequest.newBuilder(uri("/members/me"))
-                .header(HttpHeaders.ORIGIN, "http://localhost:3000")
-                .GET()
-                .build();
+        HttpRequest request =
+                HttpRequest.newBuilder(uri("/members/me"))
+                        .header(HttpHeaders.ORIGIN, "http://localhost:3000")
+                        .GET()
+                        .build();
 
-        HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
+        HttpResponse<byte[]> response =
+                client.send(request, HttpResponse.BodyHandlers.ofByteArray());
 
         assertThat(response.statusCode()).isEqualTo(401);
         assertThat(response.headers().firstValue(HttpHeaders.CONTENT_TYPE))
@@ -174,7 +178,8 @@ class AuthOverHttpTest {
     }
 
     private Member newMember() {
-        return members.save(new Member(SocialProvider.KAKAO, "http-" + UUID.randomUUID(), null, null));
+        return members.save(
+                new Member(SocialProvider.KAKAO, "http-" + UUID.randomUUID(), null, null));
     }
 
     private List<RefreshToken> refreshRowsOf(Long memberId) {
@@ -194,8 +199,12 @@ class AuthOverHttpTest {
     private HttpRequest updateNickname(Member member, String nickname) {
         return HttpRequest.newBuilder(uri("/members/me/nickname"))
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + jwt.createAccessToken(member.getId()))
-                .method("PATCH", HttpRequest.BodyPublishers.ofString("{\"nickname\":\"" + nickname + "\"}"))
+                .header(
+                        HttpHeaders.AUTHORIZATION,
+                        "Bearer " + jwt.createAccessToken(member.getId()))
+                .method(
+                        "PATCH",
+                        HttpRequest.BodyPublishers.ofString("{\"nickname\":\"" + nickname + "\"}"))
                 .build();
     }
 
@@ -215,16 +224,18 @@ class AuthOverHttpTest {
     }
 
     /** 두 요청을 최대한 같은 순간에 보내고 응답을 상태 코드 오름차순으로 돌려준다. */
-    private List<HttpResponse<String>> race(HttpRequest first, HttpRequest second) throws Exception {
+    private List<HttpResponse<String>> race(HttpRequest first, HttpRequest second)
+            throws Exception {
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);
         List<Future<HttpResponse<String>>> futures = new ArrayList<>();
         for (HttpRequest request : List.of(first, second)) {
-            Callable<HttpResponse<String>> call = () -> {
-                ready.countDown();
-                start.await();
-                return send(request);
-            };
+            Callable<HttpResponse<String>> call =
+                    () -> {
+                        ready.countDown();
+                        start.await();
+                        return send(request);
+                    };
             futures.add(pool.submit(call));
         }
         assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();

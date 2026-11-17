@@ -29,8 +29,7 @@ final class ExplorationAggregator {
     private static final String[] ALL_LABELS = {"Deep Reading", "Reading", "Scanning", "Idle"};
     private static final double MILLIS_PER_SECOND = 1000.0;
 
-    private ExplorationAggregator() {
-    }
+    private ExplorationAggregator() {}
 
     static Exploration aggregate(List<AnalyticsSessionRow> sessions) {
         if (sessions.isEmpty()) {
@@ -42,16 +41,31 @@ final class ExplorationAggregator {
             if (hasPageVisits(session)) {
                 double avgDwellSec = avgPageDwellSec(session);
                 dwellSeconds.add(avgDwellSec);
-                typeCounts.merge(judge(session.pageCount(), avgDwellSec, focusedPct(session)), 1, Integer::sum);
+                typeCounts.merge(
+                        judge(session.pageCount(), avgDwellSec, focusedPct(session)),
+                        1,
+                        Integer::sum);
             }
         }
         ExplorationType type = mostCommon(typeCounts);
         return new Exploration(
-                (int) Math.round(sessions.stream().mapToInt(AnalyticsSessionRow::pageCount).average().orElse(0)),
-                (int) Math.round(dwellSeconds.stream().mapToDouble(Double::doubleValue).average().orElse(0)),
+                (int)
+                        Math.round(
+                                sessions.stream()
+                                        .mapToInt(AnalyticsSessionRow::pageCount)
+                                        .average()
+                                        .orElse(0)),
+                (int)
+                        Math.round(
+                                dwellSeconds.stream()
+                                        .mapToDouble(Double::doubleValue)
+                                        .average()
+                                        .orElse(0)),
                 (int) Math.round(avgSessionMinutes(sessions)),
                 type,
-                type == null ? new Note(NOT_JUDGED, null) : new Note(type.analysis(), type.recommendation()));
+                type == null
+                        ? new Note(NOT_JUDGED, null)
+                        : new Note(type.analysis(), type.recommendation()));
     }
 
     // 위에서부터 먼저 맞는 성향
@@ -62,7 +76,9 @@ final class ExplorationAggregator {
         if (focusedPct >= AnalyticsRules.FOCUSED_PCT) {
             return ExplorationType.FOCUSED;
         }
-        return urls >= AnalyticsRules.MANY_URLS ? ExplorationType.BROAD : ExplorationType.QUICK_CHECK;
+        return urls >= AnalyticsRules.MANY_URLS
+                ? ExplorationType.BROAD
+                : ExplorationType.QUICK_CHECK;
     }
 
     private static boolean hasPageVisits(AnalyticsSessionRow session) {
@@ -70,9 +86,10 @@ final class ExplorationAggregator {
     }
 
     private static double avgPageDwellSec(AnalyticsSessionRow session) {
-        long dwellMs = session.pageVisits().stream()
-                .mapToLong(page -> AnalyticsJson.nonNegative(page.get("dwellMs")))
-                .sum();
+        long dwellMs =
+                session.pageVisits().stream()
+                        .mapToLong(page -> AnalyticsJson.nonNegative(page.get("dwellMs")))
+                        .sum();
         return dwellMs / MILLIS_PER_SECOND / session.pageVisits().size();
     }
 
@@ -87,18 +104,24 @@ final class ExplorationAggregator {
             return 0;
         }
         return Arrays.stream(labels)
-                .mapToLong(label -> session.analysisSummary().get(label) instanceof Map<?, ?> entry
-                        ? AnalyticsJson.nonNegative(entry.get("units"))
-                        : 0)
+                .mapToLong(
+                        label ->
+                                session.analysisSummary().get(label) instanceof Map<?, ?> entry
+                                        ? AnalyticsJson.nonNegative(entry.get("units"))
+                                        : 0)
                 .sum();
     }
 
     private static double avgSessionMinutes(List<AnalyticsSessionRow> sessions) {
         return sessions.stream()
-                .filter(session -> session.endedAt() != null)
-                .mapToLong(session -> Duration.between(session.startedAt(), session.endedAt()).toSeconds())
-                .average()
-                .orElse(0) / 60;
+                        .filter(session -> session.endedAt() != null)
+                        .mapToLong(
+                                session ->
+                                        Duration.between(session.startedAt(), session.endedAt())
+                                                .toSeconds())
+                        .average()
+                        .orElse(0)
+                / 60;
     }
 
     // 같은 세션 수면 enum 앞쪽 성향

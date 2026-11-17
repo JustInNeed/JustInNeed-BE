@@ -1,13 +1,14 @@
 package com.justinneed.community.interestdelete;
 
-import com.justinneed.global.common.ApiResponse;
 import com.justinneed.community.edit.ProfileEditService;
+import com.justinneed.global.common.ApiResponse;
 import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
 @RestController
 @RequestMapping("/community/me/interests")
 public class InterestDeleteController {

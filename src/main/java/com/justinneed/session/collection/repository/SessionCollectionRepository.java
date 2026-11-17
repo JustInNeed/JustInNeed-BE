@@ -20,7 +20,8 @@ public interface SessionCollectionRepository extends JpaRepository<SessionCollec
         return findAwaitingInput(SessionStatus.ANALYZING);
     }
 
-    @Query("""
+    @Query(
+            """
             select collection.sessionId
             from SessionCollection collection
             join BrowsingSession session on session.id = collection.sessionId
@@ -36,7 +37,8 @@ public interface SessionCollectionRepository extends JpaRepository<SessionCollec
         return findCallbackOverdue(SessionStatus.ANALYZING, fetchedBefore);
     }
 
-    @Query("""
+    @Query(
+            """
             select collection.sessionId
             from SessionCollection collection
             join BrowsingSession session on session.id = collection.sessionId
@@ -46,6 +48,5 @@ public interface SessionCollectionRepository extends JpaRepository<SessionCollec
             """)
     List<Long> findCallbackOverdue(
             @Param("status") SessionStatus status,
-            @Param("fetchedBefore") LocalDateTime fetchedBefore
-    );
+            @Param("fetchedBefore") LocalDateTime fetchedBefore);
 }

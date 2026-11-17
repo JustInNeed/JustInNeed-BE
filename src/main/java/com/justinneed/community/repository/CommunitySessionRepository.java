@@ -16,16 +16,20 @@ import org.springframework.data.repository.query.Param;
 
 public interface CommunitySessionRepository extends Repository<BrowsingSession, Long> {
     // 다른 사용자에게 보일 수 있는 세션
-    String PUBLIC_SESSION = """
+    String PUBLIC_SESSION =
+            """
             s.deletedAt is null and s.publicSession = true
             and s.status = com.justinneed.session.management.domain.SessionStatus.COMPLETED
             """;
 
     @EntityGraph(attributePaths = "summary")
-    @Query("""
+    @Query(
+            """
             select s from BrowsingSession s
             where s.userId = :userId and
-            """ + PUBLIC_SESSION + """
+            """
+                    + PUBLIC_SESSION
+                    + """
             order by s.id desc
             """)
     List<BrowsingSession> findPublicSessions(@Param("userId") Long userId);
@@ -35,7 +39,8 @@ public interface CommunitySessionRepository extends Repository<BrowsingSession, 
 
     // 작성자 본인이 보는 세션: 공개 여부와 상관없이 완료 · 미삭제 전체
     @EntityGraph(attributePaths = "summary")
-    @Query("""
+    @Query(
+            """
             select s from BrowsingSession s
             where s.userId = :userId and s.deletedAt is null
             and s.status = com.justinneed.session.management.domain.SessionStatus.COMPLETED
@@ -43,45 +48,55 @@ public interface CommunitySessionRepository extends Repository<BrowsingSession, 
             """)
     List<BrowsingSession> findCompletedSessions(@Param("userId") Long userId);
 
-    @Query("""
+    @Query(
+            """
             select s.id from BrowsingSession s, Member m
             where m.id = s.userId and m.withdrawnAt is null and s.id in :ids and
-            """ + PUBLIC_SESSION)
+            """
+                    + PUBLIC_SESSION)
     List<Long> findPublicIds(@Param("ids") Collection<Long> ids);
 
     // 내 세션 중 지우지 않은 것. 엔티티로 읽으면 세션마다 요약 조회가 한 번씩 더 나가므로 판단에 쓰는 값만 읽는다
-    @Query("""
+    @Query(
+            """
             select new com.justinneed.community.dto.PinCandidateRow(s.id, s.status, s.publicSession)
             from BrowsingSession s
             where s.userId = :userId and s.deletedAt is null and s.id in :ids
             """)
-    List<PinCandidateRow> findPinCandidates(@Param("userId") Long userId, @Param("ids") Collection<Long> ids);
+    List<PinCandidateRow> findPinCandidates(
+            @Param("userId") Long userId, @Param("ids") Collection<Long> ids);
 
     // 아래 셋은 CommunityCardBackfill 용
-    @Query("""
+    @Query(
+            """
             select s.id from BrowsingSession s, Member m
             where m.id = s.userId and m.withdrawnAt is null and
-            """ + PUBLIC_SESSION + """
+            """
+                    + PUBLIC_SESSION
+                    + """
             and not exists (select c.sessionId from CommunityCardRow c where c.sessionId = s.id)
             order by s.id
             """)
     List<Long> findPublicIdsWithoutCard();
 
-    @Query("""
+    @Query(
+            """
             select new com.justinneed.community.dto.SessionTagsRow(s.userId, s.tags)
             from BrowsingSession s, Member m
             where m.id = s.userId and m.withdrawnAt is null and s.deletedAt is null
             """)
     List<SessionTagsRow> findLiveSessionTags();
 
-    @Query("""
+    @Query(
+            """
             select p from CommunityProfile p, Member m
             where m.id = p.userId and m.withdrawnAt is null
             """)
     List<CommunityProfile> findLiveProfiles();
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("""
+    @Query(
+            """
             select s from BrowsingSession s
             where s.id = :id and s.userId = :userId and s.deletedAt is null
             """)

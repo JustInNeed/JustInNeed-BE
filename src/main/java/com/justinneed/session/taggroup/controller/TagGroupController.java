@@ -8,11 +8,11 @@ import com.justinneed.session.taggroup.dto.TagGroupUpdateRequest;
 import com.justinneed.session.taggroup.service.TagGroupService;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,17 +29,14 @@ public class TagGroupController {
     }
 
     @GetMapping
-    public ApiResponse<List<TagGroupResponse>> getTagGroups(
-            @AuthenticationPrincipal Long userId
-    ) {
+    public ApiResponse<List<TagGroupResponse>> getTagGroups(@AuthenticationPrincipal Long userId) {
         return ApiResponse.ok(tagGroupService.getTagGroups(userId));
     }
 
     @PostMapping
     public ApiResponse<TagGroupResponse> createTagGroup(
             @AuthenticationPrincipal Long userId,
-            @Valid @RequestBody TagGroupCreateRequest request
-    ) {
+            @Valid @RequestBody TagGroupCreateRequest request) {
         return ApiResponse.ok(tagGroupService.createTagGroup(userId, request));
     }
 
@@ -47,16 +44,13 @@ public class TagGroupController {
     public ApiResponse<TagGroupResponse> updateTagGroup(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long id,
-            @Valid @RequestBody TagGroupUpdateRequest request
-    ) {
+            @Valid @RequestBody TagGroupUpdateRequest request) {
         return ApiResponse.ok(tagGroupService.updateTagGroup(userId, id, request));
     }
 
     @DeleteMapping("/{id}")
     public ApiResponse<Void> deleteTagGroup(
-            @AuthenticationPrincipal Long userId,
-            @PathVariable Long id
-    ) {
+            @AuthenticationPrincipal Long userId, @PathVariable Long id) {
         tagGroupService.deleteTagGroup(userId, id);
         return ApiResponse.ok();
     }
@@ -64,8 +58,7 @@ public class TagGroupController {
     @PatchMapping("/order")
     public ApiResponse<List<TagGroupResponse>> updateOrder(
             @AuthenticationPrincipal Long userId,
-            @Valid @RequestBody TagGroupOrderRequest request
-    ) {
+            @Valid @RequestBody TagGroupOrderRequest request) {
         return ApiResponse.ok(tagGroupService.updateOrder(userId, request));
     }
 }

@@ -45,14 +45,15 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 프로필 수정 화면의 저장 버튼 (PUT /community/me/profile): 소개 · 관심사 · 노드 공개 범위 · 해시태그 공개 · 고정 세션을 한 번에 저장한다.
- * 기반 클래스처럼 테스트 트랜잭션 안에서 돌면 요청이 그 트랜잭션에 합류해, 실패한 요청의 변경이 영속성 컨텍스트에 남아 롤백을 확인할 수 없다.
- * 그래서 테스트 트랜잭션을 쓰지 않고 DB 를 따로 쓴다 (만든 행은 매번 지운다).
+ * 기반 클래스처럼 테스트 트랜잭션 안에서 돌면 요청이 그 트랜잭션에 합류해, 실패한 요청의 변경이 영속성 컨텍스트에 남아 롤백을 확인할 수 없다. 그래서 테스트 트랜잭션을 쓰지
+ * 않고 DB 를 따로 쓴다 (만든 행은 매번 지운다).
  */
-@TestPropertySource(properties = {
-        "spring.datasource.url=jdbc:h2:mem:profile-save;MODE=PostgreSQL;"
-                + "DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000",
-        "spring.jpa.properties.hibernate.session_factory.statement_inspector=com.justinneed.community.SqlCapture"
-})
+@TestPropertySource(
+        properties = {
+            "spring.datasource.url=jdbc:h2:mem:profile-save;MODE=PostgreSQL;"
+                    + "DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000",
+            "spring.jpa.properties.hibernate.session_factory.statement_inspector=com.justinneed.community.SqlCapture"
+        })
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @DisplayName("프로필 한 번에 저장")
 class ProfileSaveScenarioTest extends ScenarioTestSupport {
@@ -62,28 +63,36 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
     private static final String BIO_TOO_LONG = "소개는 120자까지 입력할 수 있습니다.";
     private static final String MALFORMED = "요청 형식이 올바르지 않습니다.";
 
-    @Autowired
-    private JdbcTemplate jdbc;
+    @Autowired private JdbcTemplate jdbc;
 
-    @Autowired
-    private PlatformTransactionManager transactionManager;
+    @Autowired private PlatformTransactionManager transactionManager;
 
-    @Autowired
-    private CommunityProfiles profileLock;
+    @Autowired private CommunityProfiles profileLock;
 
     private final ExecutorService pool = Executors.newFixedThreadPool(2);
 
     @AfterEach
     void cleanUp() {
         pool.shutdownNow();
-        for (String table : List.of("community_nodes", "community_cards", "community_hashtags", "community_profiles",
-                "summaries", "sessions", "members")) {
+        for (String table :
+                List.of(
+                        "community_nodes",
+                        "community_cards",
+                        "community_hashtags",
+                        "community_profiles",
+                        "summaries",
+                        "sessions",
+                        "members")) {
             jdbc.update("delete from " + table);
         }
     }
 
-    private static Map<String, Object> body(String bio, String visibility, List<String> interests,
-            List<Long> hiddenHashtagIds, List<Long> pinnedSessionIds) {
+    private static Map<String, Object> body(
+            String bio,
+            String visibility,
+            List<String> interests,
+            List<Long> hiddenHashtagIds,
+            List<Long> pinnedSessionIds) {
         Map<String, Object> body = new HashMap<>();
         body.put("bio", bio);
         body.put("visibility", visibility);
@@ -102,8 +111,17 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
     }
 
     private BrowsingSession session(Member owner, String title, boolean isPublic, String... tags) {
-        return session(owner, title, "2026-04-20T10:00:00", "2026-04-20T11:00:00", 1, false, isPublic, List.of(tags),
-                List.of(new Source(title, "https://example.com/" + title, "발췌")), "본문");
+        return session(
+                owner,
+                title,
+                "2026-04-20T10:00:00",
+                "2026-04-20T11:00:00",
+                1,
+                false,
+                isPublic,
+                List.of(tags),
+                List.of(new Source(title, "https://example.com/" + title, "발췌")),
+                "본문");
     }
 
     private List<String> savedHidden(Member me) {
@@ -116,7 +134,8 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
         communityProfiles.saveAndFlush(profile);
     }
 
-    private void expectPublic(Member me, BrowsingSession session, boolean isPublic) throws Exception {
+    private void expectPublic(Member me, BrowsingSession session, boolean isPublic)
+            throws Exception {
         mvc.perform(get("/sessions/{id}", session.getId()).with(as(me)))
                 .andExpect(jsonPath("$.data.isPublic").value(isPublic));
     }
@@ -130,8 +149,14 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
         BrowsingSession paris = session(me, "파리", true, "파리");
         Long hiddenId = hashtagId(me, "먹거리");
 
-        save(me, body("  소개입니다  ", "CONTENT", List.of(" 유럽여행 ", "HCI"), List.of(hiddenId, hiddenId),
-                List.of(paris.getId(), rome.getId())))
+        save(
+                        me,
+                        body(
+                                "  소개입니다  ",
+                                "CONTENT",
+                                List.of(" 유럽여행 ", "HCI"),
+                                List.of(hiddenId, hiddenId),
+                                List.of(paris.getId(), rome.getId())))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data").value(nullValue()));
 
@@ -139,11 +164,14 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.bio").value("소개입니다"))
                 .andExpect(jsonPath("$.data.interests").value(contains("유럽여행", "HCI")));
         mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(viewer)))
-                .andExpect(jsonPath("$.data.sessions[?(@.isPinned == true)].id").value(contains(ids(paris, rome))));
+                .andExpect(
+                        jsonPath("$.data.sessions[?(@.isPinned == true)].id")
+                                .value(contains(ids(paris, rome))));
         mvc.perform(get("/community/me/visibility").with(as(me)))
                 .andExpect(jsonPath("$.data.visibilityScope").value("CONTENT"));
         mvc.perform(get("/community/me/hashtags").with(as(me)))
-                .andExpect(jsonPath("$.data[?(@.hashtag == '먹거리')].isPublic").value(contains(false)))
+                .andExpect(
+                        jsonPath("$.data[?(@.hashtag == '먹거리')].isPublic").value(contains(false)))
                 .andExpect(jsonPath("$.data[?(@.hashtag == '로마')].isPublic").value(contains(true)));
         assertThat(savedHidden(me)).containsExactly("먹거리");
     }
@@ -156,16 +184,26 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
         BrowsingSession rome = session(me, "로마", true, "로마");
         BrowsingSession secret = session(me, "비밀", false, "비밀");
         Long romeTag = hashtagId(me, "로마");
-        save(me, body("처음", "URL_ONLY", List.of("HCI"), List.of(), List.of(rome.getId()))).andExpect(okEnvelope());
+        save(me, body("처음", "URL_ONLY", List.of("HCI"), List.of(), List.of(rome.getId())))
+                .andExpect(okEnvelope());
 
-        save(me, body("바뀐 소개", "CONTENT", List.of("새관심"), List.of(romeTag), List.of(secret.getId())))
+        save(
+                        me,
+                        body(
+                                "바뀐 소개",
+                                "CONTENT",
+                                List.of("새관심"),
+                                List.of(romeTag),
+                                List.of(secret.getId())))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "공개한 세션만 고정할 수 있습니다."));
 
         mvc.perform(get("/community/profiles/{id}", me.getId()).with(as(viewer)))
                 .andExpect(jsonPath("$.data.bio").value("처음"))
                 .andExpect(jsonPath("$.data.interests").value(contains("HCI")));
         mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(viewer)))
-                .andExpect(jsonPath("$.data.sessions[?(@.isPinned == true)].id").value(contains(ids(rome))));
+                .andExpect(
+                        jsonPath("$.data.sessions[?(@.isPinned == true)].id")
+                                .value(contains(ids(rome))));
         mvc.perform(get("/community/me/visibility").with(as(me)))
                 .andExpect(jsonPath("$.data.visibilityScope").value("URL_ONLY"));
         mvc.perform(get("/community/me/hashtags").with(as(me)))
@@ -189,7 +227,8 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
     @DisplayName("관심사가 11개면 400 이고 기존 관심사는 그대로다")
     void tooManyInterests() throws Exception {
         Member me = member("sprout");
-        save(me, body("소개", "URL_ONLY", List.of("HCI"), List.of(), List.of())).andExpect(okEnvelope());
+        save(me, body("소개", "URL_ONLY", List.of("HCI"), List.of(), List.of()))
+                .andExpect(okEnvelope());
         List<String> eleven = new ArrayList<>();
         for (int i = 0; i < 11; i++) {
             eleven.add("태그" + i);
@@ -210,8 +249,10 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
 
         save(me, body("소개", "URL_ONLY", List.of("#유럽"), List.of(), List.of()))
-                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST,
-                        "해시태그는 한글, 영문, 숫자만 사용할 수 있으며 최대 10자까지 입력 가능합니다."));
+                .andExpect(
+                        errorEnvelope(
+                                HttpStatus.BAD_REQUEST,
+                                "해시태그는 한글, 영문, 숫자만 사용할 수 있으며 최대 10자까지 입력 가능합니다."));
         save(me, body("소개", "URL_ONLY", List.of("HCI", "hci"), List.of(), List.of()))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "이미 등록된 해시태그입니다."));
     }
@@ -220,9 +261,11 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
     @DisplayName("관심사는 보낸 목록으로 통째로 바뀌고 보낸 순서를 따른다")
     void interestsAreReplaced() throws Exception {
         Member me = member("sprout");
-        save(me, body("소개", "URL_ONLY", List.of("가", "나", "다"), List.of(), List.of())).andExpect(okEnvelope());
+        save(me, body("소개", "URL_ONLY", List.of("가", "나", "다"), List.of(), List.of()))
+                .andExpect(okEnvelope());
 
-        save(me, body("소개", "URL_ONLY", List.of("다", "라"), List.of(), List.of())).andExpect(okEnvelope());
+        save(me, body("소개", "URL_ONLY", List.of("다", "라"), List.of(), List.of()))
+                .andExpect(okEnvelope());
 
         mvc.perform(get("/community/profiles/{id}/interests", me.getId()).with(as(me)))
                 .andExpect(jsonPath("$.data").value(contains("다", "라")));
@@ -233,21 +276,25 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
     void newInterestIsUsable() throws Exception {
         Member me = member("sprout");
 
-        save(me, body("소개", "URL_ONLY", List.of("유럽여행"), List.of(), List.of())).andExpect(okEnvelope());
+        save(me, body("소개", "URL_ONLY", List.of("유럽여행"), List.of(), List.of()))
+                .andExpect(okEnvelope());
 
         Long id = hashtagId(me, "유럽여행");
         mvc.perform(get("/community/me/interests").with(as(me)))
                 .andExpect(jsonPath("$.data[*].interestId").value(contains(id.intValue())));
-        save(me, body("소개", "URL_ONLY", List.of("유럽여행"), List.of(id), List.of())).andExpect(okEnvelope());
+        save(me, body("소개", "URL_ONLY", List.of("유럽여행"), List.of(id), List.of()))
+                .andExpect(okEnvelope());
         assertThat(savedHidden(me)).containsExactly("유럽여행");
-        mvc.perform(delete("/community/me/interests/{id}", id).with(as(me))).andExpect(okEnvelope());
+        mvc.perform(delete("/community/me/interests/{id}", id).with(as(me)))
+                .andExpect(okEnvelope());
     }
 
     @Test
     @DisplayName("이번 저장에서 뺀 관심사도 저장 전 목록의 해시태그라 같은 저장에서 비공개로 보낼 수 있다")
     void hidingInterestRemovedInSameSave() throws Exception {
         Member me = member("sprout");
-        save(me, body("소개", "URL_ONLY", List.of("유럽여행"), List.of(), List.of())).andExpect(okEnvelope());
+        save(me, body("소개", "URL_ONLY", List.of("유럽여행"), List.of(), List.of()))
+                .andExpect(okEnvelope());
         Long id = hashtagId(me, "유럽여행");
 
         save(me, body("소개", "URL_ONLY", List.of(), List.of(id), List.of())).andExpect(okEnvelope());
@@ -262,14 +309,18 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
         session(me, "로마", true, "로마", "Pasta");
         Long rome = hashtagId(me, "로마");
         Long pasta = hashtagId(me, "Pasta");
-        save(me, body("소개", "URL_ONLY", List.of(), List.of(rome), List.of())).andExpect(okEnvelope());
+        save(me, body("소개", "URL_ONLY", List.of(), List.of(rome), List.of()))
+                .andExpect(okEnvelope());
 
-        save(me, body("소개", "URL_ONLY", List.of(), List.of(pasta), List.of())).andExpect(okEnvelope());
+        save(me, body("소개", "URL_ONLY", List.of(), List.of(pasta), List.of()))
+                .andExpect(okEnvelope());
 
         assertThat(savedHidden(me)).containsExactly("pasta");
         mvc.perform(get("/community/me/hashtags").with(as(me)))
                 .andExpect(jsonPath("$.data[?(@.hashtag == '로마')].isPublic").value(contains(true)))
-                .andExpect(jsonPath("$.data[?(@.hashtag == 'Pasta')].isPublic").value(contains(false)));
+                .andExpect(
+                        jsonPath("$.data[?(@.hashtag == 'Pasta')].isPublic")
+                                .value(contains(false)));
     }
 
     @Test
@@ -319,8 +370,14 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
         BrowsingSession foreign = session(other, "남의 세션", true, "남의태그");
         BrowsingSession deleted = session(me, "지운 세션", true, "지운태그");
         mvc.perform(delete("/sessions/{id}", deleted.getId()).with(as(me))).andExpect(okEnvelope());
-        BrowsingSession analyzing = sessionWithStatus(me, "분석 중", "2026-04-20T10:00:00", "2026-04-20T11:00:00",
-                SessionStatus.ANALYZING, List.of());
+        BrowsingSession analyzing =
+                sessionWithStatus(
+                        me,
+                        "분석 중",
+                        "2026-04-20T10:00:00",
+                        "2026-04-20T11:00:00",
+                        SessionStatus.ANALYZING,
+                        List.of());
 
         for (Long id : List.of(foreign.getId(), deleted.getId(), 999_999L)) {
             save(me, body("소개", "URL_ONLY", List.of(), List.of(), List.of(id)))
@@ -339,12 +396,26 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
         BrowsingSession b = session(me, "나", true, "나");
         BrowsingSession c = session(me, "다", true, "다");
 
-        save(me, body("소개", "URL_ONLY", List.of(), List.of(), List.of(c.getId(), a.getId(), b.getId())))
+        save(
+                        me,
+                        body(
+                                "소개",
+                                "URL_ONLY",
+                                List.of(),
+                                List.of(),
+                                List.of(c.getId(), a.getId(), b.getId())))
                 .andExpect(okEnvelope());
         mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(viewer)))
                 .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(c, a, b))));
 
-        save(me, body("소개", "URL_ONLY", List.of(), List.of(), List.of(b.getId(), c.getId(), a.getId())))
+        save(
+                        me,
+                        body(
+                                "소개",
+                                "URL_ONLY",
+                                List.of(),
+                                List.of(),
+                                List.of(b.getId(), c.getId(), a.getId())))
                 .andExpect(okEnvelope());
         mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(viewer)))
                 .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(b, c, a))));
@@ -356,7 +427,8 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         BrowsingSession a = session(me, "가", true, "가");
         BrowsingSession b = session(me, "나", true, "나");
-        save(me, body("소개", "URL_ONLY", List.of(), List.of(), List.of(b.getId()))).andExpect(okEnvelope());
+        save(me, body("소개", "URL_ONLY", List.of(), List.of(), List.of(b.getId())))
+                .andExpect(okEnvelope());
 
         save(me, body("소개", "URL_ONLY", List.of(), List.of(), List.of(a.getId(), a.getId())))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "고정할 세션 목록이 올바르지 않습니다."));
@@ -372,9 +444,11 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
         BrowsingSession a = session(me, "가", true, "가");
         BrowsingSession b = session(me, "나", true, "나");
         BrowsingSession secret = session(me, "비밀", false, "비밀");
-        save(me, body("소개", "URL_ONLY", List.of(), List.of(), List.of(a.getId(), b.getId()))).andExpect(okEnvelope());
+        save(me, body("소개", "URL_ONLY", List.of(), List.of(), List.of(a.getId(), b.getId())))
+                .andExpect(okEnvelope());
 
-        save(me, body("소개", "URL_ONLY", List.of(), List.of(), List.of(a.getId()))).andExpect(okEnvelope());
+        save(me, body("소개", "URL_ONLY", List.of(), List.of(), List.of(a.getId())))
+                .andExpect(okEnvelope());
         expectPublic(me, a, true);
         expectPublic(me, b, true);
         expectPublic(me, secret, false);
@@ -397,17 +471,18 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
         SqlCapture.clear();
         save(me, body("소개", "URL_ONLY", List.of(), List.of(), pins)).andExpect(okEnvelope());
 
-        assertThat(SqlCapture.all()).filteredOn(sql -> sql.contains("from sessions") && sql.contains(".id in ("))
+        assertThat(SqlCapture.all())
+                .filteredOn(sql -> sql.contains("from sessions") && sql.contains(".id in ("))
                 .hasSize(1);
     }
 
     @ParameterizedTest
     @CsvSource({
-            "bio, 소개를 입력해 주세요.",
-            "visibility, 공개 범위를 입력해 주세요.",
-            "interests, 관심 해시태그 목록을 입력해 주세요.",
-            "hiddenHashtagIds, 비공개 해시태그 목록을 입력해 주세요.",
-            "pinnedSessionIds, 고정할 세션 목록을 입력해 주세요."
+        "bio, 소개를 입력해 주세요.",
+        "visibility, 공개 범위를 입력해 주세요.",
+        "interests, 관심 해시태그 목록을 입력해 주세요.",
+        "hiddenHashtagIds, 비공개 해시태그 목록을 입력해 주세요.",
+        "pinnedSessionIds, 고정할 세션 목록을 입력해 주세요."
     })
     @DisplayName("필드가 빠지면 400")
     void missingField(String field, String message) throws Exception {
@@ -420,9 +495,9 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
 
     @ParameterizedTest
     @CsvSource({
-            "interests, 관심 해시태그가 올바르지 않습니다.",
-            "hiddenHashtagIds, 해시태그가 올바르지 않습니다.",
-            "pinnedSessionIds, 세션이 올바르지 않습니다."
+        "interests, 관심 해시태그가 올바르지 않습니다.",
+        "hiddenHashtagIds, 해시태그가 올바르지 않습니다.",
+        "pinnedSessionIds, 세션이 올바르지 않습니다."
     })
     @DisplayName("목록에 null 이 있으면 400")
     void nullElement(String field, String message) throws Exception {
@@ -438,8 +513,10 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
     @DisplayName("없는 공개 범위 값이면 500 이 아니라 400 한글 안내이고, 숫자를 순서로 받아 CONTENT 가 되지 않는다")
     void unknownVisibility(String value) throws Exception {
         Member me = member("sprout");
-        String raw = "{\"bio\":\"소개\",\"visibility\":" + value
-                + ",\"interests\":[],\"hiddenHashtagIds\":[],\"pinnedSessionIds\":[]}";
+        String raw =
+                "{\"bio\":\"소개\",\"visibility\":"
+                        + value
+                        + ",\"interests\":[],\"hiddenHashtagIds\":[],\"pinnedSessionIds\":[]}";
 
         mvc.perform(put("/community/me/profile").with(as(me)).with(json(raw)))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, MALFORMED));
@@ -450,7 +527,8 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("로그인하지 않으면 401")
     void requiresLogin() throws Exception {
-        mvc.perform(put("/community/me/profile").with(json(valid()))).andExpect(status().isUnauthorized());
+        mvc.perform(put("/community/me/profile").with(json(valid())))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -494,12 +572,22 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
         seedHidden(me);
         List<Future<Integer>> response = new ArrayList<>();
 
-        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
-            profileLock.lock(me.getId()).replaceHiddenHashtags(List.of("옛태그"));
-            communityProfiles.flush();
-            response.add(send(me, body("저장", "CONTENT", List.of("관심"), List.of(), List.of())));
-            pause();
-        });
+        new TransactionTemplate(transactionManager)
+                .executeWithoutResult(
+                        status -> {
+                            profileLock.lock(me.getId()).replaceHiddenHashtags(List.of("옛태그"));
+                            communityProfiles.flush();
+                            response.add(
+                                    send(
+                                            me,
+                                            body(
+                                                    "저장",
+                                                    "CONTENT",
+                                                    List.of("관심"),
+                                                    List.of(),
+                                                    List.of())));
+                            pause();
+                        });
 
         assertThat(response.get(0).get(20, TimeUnit.SECONDS)).isEqualTo(200);
         CommunityProfile saved = communityProfiles.findById(me.getId()).orElseThrow();
@@ -513,17 +601,24 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         BrowsingSession a = session(me, "가", true, "가");
         BrowsingSession b = session(me, "나", true, "나");
-        Map<String, Object> first = body("첫째", "CONTENT", List.of("공통", "첫째"), List.of(), List.of(a.getId()));
-        Map<String, Object> second = body("둘째", "URL_ONLY", List.of("공통", "둘째"), List.of(), List.of(b.getId()));
+        Map<String, Object> first =
+                body("첫째", "CONTENT", List.of("공통", "첫째"), List.of(), List.of(a.getId()));
+        Map<String, Object> second =
+                body("둘째", "URL_ONLY", List.of("공통", "둘째"), List.of(), List.of(b.getId()));
         List<Future<Integer>> responses = new ArrayList<>();
 
-        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
-            jdbc.queryForObject("select id from members where id = ? for update", Long.class, me.getId());
-            responses.add(send(me, first));
-            pause();
-            responses.add(send(me, second));
-            pause();
-        });
+        new TransactionTemplate(transactionManager)
+                .executeWithoutResult(
+                        status -> {
+                            jdbc.queryForObject(
+                                    "select id from members where id = ? for update",
+                                    Long.class,
+                                    me.getId());
+                            responses.add(send(me, first));
+                            pause();
+                            responses.add(send(me, second));
+                            pause();
+                        });
 
         for (Future<Integer> response : responses) {
             assertThat(response.get(20, TimeUnit.SECONDS)).isEqualTo(200);
@@ -537,13 +632,21 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
             assertThat(saved.getInterests()).containsExactly("공통", "둘째");
             assertThat(saved.getPinnedSessionIds()).containsExactly(b.getId());
         }
-        assertThat(jdbc.queryForObject("select count(*) from community_hashtags where owner_id = ? and name = '공통'",
-                Integer.class, me.getId())).isEqualTo(1);
+        assertThat(
+                        jdbc.queryForObject(
+                                "select count(*) from community_hashtags where owner_id = ? and name = '공통'",
+                                Integer.class,
+                                me.getId()))
+                .isEqualTo(1);
     }
 
     private Future<Integer> send(Member me, Map<String, Object> body) {
-        return pool.submit(() -> mvc.perform(put("/community/me/profile").with(as(me)).with(json(body)))
-                .andReturn().getResponse().getStatus());
+        return pool.submit(
+                () ->
+                        mvc.perform(put("/community/me/profile").with(as(me)).with(json(body)))
+                                .andReturn()
+                                .getResponse()
+                                .getStatus());
     }
 
     private static void pause() {

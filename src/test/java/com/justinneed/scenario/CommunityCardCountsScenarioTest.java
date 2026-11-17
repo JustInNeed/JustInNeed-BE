@@ -18,11 +18,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.TestPropertySource;
 
 /** 카드 숫자는 한 번에 읽는다: 카드 수가 늘어도 쿼리 수가 늘지 않는다. */
-@TestPropertySource(properties = {
-        "spring.datasource.url=jdbc:h2:mem:community-card-counts;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;"
-                + "DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1",
-        "spring.jpa.properties.hibernate.session_factory.statement_inspector=com.justinneed.community.SqlCapture"
-})
+@TestPropertySource(
+        properties = {
+            "spring.datasource.url=jdbc:h2:mem:community-card-counts;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;"
+                    + "DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1",
+            "spring.jpa.properties.hibernate.session_factory.statement_inspector=com.justinneed.community.SqlCapture"
+        })
 @DisplayName("카드 숫자")
 class CommunityCardCountsScenarioTest extends ScenarioTestSupport {
 
@@ -32,8 +33,18 @@ class CommunityCardCountsScenarioTest extends ScenarioTestSupport {
     private List<Long> cards(Member owner, int size) {
         var ids = new ArrayList<Long>();
         for (int i = 0; i < size; i++) {
-            BrowsingSession card = session(owner, "카드 " + i, "2026-04-20T10:00:00", "2026-04-20T11:00:00", 1, false, true,
-                    List.of("묶음"), List.of(new Source("글", "https://example.com/" + i, "발췌")), "본문");
+            BrowsingSession card =
+                    session(
+                            owner,
+                            "카드 " + i,
+                            "2026-04-20T10:00:00",
+                            "2026-04-20T11:00:00",
+                            1,
+                            false,
+                            true,
+                            List.of("묶음"),
+                            List.of(new Source("글", "https://example.com/" + i, "발췌")),
+                            "본문");
             ids.add(card.getId());
         }
         return ids;
@@ -52,9 +63,18 @@ class CommunityCardCountsScenarioTest extends ScenarioTestSupport {
         Member viewer = member("viewer");
         var ids = cards(owner, 50);
         for (Long id : ids) {
-            mvc.perform(patch("/community/mindmaps/{id}/like", id).with(as(viewer)).with(json(Map.of("liked", true))));
-            mvc.perform(patch("/community/mindmaps/{id}/exploring", id).with(as(viewer)).with(json(Map.of("exploring", true))));
-            mvc.perform(patch("/community/mindmaps/{id}/bookmark", id).with(as(viewer)).with(json(Map.of("bookmarked", true))));
+            mvc.perform(
+                    patch("/community/mindmaps/{id}/like", id)
+                            .with(as(viewer))
+                            .with(json(Map.of("liked", true))));
+            mvc.perform(
+                    patch("/community/mindmaps/{id}/exploring", id)
+                            .with(as(viewer))
+                            .with(json(Map.of("exploring", true))));
+            mvc.perform(
+                    patch("/community/mindmaps/{id}/bookmark", id)
+                            .with(as(viewer))
+                            .with(json(Map.of("bookmarked", true))));
         }
 
         int few = countQueries(ids.subList(0, 2), viewer.getId());
@@ -62,15 +82,18 @@ class CommunityCardCountsScenarioTest extends ScenarioTestSupport {
 
         assertThat(many).isEqualTo(few).isLessThanOrEqualTo(6);
         var found = counts.counts(ids, viewer.getId());
-        assertThat(found.values()).allSatisfy(count -> {
-            assertThat(count.likeCount()).isEqualTo(1);
-            assertThat(count.likedByMe()).isTrue();
-            assertThat(count.exploringCount()).isEqualTo(1);
-            assertThat(count.exploringByMe()).isTrue();
-            assertThat(count.bookmarkCount()).isEqualTo(1);
-            assertThat(count.bookmarkId()).isNotNull();
-        });
-        assertThat(found.values().stream().map(CardCounts.Count::bookmarkId).distinct()).hasSize(50);
+        assertThat(found.values())
+                .allSatisfy(
+                        count -> {
+                            assertThat(count.likeCount()).isEqualTo(1);
+                            assertThat(count.likedByMe()).isTrue();
+                            assertThat(count.exploringCount()).isEqualTo(1);
+                            assertThat(count.exploringByMe()).isTrue();
+                            assertThat(count.bookmarkCount()).isEqualTo(1);
+                            assertThat(count.bookmarkId()).isNotNull();
+                        });
+        assertThat(found.values().stream().map(CardCounts.Count::bookmarkId).distinct())
+                .hasSize(50);
     }
 
     @Test
@@ -79,7 +102,10 @@ class CommunityCardCountsScenarioTest extends ScenarioTestSupport {
         Member owner = member("owner");
         Member viewer = member("viewer");
         var ids = cards(owner, 1);
-        mvc.perform(patch("/community/mindmaps/{id}/like", ids.get(0)).with(as(viewer)).with(json(Map.of("liked", true))));
+        mvc.perform(
+                patch("/community/mindmaps/{id}/like", ids.get(0))
+                        .with(as(viewer))
+                        .with(json(Map.of("liked", true))));
 
         assertThat(counts.counts(ids, null).get(ids.get(0)).likeCount()).isEqualTo(1);
         assertThat(counts.counts(ids, null).get(ids.get(0)).likedByMe()).isFalse();

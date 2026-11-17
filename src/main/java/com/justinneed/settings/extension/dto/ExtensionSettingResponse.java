@@ -11,23 +11,30 @@ public record ExtensionSettingResponse(
         Boolean popupVisible,
         Boolean autoEndNotificationEnabled,
         Boolean manualScrapEnabled,
-        LocalDateTime updatedAt
-) {
+        LocalDateTime updatedAt) {
 
     public static ExtensionSettingResponse of(Long userId, ExtensionSetting setting) {
-        return new ExtensionSettingResponse(200, userId, setting.isPopupVisible(),
-                setting.isAutoEndNotificationEnabled(), setting.isManualScrapEnabled(), setting.getUpdatedAt());
+        return new ExtensionSettingResponse(
+                200,
+                userId,
+                setting.isPopupVisible(),
+                setting.isAutoEndNotificationEnabled(),
+                setting.isManualScrapEnabled(),
+                setting.getUpdatedAt());
     }
 
-    public static ExtensionSettingResponse popup(Long userId, boolean enabled, LocalDateTime updatedAt) {
+    public static ExtensionSettingResponse popup(
+            Long userId, boolean enabled, LocalDateTime updatedAt) {
         return new ExtensionSettingResponse(200, userId, enabled, null, null, updatedAt);
     }
 
-    public static ExtensionSettingResponse autoEndNotification(Long userId, boolean enabled, LocalDateTime updatedAt) {
+    public static ExtensionSettingResponse autoEndNotification(
+            Long userId, boolean enabled, LocalDateTime updatedAt) {
         return new ExtensionSettingResponse(200, userId, null, enabled, null, updatedAt);
     }
 
-    public static ExtensionSettingResponse manualScrap(Long userId, boolean enabled, LocalDateTime updatedAt) {
+    public static ExtensionSettingResponse manualScrap(
+            Long userId, boolean enabled, LocalDateTime updatedAt) {
         return new ExtensionSettingResponse(200, userId, null, null, enabled, updatedAt);
     }
 }

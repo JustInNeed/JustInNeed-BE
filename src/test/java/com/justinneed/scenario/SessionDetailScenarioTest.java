@@ -58,19 +58,32 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.sources[0].title").value("콜로세움 공식 예약"))
                 .andExpect(jsonPath("$.data.sources[0].url").value("https://www.colosseo.it/en/"))
                 .andExpect(jsonPath("$.data.sources[0].excerpt").value("입장권은 30분 단위로 예약한다."))
-                .andExpect(jsonPath("$.data.sources[*].url").value(contains(
-                        "https://www.colosseo.it/en/",
-                        "https://www.museivaticani.va/",
-                        "https://www.turismoroma.it/en/places/trastevere",
-                        "https://www.tripadvisor.co.kr/Restaurants-g187791-Rome_Lazio.html")));
+                .andExpect(
+                        jsonPath("$.data.sources[*].url")
+                                .value(
+                                        contains(
+                                                "https://www.colosseo.it/en/",
+                                                "https://www.museivaticani.va/",
+                                                "https://www.turismoroma.it/en/places/trastevere",
+                                                "https://www.tripadvisor.co.kr/Restaurants-g187791-Rome_Lazio.html")));
     }
 
     @Test
     @DisplayName("요약이 아직 없는 세션은 summary=null · sources=[] 로 와서 FE 가 빈 줄글을 보여준다")
     void detailWithoutSummary() throws Exception {
         Member me = member("sprout");
-        BrowsingSession bare = session(me, "방금 끝난 세션", "2026-04-27T09:00:00", "2026-04-27T09:10:00", 2,
-                false, false, List.of(), List.of(), null);
+        BrowsingSession bare =
+                session(
+                        me,
+                        "방금 끝난 세션",
+                        "2026-04-27T09:00:00",
+                        "2026-04-27T09:10:00",
+                        2,
+                        false,
+                        false,
+                        List.of(),
+                        List.of(),
+                        null);
 
         mvc.perform(get("/sessions/{id}", bare.getId()).with(as(me)))
                 .andExpect(okEnvelope())
@@ -130,8 +143,10 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         BrowsingSession rome = seedMockSessions(me).rome();
 
-        mvc.perform(patch("/sessions/{id}", rome.getId()).with(as(me))
-                        .with(json(Map.of("tags", List.of("로마", "바티칸", "먹거리")))))
+        mvc.perform(
+                        patch("/sessions/{id}", rome.getId())
+                                .with(as(me))
+                                .with(json(Map.of("tags", List.of("로마", "바티칸", "먹거리")))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.tags").value(contains("로마", "바티칸", "먹거리")));
 
@@ -145,8 +160,10 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         BrowsingSession rome = seedMockSessions(me).rome();
 
-        mvc.perform(patch("/sessions/{id}", rome.getId()).with(as(me))
-                        .with(json(Map.of("tags", List.of("먹거리", "로마", "콜로세움", "바티칸")))))
+        mvc.perform(
+                        patch("/sessions/{id}", rome.getId())
+                                .with(as(me))
+                                .with(json(Map.of("tags", List.of("먹거리", "로마", "콜로세움", "바티칸")))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.tags").value(contains("먹거리", "로마", "콜로세움", "바티칸")));
     }
@@ -156,9 +173,15 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
     void addTagsUpToTen() throws Exception {
         Member me = member("sprout");
         BrowsingSession rome = seedMockSessions(me).rome();
-        List<String> ten = List.of("로마", "콜로세움", "바티칸", "먹거리", "판테온", "트레비", "젤라또", "포로로마노", "테르미니", " 스페인계단 ");
+        List<String> ten =
+                List.of(
+                        "로마", "콜로세움", "바티칸", "먹거리", "판테온", "트레비", "젤라또", "포로로마노", "테르미니",
+                        " 스페인계단 ");
 
-        mvc.perform(patch("/sessions/{id}", rome.getId()).with(as(me)).with(json(Map.of("tags", ten))))
+        mvc.perform(
+                        patch("/sessions/{id}", rome.getId())
+                                .with(as(me))
+                                .with(json(Map.of("tags", ten))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.tags", hasSize(10)))
                 .andExpect(jsonPath("$.data.tags[9]").value("스페인계단"));
@@ -169,9 +192,13 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
     void moreThanTenTagsIsRejected() throws Exception {
         Member me = member("sprout");
         BrowsingSession rome = seedMockSessions(me).rome();
-        List<String> eleven = List.of("a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "a9", "a10", "a11");
+        List<String> eleven =
+                List.of("a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "a9", "a10", "a11");
 
-        mvc.perform(patch("/sessions/{id}", rome.getId()).with(as(me)).with(json(Map.of("tags", eleven))))
+        mvc.perform(
+                        patch("/sessions/{id}", rome.getId())
+                                .with(as(me))
+                                .with(json(Map.of("tags", eleven))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "해시태그는 최대 10개까지 추가할 수 있습니다."));
 
         mvc.perform(get("/sessions/{id}", rome.getId()).with(as(me)))
@@ -185,8 +212,10 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         BrowsingSession rome = seedMockSessions(me).rome();
 
-        mvc.perform(patch("/sessions/{id}", rome.getId()).with(as(me))
-                        .with(json(Map.of("tags", List.of("로마", tag)))))
+        mvc.perform(
+                        patch("/sessions/{id}", rome.getId())
+                                .with(as(me))
+                                .with(json(Map.of("tags", List.of("로마", tag)))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, INVALID_HASHTAG));
     }
 
@@ -196,8 +225,10 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         BrowsingSession rome = seedMockSessions(me).rome();
 
-        mvc.perform(patch("/sessions/{id}", rome.getId()).with(as(me))
-                        .with(json(Map.of("tags", List.of("Rome", "rome")))))
+        mvc.perform(
+                        patch("/sessions/{id}", rome.getId())
+                                .with(as(me))
+                                .with(json(Map.of("tags", List.of("Rome", "rome")))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "이미 등록된 해시태그입니다."));
     }
 
@@ -207,7 +238,10 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         BrowsingSession rome = seedMockSessions(me).rome();
 
-        mvc.perform(patch("/sessions/{id}", rome.getId()).with(as(me)).with(json(Map.of("isFavorite", false))))
+        mvc.perform(
+                        patch("/sessions/{id}", rome.getId())
+                                .with(as(me))
+                                .with(json(Map.of("isFavorite", false))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.isFavorite").value(false))
                 .andExpect(jsonPath("$.data.title").value("로마 3박 4일 동선 짜기"))
@@ -223,11 +257,17 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         BrowsingSession rome = seedMockSessions(me).rome();
 
-        mvc.perform(patch("/sessions/{id}", rome.getId()).with(as(me)).with(json(Map.of("isPublic", true))))
+        mvc.perform(
+                        patch("/sessions/{id}", rome.getId())
+                                .with(as(me))
+                                .with(json(Map.of("isPublic", true))))
                 .andExpect(jsonPath("$.data.isPublic").value(true));
         mvc.perform(get("/sessions/{id}", rome.getId()).with(as(me)))
                 .andExpect(jsonPath("$.data.isPublic").value(true));
-        mvc.perform(patch("/sessions/{id}", rome.getId()).with(as(me)).with(json(Map.of("isPublic", false))))
+        mvc.perform(
+                        patch("/sessions/{id}", rome.getId())
+                                .with(as(me))
+                                .with(json(Map.of("isPublic", false))))
                 .andExpect(jsonPath("$.data.isPublic").value(false));
     }
 
@@ -236,30 +276,48 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
     void editTitleAndMarkdown() throws Exception {
         Member me = member("sprout");
         BrowsingSession rome = seedMockSessions(me).rome();
-        Map<String, Object> edit = Map.of(
-                "title", "로마 3박 4일 최종 동선",
-                "editedMarkdown", "# 로마 최종\n\n## 1일차\n콜로세움 09:00 입장");
+        Map<String, Object> edit =
+                Map.of(
+                        "title", "로마 3박 4일 최종 동선",
+                        "editedMarkdown", "# 로마 최종\n\n## 1일차\n콜로세움 09:00 입장");
 
         for (int autosave = 0; autosave < 2; autosave++) {
             mvc.perform(patch("/sessions/{id}", rome.getId()).with(as(me)).with(json(edit)))
                     .andExpect(okEnvelope())
                     .andExpect(jsonPath("$.data.title").value("로마 3박 4일 최종 동선"))
-                    .andExpect(jsonPath("$.data.summary.markdown").value("# 로마 최종\n\n## 1일차\n콜로세움 09:00 입장"));
+                    .andExpect(
+                            jsonPath("$.data.summary.markdown")
+                                    .value("# 로마 최종\n\n## 1일차\n콜로세움 09:00 입장"));
         }
 
         mvc.perform(get("/sessions/{id}", rome.getId()).with(as(me)))
                 .andExpect(jsonPath("$.data.title").value("로마 3박 4일 최종 동선"))
-                .andExpect(jsonPath("$.data.summary.markdown").value("# 로마 최종\n\n## 1일차\n콜로세움 09:00 입장"));
+                .andExpect(
+                        jsonPath("$.data.summary.markdown")
+                                .value("# 로마 최종\n\n## 1일차\n콜로세움 09:00 입장"));
     }
 
     @Test
     @DisplayName("요약이 없던 세션에 본문을 저장하면 summary 가 새로 생긴다")
     void markdownCreatesSummary() throws Exception {
         Member me = member("sprout");
-        BrowsingSession bare = session(me, "방금 끝난 세션", "2026-04-27T09:00:00", "2026-04-27T09:10:00", 2,
-                false, false, List.of(), List.of(), null);
+        BrowsingSession bare =
+                session(
+                        me,
+                        "방금 끝난 세션",
+                        "2026-04-27T09:00:00",
+                        "2026-04-27T09:10:00",
+                        2,
+                        false,
+                        false,
+                        List.of(),
+                        List.of(),
+                        null);
 
-        mvc.perform(patch("/sessions/{id}", bare.getId()).with(as(me)).with(json(Map.of("editedMarkdown", "# 직접 쓴 메모"))))
+        mvc.perform(
+                        patch("/sessions/{id}", bare.getId())
+                                .with(as(me))
+                                .with(json(Map.of("editedMarkdown", "# 직접 쓴 메모"))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.summary.markdown").value("# 직접 쓴 메모"));
     }
@@ -270,11 +328,20 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         BrowsingSession rome = seedMockSessions(me).rome();
 
-        mvc.perform(patch("/sessions/{id}", rome.getId()).with(as(me)).with(json(Map.of("title", "   "))))
+        mvc.perform(
+                        patch("/sessions/{id}", rome.getId())
+                                .with(as(me))
+                                .with(json(Map.of("title", "   "))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "제목을 입력해 주세요."));
-        mvc.perform(patch("/sessions/{id}", rome.getId()).with(as(me)).with(json(Map.of("title", "가".repeat(101)))))
+        mvc.perform(
+                        patch("/sessions/{id}", rome.getId())
+                                .with(as(me))
+                                .with(json(Map.of("title", "가".repeat(101)))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "제목은 최대 100자까지 입력할 수 있습니다."));
-        mvc.perform(patch("/sessions/{id}", rome.getId()).with(as(me)).with(json(Map.of("title", "가".repeat(100)))))
+        mvc.perform(
+                        patch("/sessions/{id}", rome.getId())
+                                .with(as(me))
+                                .with(json(Map.of("title", "가".repeat(100)))))
                 .andExpect(okEnvelope());
     }
 
@@ -292,7 +359,9 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
                 .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, SESSION_NOT_FOUND));
         mvc.perform(get("/sessions").with(as(me)))
                 .andExpect(jsonPath("$.data.sessions", hasSize(6)))
-                .andExpect(jsonPath("$.data.sessions[*].id").value(not(hasItem(rome.getId().intValue()))));
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(not(hasItem(rome.getId().intValue()))));
         mvc.perform(delete("/sessions/{id}", rome.getId()).with(as(me)))
                 .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, SESSION_NOT_FOUND));
     }
@@ -303,12 +372,18 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         BrowsingSession rome = seedMockSessions(me).rome();
 
-        var detail = mvc.perform(get("/sessions/{id}", rome.getId()).with(as(me)))
-                .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.sources[*].visitedAt", hasSize(4)))
-                .andExpect(jsonPath("$.data.sources[*].visitedAt", everyItem(notNullValue())))
-                .andExpect(jsonPath("$.data.sources[*].visitedAt",
-                        everyItem(matchesPattern("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*"))));
+        var detail =
+                mvc.perform(get("/sessions/{id}", rome.getId()).with(as(me)))
+                        .andExpect(okEnvelope())
+                        .andExpect(jsonPath("$.data.sources[*].visitedAt", hasSize(4)))
+                        .andExpect(
+                                jsonPath("$.data.sources[*].visitedAt", everyItem(notNullValue())))
+                        .andExpect(
+                                jsonPath(
+                                        "$.data.sources[*].visitedAt",
+                                        everyItem(
+                                                matchesPattern(
+                                                        "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*"))));
         List<String> visitedAt = read(detail, "$.data.sources[*].visitedAt");
         assertThat(visitedAt).isSorted();
     }

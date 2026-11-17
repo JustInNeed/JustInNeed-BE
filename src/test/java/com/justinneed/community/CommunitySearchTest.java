@@ -49,19 +49,27 @@ class CommunitySearchTest extends CommunityTestSupport {
     }
 
     private void visibility(Long owner, NodeVisibility visibility, String... hidden) {
-        CommunityProfile profile = profiles.findById(owner).orElseGet(() -> new CommunityProfile(owner));
+        CommunityProfile profile =
+                profiles.findById(owner).orElseGet(() -> new CommunityProfile(owner));
         profile.changeVisibility(visibility);
         profile.replaceHiddenHashtags(List.of(hidden));
         profiles.saveAndFlush(profile);
     }
 
     private Long member(String providerId, String nickname) {
-        return members.saveAndFlush(new Member(SocialProvider.KAKAO, providerId, nickname, null)).getId();
+        return members.saveAndFlush(new Member(SocialProvider.KAKAO, providerId, nickname, null))
+                .getId();
     }
 
     private void profileOrder(String q, Long... ids) throws Exception {
-        search(PROFILES, q, "size", "100").andExpect(jsonPath("$.data.profiles[*].userId")
-                .value(contains(Arrays.stream(ids).map(Long::intValue).toArray(Integer[]::new))));
+        search(PROFILES, q, "size", "100")
+                .andExpect(
+                        jsonPath("$.data.profiles[*].userId")
+                                .value(
+                                        contains(
+                                                Arrays.stream(ids)
+                                                        .map(Long::intValue)
+                                                        .toArray(Integer[]::new))));
     }
 
     @ParameterizedTest
@@ -70,7 +78,9 @@ class CommunitySearchTest extends CommunityTestSupport {
         var session = card(ownerId, "제목", 0, "JavaSpring");
         search(MINDMAPS, q)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(session.getId().intValue())))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[*].mindmapId")
+                                .value(contains(session.getId().intValue())))
                 .andExpect(jsonPath("$.data.hasNext").value(false));
     }
 
@@ -91,14 +101,20 @@ class CommunitySearchTest extends CommunityTestSupport {
         visibility(contentOwner, NodeVisibility.CONTENT);
         var content = card(contentOwner, "공개된 제목", 1, "태그");
 
-        search(MINDMAPS, "공개된").andExpect(jsonPath("$.data.mindmaps[*].mindmapId")
-                .value(contains(content.getId().intValue())));
+        search(MINDMAPS, "공개된")
+                .andExpect(
+                        jsonPath("$.data.mindmaps[*].mindmapId")
+                                .value(contains(content.getId().intValue())));
         search(MINDMAPS, "비밀스런").andExpect(jsonPath("$.data.mindmaps", hasSize(0)));
-        search(MINDMAPS, "OWN").andExpect(jsonPath("$.data.mindmaps[*].mindmapId")
-                .value(contains(urlOnly.getId().intValue())))
+        search(MINDMAPS, "OWN")
+                .andExpect(
+                        jsonPath("$.data.mindmaps[*].mindmapId")
+                                .value(contains(urlOnly.getId().intValue())))
                 .andExpect(jsonPath("$.data.mindmaps[0].title").value(nullValue()));
-        search(MINDMAPS, "민").andExpect(jsonPath("$.data.mindmaps[*].mindmapId")
-                .value(contains(content.getId().intValue())));
+        search(MINDMAPS, "민")
+                .andExpect(
+                        jsonPath("$.data.mindmaps[*].mindmapId")
+                                .value(contains(content.getId().intValue())));
     }
 
     @Test
@@ -110,7 +126,9 @@ class CommunitySearchTest extends CommunityTestSupport {
         search(PROFILES, "secr").andExpect(jsonPath("$.data.profiles", hasSize(0)));
         search(HASHTAGS, "secr").andExpect(jsonPath("$.data.hashtags", hasSize(0)));
         search(MINDMAPS, "java")
-                .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(session.getId().intValue())))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[*].mindmapId")
+                                .value(contains(session.getId().intValue())))
                 .andExpect(jsonPath("$.data.mindmaps[0].hashtags").value(contains("Java")));
     }
 
@@ -151,7 +169,9 @@ class CommunitySearchTest extends CommunityTestSupport {
         members.saveAndFlush(gone);
 
         search(MINDMAPS, "태그", "size", "1")
-                .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(kept.getId().intValue())))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[*].mindmapId")
+                                .value(contains(kept.getId().intValue())))
                 .andExpect(jsonPath("$.data.hasNext").value(false));
     }
 
@@ -162,8 +182,15 @@ class CommunitySearchTest extends CommunityTestSupport {
         var tieLow = card(ownerId, "c", 3, "태그");
         var tieHigh = card(ownerId, "d", 3, "태그");
 
-        search(MINDMAPS, "태그").andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(
-                mine.getId().intValue(), tieHigh.getId().intValue(), tieLow.getId().intValue(), older.getId().intValue())));
+        search(MINDMAPS, "태그")
+                .andExpect(
+                        jsonPath("$.data.mindmaps[*].mindmapId")
+                                .value(
+                                        contains(
+                                                mine.getId().intValue(),
+                                                tieHigh.getId().intValue(),
+                                                tieLow.getId().intValue(),
+                                                older.getId().intValue())));
     }
 
     @Test
@@ -179,12 +206,20 @@ class CommunitySearchTest extends CommunityTestSupport {
         card(ownerId, "z", 3, "숨김태그");
 
         search(MINDMAPS, "숨김", "size", "2")
-                .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(
-                        first.getId().intValue(), second.getId().intValue())))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[*].mindmapId")
+                                .value(
+                                        contains(
+                                                first.getId().intValue(),
+                                                second.getId().intValue())))
                 .andExpect(jsonPath("$.data.hasNext").value(true));
         search(MINDMAPS, "숨김", "size", "2", "page", "1")
-                .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(
-                        third.getId().intValue(), fourth.getId().intValue())))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[*].mindmapId")
+                                .value(
+                                        contains(
+                                                third.getId().intValue(),
+                                                fourth.getId().intValue())))
                 .andExpect(jsonPath("$.data.hasNext").value(false));
         search(MINDMAPS, "숨김", "size", "2", "page", "2")
                 .andExpect(jsonPath("$.data.mindmaps", hasSize(0)))
@@ -206,7 +241,9 @@ class CommunitySearchTest extends CommunityTestSupport {
                 .andExpect(jsonPath("$.data.profiles[0].nickname").value("Owner"))
                 .andExpect(jsonPath("$.data.profiles[0].mindmapCount").value(3))
                 // 많은 순 → 같으면 이름 순
-                .andExpect(jsonPath("$.data.profiles[0].hashtags").value(contains("여섯", "일곱", "다섯", "넷", "둘")))
+                .andExpect(
+                        jsonPath("$.data.profiles[0].hashtags")
+                                .value(contains("여섯", "일곱", "다섯", "넷", "둘")))
                 .andExpect(jsonPath("$.data.hasNext").value(false));
     }
 
@@ -221,8 +258,14 @@ class CommunitySearchTest extends CommunityTestSupport {
         interested.replaceInterests(List.of("태그"));
         profiles.saveAndFlush(interested);
 
-        search(PROFILES, "민수").andExpect(jsonPath("$.data.profiles[*].userId").value(contains(contentOwner.intValue())));
-        search(PROFILES, "태").andExpect(jsonPath("$.data.profiles[*].userId").value(contains(contentOwner.intValue())));
+        search(PROFILES, "민수")
+                .andExpect(
+                        jsonPath("$.data.profiles[*].userId")
+                                .value(contains(contentOwner.intValue())));
+        search(PROFILES, "태")
+                .andExpect(
+                        jsonPath("$.data.profiles[*].userId")
+                                .value(contains(contentOwner.intValue())));
         search(PROFILES, "제목글자").andExpect(jsonPath("$.data.profiles", hasSize(0)));
     }
 
@@ -233,10 +276,12 @@ class CommunitySearchTest extends CommunityTestSupport {
         card(viewerId, "c", 2, "태그");
 
         search(PROFILES, "태그", "size", "1")
-                .andExpect(jsonPath("$.data.profiles[*].userId").value(contains(ownerId.intValue())))
+                .andExpect(
+                        jsonPath("$.data.profiles[*].userId").value(contains(ownerId.intValue())))
                 .andExpect(jsonPath("$.data.hasNext").value(true));
         search(PROFILES, "태그", "size", "1", "page", "1")
-                .andExpect(jsonPath("$.data.profiles[*].userId").value(contains(viewerId.intValue())))
+                .andExpect(
+                        jsonPath("$.data.profiles[*].userId").value(contains(viewerId.intValue())))
                 .andExpect(jsonPath("$.data.hasNext").value(false));
     }
 
@@ -426,18 +471,20 @@ class CommunitySearchTest extends CommunityTestSupport {
         card(three, "h", 3, "여행");
 
         search(PROFILES, "여행", "size", "2")
-                .andExpect(jsonPath("$.data.profiles[*].userId").value(contains(three.intValue(), two.intValue())))
+                .andExpect(
+                        jsonPath("$.data.profiles[*].userId")
+                                .value(contains(three.intValue(), two.intValue())))
                 .andExpect(jsonPath("$.data.hasNext").value(true));
         search(PROFILES, "여행", "size", "2", "page", "1")
-                .andExpect(jsonPath("$.data.profiles[*].userId").value(contains(one.intValue(), nickname.intValue())))
+                .andExpect(
+                        jsonPath("$.data.profiles[*].userId")
+                                .value(contains(one.intValue(), nickname.intValue())))
                 .andExpect(jsonPath("$.data.hasNext").value(false));
         search(PROFILES, "여행", "size", "2", "page", "2")
                 .andExpect(jsonPath("$.data.profiles", hasSize(0)))
                 .andExpect(jsonPath("$.data.hasNext").value(false));
-        search(PROFILES, "여행", "size", "3")
-                .andExpect(jsonPath("$.data.hasNext").value(true));
-        search(PROFILES, "여행", "size", "4")
-                .andExpect(jsonPath("$.data.hasNext").value(false));
+        search(PROFILES, "여행", "size", "3").andExpect(jsonPath("$.data.hasNext").value(true));
+        search(PROFILES, "여행", "size", "4").andExpect(jsonPath("$.data.hasNext").value(false));
     }
 
     @Test
@@ -450,7 +497,9 @@ class CommunitySearchTest extends CommunityTestSupport {
         visibility(ownerId, NodeVisibility.URL_ONLY, "숨김자바");
 
         search(HASHTAGS, "#JAVA")
-                .andExpect(jsonPath("$.data.hashtags[*].tag").value(contains("Java", "JavaBean", "JavaSpring")))
+                .andExpect(
+                        jsonPath("$.data.hashtags[*].tag")
+                                .value(contains("Java", "JavaBean", "JavaSpring")))
                 .andExpect(jsonPath("$.data.hashtags[*].count").value(contains(3, 2, 1)));
         search(HASHTAGS, "자바").andExpect(jsonPath("$.data.hashtags", hasSize(0)));
     }
@@ -468,7 +517,9 @@ class CommunitySearchTest extends CommunityTestSupport {
             card(ownerId, "t" + i, i, "태그" + (char) ('a' + i));
         }
         search(HASHTAGS, "태그")
-                .andExpect(jsonPath("$.data.hashtags[*].tag").value(contains("태그a", "태그b", "태그c", "태그d", "태그e")));
+                .andExpect(
+                        jsonPath("$.data.hashtags[*].tag")
+                                .value(contains("태그a", "태그b", "태그c", "태그d", "태그e")));
         search(HASHTAGS, "태그", "limit", "20").andExpect(jsonPath("$.data.hashtags", hasSize(20)));
         search(HASHTAGS, "태그", "limit", "21").andExpect(status().isBadRequest());
         search(HASHTAGS, "태그", "limit", "0").andExpect(status().isBadRequest());
@@ -478,7 +529,8 @@ class CommunitySearchTest extends CommunityTestSupport {
     @ValueSource(strings = {"", "   ", "#", " # ", "\u0000"})
     void blankSearchIsKorean400(String q) throws Exception {
         for (String path : List.of(MINDMAPS, PROFILES, HASHTAGS)) {
-            search(path, q).andExpect(status().isBadRequest())
+            search(path, q)
+                    .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.message").value("검색어를 입력해 주세요."));
         }
     }

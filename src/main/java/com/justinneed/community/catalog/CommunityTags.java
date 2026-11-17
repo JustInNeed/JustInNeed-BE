@@ -29,8 +29,12 @@ public class CommunityTags {
     private final CommunityProfileRepository profileRows;
     private final CommunitySharing sharing;
 
-    public CommunityTags(CommunityProfiles profiles, CommunityHashtagRepository tags,
-            BrowsingSessionRepository sessions, CommunityProfileRepository profileRows, CommunitySharing sharing) {
+    public CommunityTags(
+            CommunityProfiles profiles,
+            CommunityHashtagRepository tags,
+            BrowsingSessionRepository sessions,
+            CommunityProfileRepository profileRows,
+            CommunitySharing sharing) {
         this.profiles = profiles;
         this.tags = tags;
         this.sessions = sessions;
@@ -38,12 +42,15 @@ public class CommunityTags {
         this.sharing = sharing;
     }
 
-    /** 지금 이 회원의 해시태그: 지우지 않은 세션의 태그 + 관심사 + 비공개 설정. 행은 쓰기 시점에 만들어 둔다 (CommunityCardSync · ensure). */
+    /**
+     * 지금 이 회원의 해시태그: 지우지 않은 세션의 태그 + 관심사 + 비공개 설정. 행은 쓰기 시점에 만들어 둔다 (CommunityCardSync · ensure).
+     */
     @Transactional(readOnly = true)
     public List<CommunityHashtag> owned(Long ownerId) {
         var profile = profiles.read(ownerId);
         Set<String> current = new LinkedHashSet<>();
-        sessions.findTagsByUserId(ownerId).forEach(names -> names.forEach(t -> current.add(key(t))));
+        sessions.findTagsByUserId(ownerId)
+                .forEach(names -> names.forEach(t -> current.add(key(t))));
         profile.getInterests().forEach(t -> current.add(key(t)));
         profile.getHiddenHashtags().forEach(t -> current.add(key(t)));
         var indexed = index(ownerId);
@@ -63,8 +70,11 @@ public class CommunityTags {
     public Map<Long, Map<String, CommunityHashtag>> indexes(Collection<Long> ownerIds) {
         Map<Long, Map<String, CommunityHashtag>> indexed = new HashMap<>();
         if (ownerIds.isEmpty()) return indexed;
-        tags.findByOwnerIdInOrderByIdAsc(ownerIds).forEach(t ->
-                indexed.computeIfAbsent(t.getOwnerId(), id -> new LinkedHashMap<>()).put(t.getNormalizedName(), t));
+        tags.findByOwnerIdInOrderByIdAsc(ownerIds)
+                .forEach(
+                        t ->
+                                indexed.computeIfAbsent(t.getOwnerId(), id -> new LinkedHashMap<>())
+                                        .put(t.getNormalizedName(), t));
         return indexed;
     }
 
@@ -83,13 +93,17 @@ public class CommunityTags {
         missing.forEach((normalized, name) -> tags.insertIfAbsent(ownerId, name, normalized));
     }
 
-    /** Ids among the given ones whose hashtag and (not withdrawn) owner still exist and the owner has not made private. */
+    /**
+     * Ids among the given ones whose hashtag and (not withdrawn) owner still exist and the owner
+     * has not made private.
+     */
     @Transactional(readOnly = true)
     public Set<Long> publicIds(Collection<Long> ids) {
         if (ids.isEmpty()) return Set.of();
         var found = tags.findWithOwnerByIdIn(new HashSet<>(ids));
         Map<Long, CommunityProfile> owners = new HashMap<>();
-        profileRows.findAllById(found.stream().map(CommunityHashtag::getOwnerId).distinct().toList())
+        profileRows
+                .findAllById(found.stream().map(CommunityHashtag::getOwnerId).distinct().toList())
                 .forEach(p -> owners.put(p.getUserId(), p));
         var result = new HashSet<Long>();
         for (var tag : found) {
@@ -99,5 +113,7 @@ public class CommunityTags {
         return result;
     }
 
-    public static String key(String value) { return value.toLowerCase(Locale.ROOT); }
+    public static String key(String value) {
+        return value.toLowerCase(Locale.ROOT);
+    }
 }

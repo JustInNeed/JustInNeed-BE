@@ -26,9 +26,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.ResultActions;
 
 /**
- * 마이프로필 (/profile) + 프로필 수정 화면.
- * FE: src/features/profile/ProfileView.tsx · ProfileEdit.tsx, 목 MY_PROFILE(pinnedSessionIds [9001, 9003, 9002, 9005]).
- * FE NodeVisibility 'url' | 'full' ↔ BE URL_ONLY | CONTENT 로 바꿔 보내야 한다.
+ * 마이프로필 (/profile) + 프로필 수정 화면. FE: src/features/profile/ProfileView.tsx · ProfileEdit.tsx, 목
+ * MY_PROFILE(pinnedSessionIds [9001, 9003, 9002, 9005]). FE NodeVisibility 'url' | 'full' ↔ BE
+ * URL_ONLY | CONTENT 로 바꿔 보내야 한다.
  */
 @DisplayName("마이프로필 · 프로필 수정 화면")
 class ProfileScenarioTest extends ScenarioTestSupport {
@@ -37,20 +37,31 @@ class ProfileScenarioTest extends ScenarioTestSupport {
     private static final String INVALID_PIN_ORDER = "고정할 세션 목록이 올바르지 않습니다.";
 
     private ResultActions pin(Member me, BrowsingSession session) throws Exception {
-        return mvc.perform(post("/community/me/pinned-sessions").with(as(me)).with(json(Map.of("sessionId", session.getId()))));
+        return mvc.perform(
+                post("/community/me/pinned-sessions")
+                        .with(as(me))
+                        .with(json(Map.of("sessionId", session.getId()))));
     }
 
     // 고정은 공개 세션만 된다. 공개는 세션 상세의 토글로만 한다
     private void publish(Member me, BrowsingSession... targets) throws Exception {
         for (BrowsingSession session : targets) {
-            mvc.perform(patch("/sessions/{id}", session.getId()).with(as(me)).with(json(Map.of("isPublic", true))))
+            mvc.perform(
+                            patch("/sessions/{id}", session.getId())
+                                    .with(as(me))
+                                    .with(json(Map.of("isPublic", true))))
                     .andExpect(okEnvelope());
         }
     }
 
     private Long addInterest(Member me, String hashtag) throws Exception {
-        return readLong(mvc.perform(post("/community/me/interests").with(as(me)).with(json(Map.of("hashtag", hashtag))))
-                .andExpect(status().isCreated()), "$.data.interestId");
+        return readLong(
+                mvc.perform(
+                                post("/community/me/interests")
+                                        .with(as(me))
+                                        .with(json(Map.of("hashtag", hashtag))))
+                        .andExpect(status().isCreated()),
+                "$.data.interestId");
     }
 
     @Test
@@ -71,7 +82,9 @@ class ProfileScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.nickname").value("sprout"))
                 // 공개 세션 출처 수: 로마 4 + 파리 2
                 .andExpect(jsonPath("$.data.totalNodeCount").value(6))
-                .andExpect(jsonPath("$.data.topHashtags[*].name").value(contains("로마", "먹거리", "바티칸", "콜로세움", "루브르")))
+                .andExpect(
+                        jsonPath("$.data.topHashtags[*].name")
+                                .value(contains("로마", "먹거리", "바티칸", "콜로세움", "루브르")))
                 .andExpect(jsonPath("$.data.topHashtags[0].nodeCount").value(4))
                 .andExpect(jsonPath("$.data.topHashtags[0].hashtagId").isNumber())
                 .andExpect(jsonPath("$.data.interests").value(contains("유럽여행", "HCI", "미술관")))
@@ -86,14 +99,20 @@ class ProfileScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         seedMockSessions(me);
 
-        mvc.perform(post("/community/me/interests").with(as(me)).with(json(Map.of("hashtag", "유럽여행"))))
+        mvc.perform(
+                        post("/community/me/interests")
+                                .with(as(me))
+                                .with(json(Map.of("hashtag", "유럽여행"))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.code").value(201))
                 .andExpect(jsonPath("$.data.interestId").isNumber())
                 .andExpect(jsonPath("$.data.hashtag").value("유럽여행"))
                 .andExpect(jsonPath("$.data.interestCount").value(1));
-        mvc.perform(post("/community/me/interests").with(as(me)).with(json(Map.of("hashtag", "HCI"))))
+        mvc.perform(
+                        post("/community/me/interests")
+                                .with(as(me))
+                                .with(json(Map.of("hashtag", "HCI"))))
                 .andExpect(jsonPath("$.data.interestCount").value(2));
 
         // 수정 화면 목록(id 포함)은 순서를 보장하지 않으니 FE 가 프로필 순서를 따로 쓴다
@@ -111,10 +130,18 @@ class ProfileScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         addInterest(me, "HCI");
 
-        mvc.perform(post("/community/me/interests").with(as(me)).with(json(Map.of("hashtag", "#유럽"))))
-                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST,
-                        "해시태그는 한글, 영문, 숫자만 사용할 수 있으며 최대 10자까지 입력 가능합니다."));
-        mvc.perform(post("/community/me/interests").with(as(me)).with(json(Map.of("hashtag", "hci"))))
+        mvc.perform(
+                        post("/community/me/interests")
+                                .with(as(me))
+                                .with(json(Map.of("hashtag", "#유럽"))))
+                .andExpect(
+                        errorEnvelope(
+                                HttpStatus.BAD_REQUEST,
+                                "해시태그는 한글, 영문, 숫자만 사용할 수 있으며 최대 10자까지 입력 가능합니다."));
+        mvc.perform(
+                        post("/community/me/interests")
+                                .with(as(me))
+                                .with(json(Map.of("hashtag", "hci"))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "이미 등록된 해시태그입니다."));
     }
 
@@ -145,16 +172,25 @@ class ProfileScenarioTest extends ScenarioTestSupport {
         mvc.perform(get("/community/me/visibility").with(as(me)))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.visibilityScope").value("URL_ONLY"));
-        mvc.perform(patch("/community/me/visibility").with(as(me)).with(json(Map.of("visibility", "CONTENT"))))
+        mvc.perform(
+                        patch("/community/me/visibility")
+                                .with(as(me))
+                                .with(json(Map.of("visibility", "CONTENT"))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.visibilityScope").value("CONTENT"))
                 .andExpect(jsonPath("$.data.updatedAt").value(notNullValue()));
         mvc.perform(get("/community/me/visibility").with(as(me)))
                 .andExpect(jsonPath("$.data.visibilityScope").value("CONTENT"));
         // 응답 필드 이름(visibilityScope)으로 보내도 받는다
-        mvc.perform(patch("/community/me/visibility").with(as(me)).with(json(Map.of("visibilityScope", "URL_ONLY"))))
+        mvc.perform(
+                        patch("/community/me/visibility")
+                                .with(as(me))
+                                .with(json(Map.of("visibilityScope", "URL_ONLY"))))
                 .andExpect(jsonPath("$.data.visibilityScope").value("URL_ONLY"));
-        mvc.perform(patch("/community/me/visibility").with(as(me)).with(json(Map.of("visibility", "full"))))
+        mvc.perform(
+                        patch("/community/me/visibility")
+                                .with(as(me))
+                                .with(json(Map.of("visibility", "full"))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false));
     }
@@ -165,26 +201,35 @@ class ProfileScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
         Member viewer = member("foodtrip");
-        mvc.perform(patch("/sessions/{id}", mock.rome().getId()).with(as(me)).with(json(Map.of("isPublic", true))))
+        mvc.perform(
+                        patch("/sessions/{id}", mock.rome().getId())
+                                .with(as(me))
+                                .with(json(Map.of("isPublic", true))))
                 .andExpect(okEnvelope());
         Long rome = hashtagId(me, "로마");
 
         mvc.perform(get("/community/me/hashtags").with(as(me)))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data[?(@.hashtag == '로마')].isPublic").value(contains(true)))
-                .andExpect(jsonPath("$.data[?(@.hashtag == '로마')].hashtagId").value(contains(rome.intValue())));
+                .andExpect(
+                        jsonPath("$.data[?(@.hashtag == '로마')].hashtagId")
+                                .value(contains(rome.intValue())));
         mvc.perform(get("/community/profiles/{id}/mindmap", me.getId()).with(as(viewer)))
                 .andExpect(jsonPath("$.data.hashtags[*].name").value(hasItem("로마")))
                 .andExpect(jsonPath("$.data.nodes", hasSize(4)));
 
-        mvc.perform(patch("/community/me/hashtags/{id}/visibility", rome).with(as(me)).with(json(Map.of("isPublic", false))))
+        mvc.perform(
+                        patch("/community/me/hashtags/{id}/visibility", rome)
+                                .with(as(me))
+                                .with(json(Map.of("isPublic", false))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.hashtagId").value(rome))
                 .andExpect(jsonPath("$.data.hashtag").value("로마"))
                 .andExpect(jsonPath("$.data.isPublic").value(false));
 
         mvc.perform(get("/community/me/hashtags").with(as(me)))
-                .andExpect(jsonPath("$.data[?(@.hashtag == '로마')].isPublic").value(contains(false)));
+                .andExpect(
+                        jsonPath("$.data[?(@.hashtag == '로마')].isPublic").value(contains(false)));
         // 로마 세션은 다른 태그(콜로세움 등)로 계속 보인다
         mvc.perform(get("/community/profiles/{id}/mindmap", me.getId()).with(as(viewer)))
                 .andExpect(jsonPath("$.data.hashtags[*].name").value(not(hasItem("로마"))))
@@ -199,7 +244,8 @@ class ProfileScenarioTest extends ScenarioTestSupport {
         Member viewer = member("foodtrip");
 
         // FE 목 MY_PROFILE.pinnedSessionIds = [9001 로마, 9003 파리, 9002 항공권, 9005 바르셀로나]
-        List<BrowsingSession> pins = List.of(mock.rome(), mock.paris(), mock.flight(), mock.barca());
+        List<BrowsingSession> pins =
+                List.of(mock.rome(), mock.paris(), mock.flight(), mock.barca());
         publish(me, pins.toArray(BrowsingSession[]::new));
         for (int order = 0; order < pins.size(); order++) {
             pin(me, pins.get(order))
@@ -215,7 +261,15 @@ class ProfileScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.isPublic").value(true));
         mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(viewer)))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(mock.rome(), mock.paris(), mock.flight(), mock.barca()))));
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(
+                                        contains(
+                                                ids(
+                                                        mock.rome(),
+                                                        mock.paris(),
+                                                        mock.flight(),
+                                                        mock.barca()))));
     }
 
     @Test
@@ -225,30 +279,73 @@ class ProfileScenarioTest extends ScenarioTestSupport {
         MockSessions mock = seedMockSessions(me);
         Member viewer = member("foodtrip");
         publish(me, mock.rome(), mock.paris(), mock.flight(), mock.barca());
-        for (BrowsingSession session : List.of(mock.rome(), mock.paris(), mock.flight(), mock.barca())) {
+        for (BrowsingSession session :
+                List.of(mock.rome(), mock.paris(), mock.flight(), mock.barca())) {
             pin(me, session).andExpect(status().isCreated());
         }
-        List<Long> next = List.of(mock.flight().getId(), mock.rome().getId(), mock.barca().getId(), mock.paris().getId());
+        List<Long> next =
+                List.of(
+                        mock.flight().getId(),
+                        mock.rome().getId(),
+                        mock.barca().getId(),
+                        mock.paris().getId());
 
-        mvc.perform(patch("/community/me/pinned-sessions/order").with(as(me)).with(json(Map.of("sessionIds", next))))
+        mvc.perform(
+                        patch("/community/me/pinned-sessions/order")
+                                .with(as(me))
+                                .with(json(Map.of("sessionIds", next))))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.sessionIds").value(contains(ids(next.toArray(Long[]::new)))));
+                .andExpect(
+                        jsonPath("$.data.sessionIds")
+                                .value(contains(ids(next.toArray(Long[]::new)))));
         mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(viewer)))
-                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(next.toArray(Long[]::new)))));
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(contains(ids(next.toArray(Long[]::new)))));
 
-        mvc.perform(patch("/community/me/pinned-sessions/order").with(as(me))
-                        .with(json(Map.of("sessionIds", List.of(mock.rome().getId(), mock.paris().getId())))))
+        mvc.perform(
+                        patch("/community/me/pinned-sessions/order")
+                                .with(as(me))
+                                .with(
+                                        json(
+                                                Map.of(
+                                                        "sessionIds",
+                                                        List.of(
+                                                                mock.rome().getId(),
+                                                                mock.paris().getId())))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, INVALID_PIN_ORDER));
-        mvc.perform(patch("/community/me/pinned-sessions/order").with(as(me)).with(json(Map.of("sessionIds",
-                        List.of(mock.flight().getId(), mock.rome().getId(), mock.barca().getId(), mock.paris().getId(),
-                                mock.prague().getId())))))
+        mvc.perform(
+                        patch("/community/me/pinned-sessions/order")
+                                .with(as(me))
+                                .with(
+                                        json(
+                                                Map.of(
+                                                        "sessionIds",
+                                                        List.of(
+                                                                mock.flight().getId(),
+                                                                mock.rome().getId(),
+                                                                mock.barca().getId(),
+                                                                mock.paris().getId(),
+                                                                mock.prague().getId())))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, INVALID_PIN_ORDER));
         // 개수가 같아도 같은 id 가 두 번이면 400 이고 순서는 그대로다
-        mvc.perform(patch("/community/me/pinned-sessions/order").with(as(me)).with(json(Map.of("sessionIds",
-                        List.of(mock.flight().getId(), mock.flight().getId(), mock.barca().getId(), mock.paris().getId())))))
+        mvc.perform(
+                        patch("/community/me/pinned-sessions/order")
+                                .with(as(me))
+                                .with(
+                                        json(
+                                                Map.of(
+                                                        "sessionIds",
+                                                        List.of(
+                                                                mock.flight().getId(),
+                                                                mock.flight().getId(),
+                                                                mock.barca().getId(),
+                                                                mock.paris().getId())))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, INVALID_PIN_ORDER));
         mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(viewer)))
-                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(next.toArray(Long[]::new)))));
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(contains(ids(next.toArray(Long[]::new)))));
     }
 
     @Test
@@ -272,10 +369,14 @@ class ProfileScenarioTest extends ScenarioTestSupport {
         mvc.perform(get("/sessions/{id}", mock.rome().getId()).with(as(me)))
                 .andExpect(jsonPath("$.data.isPublic").value(true));
         mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(viewer)))
-                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(mock.paris(), mock.flight(), mock.rome()))))
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(contains(ids(mock.paris(), mock.flight(), mock.rome()))))
                 .andExpect(jsonPath("$.data.sessions[2].isPinned").value(false));
         mvc.perform(get("/community/profiles/{id}/mindmap", me.getId()).with(as(viewer)))
-                .andExpect(jsonPath("$.data.nodes[*].sourceUrl").value(hasItem("https://www.colosseo.it/en/")));
+                .andExpect(
+                        jsonPath("$.data.nodes[*].sourceUrl")
+                                .value(hasItem("https://www.colosseo.it/en/")));
     }
 
     @Test
@@ -284,13 +385,18 @@ class ProfileScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
         Wanderer wanderer = seedWanderer();
-        mvc.perform(delete("/sessions/{id}", mock.rail().getId()).with(as(me))).andExpect(okEnvelope());
+        mvc.perform(delete("/sessions/{id}", mock.rail().getId()).with(as(me)))
+                .andExpect(okEnvelope());
 
-        mvc.perform(delete("/community/me/pinned-sessions/{id}", mock.prague().getId()).with(as(me)))
+        mvc.perform(
+                        delete("/community/me/pinned-sessions/{id}", mock.prague().getId())
+                                .with(as(me)))
                 .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, SESSION_NOT_FOUND));
-        pin(me, wanderer.vienna()).andExpect(errorEnvelope(HttpStatus.NOT_FOUND, SESSION_NOT_FOUND));
+        pin(me, wanderer.vienna())
+                .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, SESSION_NOT_FOUND));
         pin(me, mock.rail()).andExpect(errorEnvelope(HttpStatus.NOT_FOUND, SESSION_NOT_FOUND));
-        pin(me, mock.prague()).andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "공개한 세션만 고정할 수 있습니다."));
+        pin(me, mock.prague())
+                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "공개한 세션만 고정할 수 있습니다."));
         mvc.perform(get("/sessions/{id}", mock.prague().getId()).with(as(me)))
                 .andExpect(jsonPath("$.data.isPublic").value(false));
     }
@@ -304,7 +410,10 @@ class ProfileScenarioTest extends ScenarioTestSupport {
         pin(me, mock.rome()).andExpect(status().isCreated());
         pin(me, mock.paris()).andExpect(status().isCreated());
 
-        mvc.perform(patch("/sessions/{id}", mock.rome().getId()).with(as(me)).with(json(Map.of("isPublic", false))))
+        mvc.perform(
+                        patch("/sessions/{id}", mock.rome().getId())
+                                .with(as(me))
+                                .with(json(Map.of("isPublic", false))))
                 .andExpect(okEnvelope());
 
         mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(me)))
@@ -315,7 +424,9 @@ class ProfileScenarioTest extends ScenarioTestSupport {
         publish(me, mock.rome());
 
         mvc.perform(get("/community/profiles/{id}/shared-sessions", me.getId()).with(as(me)))
-                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(mock.paris(), mock.rome()))))
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(contains(ids(mock.paris(), mock.rome()))))
                 .andExpect(jsonPath("$.data.sessions[1].isPinned").value(false));
     }
 
@@ -327,7 +438,10 @@ class ProfileScenarioTest extends ScenarioTestSupport {
         publish(me, mock.rome());
         pin(me, mock.rome()).andExpect(status().isCreated());
 
-        mvc.perform(patch("/sessions/{id}", mock.rome().getId()).with(as(me)).with(json(Map.of("isFavorite", false, "title", "새 제목"))))
+        mvc.perform(
+                        patch("/sessions/{id}", mock.rome().getId())
+                                .with(as(me))
+                                .with(json(Map.of("isFavorite", false, "title", "새 제목"))))
                 .andExpect(okEnvelope());
         publish(me, mock.rome());
 
@@ -340,7 +454,8 @@ class ProfileScenarioTest extends ScenarioTestSupport {
     void requiresLogin() throws Exception {
         Member me = member("sprout");
 
-        mvc.perform(get("/community/profiles/{id}", me.getId())).andExpect(status().isUnauthorized());
+        mvc.perform(get("/community/profiles/{id}", me.getId()))
+                .andExpect(status().isUnauthorized());
         mvc.perform(get("/community/me/visibility")).andExpect(status().isUnauthorized());
         mvc.perform(post("/community/me/pinned-sessions").with(json(Map.of("sessionId", 1))))
                 .andExpect(status().isUnauthorized());
@@ -358,7 +473,10 @@ class ProfileScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.bio").value(bio));
         mvc.perform(get("/community/profiles/{id}", me.getId()).with(as(viewer)))
                 .andExpect(jsonPath("$.data.bio").value(bio));
-        mvc.perform(patch("/community/me/profile").with(as(me)).with(json(Map.of("bio", "가".repeat(121)))))
+        mvc.perform(
+                        patch("/community/me/profile")
+                                .with(as(me))
+                                .with(json(Map.of("bio", "가".repeat(121)))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false));
     }
@@ -368,13 +486,17 @@ class ProfileScenarioTest extends ScenarioTestSupport {
     void myHashtagsHaveCounts() throws Exception {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
-        mvc.perform(patch("/community/me/hashtags/{id}/visibility", hashtagId(me, "먹거리")).with(as(me))
-                .with(json(Map.of("isPublic", false)))).andExpect(okEnvelope());
+        mvc.perform(
+                        patch("/community/me/hashtags/{id}/visibility", hashtagId(me, "먹거리"))
+                                .with(as(me))
+                                .with(json(Map.of("isPublic", false))))
+                .andExpect(okEnvelope());
 
         mvc.perform(get("/community/me/hashtags").with(as(me)))
                 // 노드 수는 AI 노드 기준이라 분석 결과가 없는 이 세션들은 0 이다 (값이 있는 경우는 MyProfileScenarioTest)
                 .andExpect(jsonPath("$.data[?(@.hashtag == '로마')].nodeCount").value(contains(0)))
                 .andExpect(jsonPath("$.data[?(@.hashtag == '먹거리')].nodeCount").value(contains(0)))
-                .andExpect(jsonPath("$.data[?(@.hashtag == '먹거리')].isPublic").value(contains(false)));
+                .andExpect(
+                        jsonPath("$.data[?(@.hashtag == '먹거리')].isPublic").value(contains(false)));
     }
 }

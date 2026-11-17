@@ -1,6 +1,3 @@
 package com.justinneed.auth.dto;
 
-public record TokenRefreshRequest(
-        String refreshToken
-) {
-}
+public record TokenRefreshRequest(String refreshToken) {}

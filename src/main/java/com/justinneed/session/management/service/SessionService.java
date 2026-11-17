@@ -44,9 +44,14 @@ public class SessionService {
     private final CommunityCardSync cards;
     private final ObjectMapper objectMapper;
 
-    public SessionService(BrowsingSessionRepository sessionRepository, SessionResultRepository resultRepository,
-            SessionRawChunkRepository chunkRepository, CommunitySharing sharing, CommunityProfiles profiles,
-            CommunityCardSync cards, ObjectMapper objectMapper) {
+    public SessionService(
+            BrowsingSessionRepository sessionRepository,
+            SessionResultRepository resultRepository,
+            SessionRawChunkRepository chunkRepository,
+            CommunitySharing sharing,
+            CommunityProfiles profiles,
+            CommunityCardSync cards,
+            ObjectMapper objectMapper) {
         this.sessionRepository = sessionRepository;
         this.resultRepository = resultRepository;
         this.chunkRepository = chunkRepository;
@@ -58,14 +63,14 @@ public class SessionService {
 
     public SessionPageResponse getSessions(Long userId, int page, int size, boolean favoriteOnly) {
         Pageable pageable = pageRequest(page, size);
-        Slice<BrowsingSession> slice = sessionRepository.findListPage(userId, favoriteOnly, pageable);
-        List<SessionListResponse> sessions = slice.stream()
-                .map(SessionListResponse::from)
-                .toList();
+        Slice<BrowsingSession> slice =
+                sessionRepository.findListPage(userId, favoriteOnly, pageable);
+        List<SessionListResponse> sessions = slice.stream().map(SessionListResponse::from).toList();
 
         // 화면 상단 "전체 N개 세션 · M개 즐겨찾기" 는 필터 · 페이지와 상관없이 센다
         long totalCount = sessionRepository.countByUserIdAndDeletedAtIsNull(userId);
-        long favoriteCount = sessionRepository.countByUserIdAndFavoriteTrueAndDeletedAtIsNull(userId);
+        long favoriteCount =
+                sessionRepository.countByUserIdAndFavoriteTrueAndDeletedAtIsNull(userId);
         return new SessionPageResponse(sessions, slice.hasNext(), totalCount, favoriteCount);
     }
 
@@ -88,8 +93,10 @@ public class SessionService {
             return SessionDetailResponse.from(session);
         }
         CommunityProfile owner = publicOwner(session);
-        List<String> tags = session.getTags().stream().filter(tag -> !sharing.isHidden(owner, tag)).toList();
-        return SessionDetailResponse.forViewer(session, tags, owner.getVisibility() == NodeVisibility.CONTENT);
+        List<String> tags =
+                session.getTags().stream().filter(tag -> !sharing.isHidden(owner, tag)).toList();
+        return SessionDetailResponse.forViewer(
+                session, tags, owner.getVisibility() == NodeVisibility.CONTENT);
     }
 
     // 접근 규칙은 세션 상세와 같다. 키워드 · 인용은 내용이라 URL 만 공개한 작성자의 마인드맵은 다른 사용자에게 비워서 준다
@@ -102,9 +109,14 @@ public class SessionService {
         if (session.getStatus() != SessionStatus.COMPLETED) {
             return SessionMindmapResponse.EMPTY;
         }
-        return resultRepository.findMindmapSource(sessionId)
-                .map(source -> SessionMindmapBuilder.build(
-                        parseJson(source.mindmap()), parseJson(source.selectedUnits()), session.getSources()))
+        return resultRepository
+                .findMindmapSource(sessionId)
+                .map(
+                        source ->
+                                SessionMindmapBuilder.build(
+                                        parseJson(source.mindmap()),
+                                        parseJson(source.selectedUnits()),
+                                        session.getSources()))
                 .map(mindmap -> mine ? mindmap : mindmap.withWebCitationsOnly())
                 .orElse(SessionMindmapResponse.EMPTY);
     }
@@ -114,18 +126,26 @@ public class SessionService {
     }
 
     @Transactional
-    public SessionDetailResponse updateSession(Long userId, Long sessionId, SessionUpdateRequest request) {
+    public SessionDetailResponse updateSession(
+            Long userId, Long sessionId, SessionUpdateRequest request) {
         // 비공개로 돌리면 고정 목록도 고치므로 공개 여부를 바꿀 때는 고정(SharedSessionService.pin)과 같이 회원 → 세션 순서로 잠근다
         CommunityProfile profile = request.isPublic() == null ? null : profiles.lock(userId);
-        BrowsingSession session = sessionRepository.lockOwned(sessionId, userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        BrowsingSession session =
+                sessionRepository
+                        .lockOwned(sessionId, userId)
+                        .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         if (request.changesContent() && session.getStatus() != SessionStatus.COMPLETED) {
             throw new CustomException(ErrorCode.SESSION_NOT_COMPLETED);
         }
 
         validateTitle(request.title());
         List<String> tags = HashtagValidator.normalizeAndValidate(request.tags());
-        session.update(request.title(), request.editedMarkdown(), request.isPublic(), request.isFavorite(), tags);
+        session.update(
+                request.title(),
+                request.editedMarkdown(),
+                request.isPublic(),
+                request.isFavorite(),
+                tags);
         // 고정은 공개 세션 안에서의 자리라, 다시 공개해도 되살아나지 않게 지운다
         if (Boolean.FALSE.equals(request.isPublic())) {
             profile.removePinnedSession(sessionId);
@@ -138,8 +158,10 @@ public class SessionService {
 
     @Transactional
     public void deleteSession(Long userId, Long sessionId) {
-        BrowsingSession session = sessionRepository.lockOwned(sessionId, userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        BrowsingSession session =
+                sessionRepository
+                        .lockOwned(sessionId, userId)
+                        .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         session.delete();
         // 합치기 · 청크 수신은 세션 행을 잠그고 지운 세션을 건너뛰므로, 지운 뒤에 청크가 다시 쌓이지 않는다
         if (session.getCollectorSessionId() != null) {
@@ -149,7 +171,8 @@ public class SessionService {
     }
 
     private BrowsingSession findSession(Long sessionId) {
-        return sessionRepository.findWithSummaryByIdAndDeletedAtIsNull(sessionId)
+        return sessionRepository
+                .findWithSummaryByIdAndDeletedAtIsNull(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
     }
 
@@ -163,7 +186,10 @@ public class SessionService {
 
     private Pageable pageRequest(int page, int size) {
         // 건너뛸 개수(page * size)가 int 를 넘으면 JPA 가 처리하지 못해 500 이 나므로 같이 막는다
-        if (page < 0 || size < 1 || size > MAX_PAGE_SIZE || (long) page * size > Integer.MAX_VALUE) {
+        if (page < 0
+                || size < 1
+                || size > MAX_PAGE_SIZE
+                || (long) page * size > Integer.MAX_VALUE) {
             throw new CustomException(ErrorCode.INVALID_PAGE_REQUEST);
         }
         return PageRequest.of(page, size);

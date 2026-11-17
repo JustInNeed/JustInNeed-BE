@@ -34,20 +34,15 @@ class TagGroupControllerTest {
 
     private static final Long USER_ID = 1L;
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @Autowired private ObjectMapper objectMapper;
 
-    @Autowired
-    private BrowsingSessionRepository sessionRepository;
+    @Autowired private BrowsingSessionRepository sessionRepository;
 
-    @Autowired
-    private TagGroupRepository tagGroupRepository;
+    @Autowired private TagGroupRepository tagGroupRepository;
 
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
+    @Autowired private JwtTokenProvider jwtTokenProvider;
 
     private TagGroup springGroup;
     private TagGroup javaGroup;
@@ -59,7 +54,8 @@ class TagGroupControllerTest {
         sessionRepository.deleteAll();
         bearer = "Bearer " + jwtTokenProvider.createAccessToken(USER_ID);
 
-        BrowsingSession session = new BrowsingSession(USER_ID, "JPA 기록", LocalDateTime.of(2026, 6, 1, 9, 0));
+        BrowsingSession session =
+                new BrowsingSession(USER_ID, "JPA 기록", LocalDateTime.of(2026, 6, 1, 9, 0));
         session.complete(LocalDateTime.of(2026, 6, 1, 9, 30), 2);
         session.update(null, null, false, false, List.of("Spring", "JPA"));
         sessionRepository.save(session);
@@ -70,10 +66,8 @@ class TagGroupControllerTest {
 
     @Test
     void getTagGroupsRequiresAuthentication() throws Exception {
-        mockMvc.perform(get("/tag-groups"))
-                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/tag-groups")).andExpect(status().isUnauthorized());
     }
-
 
     @Test
     void getTagGroupsReturnsMatchingSessions() throws Exception {
@@ -88,10 +82,11 @@ class TagGroupControllerTest {
     void createTagGroupAppendsToEnd() throws Exception {
         TagGroupCreateRequest request = new TagGroupCreateRequest(List.of("Backend"), null);
 
-        mockMvc.perform(post("/tag-groups")
-                        .header(HttpHeaders.AUTHORIZATION, bearer)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(
+                        post("/tag-groups")
+                                .header(HttpHeaders.AUTHORIZATION, bearer)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.hashtags[0]").value("Backend"))
                 .andExpect(jsonPath("$.data.position").value(2));
@@ -101,10 +96,11 @@ class TagGroupControllerTest {
     void createTagGroupAtPositionShiftsOthers() throws Exception {
         TagGroupCreateRequest request = new TagGroupCreateRequest(List.of("Backend"), 0);
 
-        mockMvc.perform(post("/tag-groups")
-                        .header(HttpHeaders.AUTHORIZATION, bearer)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(
+                        post("/tag-groups")
+                                .header(HttpHeaders.AUTHORIZATION, bearer)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.position").value(0));
 
@@ -122,21 +118,24 @@ class TagGroupControllerTest {
     void createTagGroupRejectsOutOfRangePosition() throws Exception {
         TagGroupCreateRequest request = new TagGroupCreateRequest(List.of("Backend"), 5);
 
-        mockMvc.perform(post("/tag-groups")
-                        .header(HttpHeaders.AUTHORIZATION, bearer)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(
+                        post("/tag-groups")
+                                .header(HttpHeaders.AUTHORIZATION, bearer)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void updateOrder() throws Exception {
-        TagGroupOrderRequest request = new TagGroupOrderRequest(List.of(javaGroup.getId(), springGroup.getId()));
+        TagGroupOrderRequest request =
+                new TagGroupOrderRequest(List.of(javaGroup.getId(), springGroup.getId()));
 
-        mockMvc.perform(patch("/tag-groups/order")
-                        .header(HttpHeaders.AUTHORIZATION, bearer)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(
+                        patch("/tag-groups/order")
+                                .header(HttpHeaders.AUTHORIZATION, bearer)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].id").value(javaGroup.getId()));
     }

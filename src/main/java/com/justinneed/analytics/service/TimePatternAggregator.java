@@ -26,17 +26,18 @@ final class TimePatternAggregator {
     private static final int SLOT_HOURS = 3;
     private static final int SLOTS = 24 / SLOT_HOURS;
     private static final Set<String> FOCUSED_LABELS = Set.of("Deep Reading", "Reading");
-    private static final String PEAK_SLOT = "웹 탐색은 주로 **%s**에 진행됩니다. 이 시간대에 가장 많은 정보 탐색과 읽기가 이루어지고 있어요.";
-    private static final String NO_PEAK_SLOT = "특정 시간대에 집중되기보다, 하루 전반에 걸쳐 웹 탐색이 이루어지고 있어요. "
-            + "집중이 잘 되는 시간대를 활용해 중요한 웹 탐색을 배치해보세요.";
-    private static final String FOCUS_SLOT = "**%s**에 집중도가 가장 높아요. (정독 비율 %d%%로 가장 높은 시간대) 중요한 학습은 이 시간대를 활용해보세요.";
+    private static final String PEAK_SLOT =
+            "웹 탐색은 주로 **%s**에 진행됩니다. 이 시간대에 가장 많은 정보 탐색과 읽기가 이루어지고 있어요.";
+    private static final String NO_PEAK_SLOT =
+            "특정 시간대에 집중되기보다, 하루 전반에 걸쳐 웹 탐색이 이루어지고 있어요. " + "집중이 잘 되는 시간대를 활용해 중요한 웹 탐색을 배치해보세요.";
+    private static final String FOCUS_SLOT =
+            "**%s**에 집중도가 가장 높아요. (정독 비율 %d%%로 가장 높은 시간대) 중요한 학습은 이 시간대를 활용해보세요.";
 
     private final long[][] unitCounts = new long[DAYS][SLOTS];
     private final long[][] focusedUnits = new long[DAYS][SLOTS];
     private final long[][] dwellMs = new long[DAYS][SLOTS];
 
-    private TimePatternAggregator() {
-    }
+    private TimePatternAggregator() {}
 
     static TimePatterns aggregate(List<AnalyticsUnitsRow> sessions) {
         TimePatternAggregator aggregator = new TimePatternAggregator();

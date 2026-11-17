@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 읽기 상태별 유닛 수 합 (analysis_summary). 비율 = 분류별 유닛 수 ÷ 전체 유닛 수 (Idle 포함).
- * 홈 Deep Reading 비율과 분석 읽기 행동 분포가 같은 숫자를 내도록 둘 다 이 계산을 쓴다.
+ * 읽기 상태별 유닛 수 합 (analysis_summary). 비율 = 분류별 유닛 수 ÷ 전체 유닛 수 (Idle 포함). 홈 Deep Reading 비율과 분석 읽기 행동
+ * 분포가 같은 숫자를 내도록 둘 다 이 계산을 쓴다.
  */
 public final class ReadingDistribution {
 
@@ -53,7 +53,8 @@ public final class ReadingDistribution {
     }
 
     private static long unitsOf(Map<String, Object> summary, Level level) {
-        return summary.get(level.label()) instanceof Map<?, ?> entry && entry.get("units") instanceof Number number
+        return summary.get(level.label()) instanceof Map<?, ?> entry
+                        && entry.get("units") instanceof Number number
                 ? Math.max(0, number.longValue())
                 : 0;
     }
@@ -80,7 +81,9 @@ public final class ReadingDistribution {
     /** 유닛이 가장 많은 분류 */
     public Level dominant() {
         return Arrays.stream(Level.values())
-                .max(Comparator.<Level>comparingLong(units::get).thenComparing(Comparator.reverseOrder()))
+                .max(
+                        Comparator.<Level>comparingLong(units::get)
+                                .thenComparing(Comparator.reverseOrder()))
                 .orElseThrow();
     }
 
@@ -98,7 +101,8 @@ public final class ReadingDistribution {
             assigned += percents[i];
             byRemainder.add(i);
         }
-        byRemainder.sort(Comparator.<Integer>comparingLong(i -> counts[i] * 100 % total).reversed());
+        byRemainder.sort(
+                Comparator.<Integer>comparingLong(i -> counts[i] * 100 % total).reversed());
         for (int i = 0; i < 100 - assigned; i++) {
             percents[byRemainder.get(i)]++;
         }

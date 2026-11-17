@@ -10,13 +10,11 @@ public interface ExternalIntegrationRepository extends JpaRepository<ExternalInt
 
     List<ExternalIntegration> findByMemberId(Long memberId);
 
-    Optional<ExternalIntegration> findByMemberIdAndProvider(Long memberId, IntegrationProvider provider);
+    Optional<ExternalIntegration> findByMemberIdAndProvider(
+            Long memberId, IntegrationProvider provider);
 
     boolean existsByProviderAndEmailIgnoreCase(IntegrationProvider provider, String email);
 
     boolean existsByProviderAndEmailIgnoreCaseAndIdNot(
-            IntegrationProvider provider,
-            String email,
-            Long id
-    );
+            IntegrationProvider provider, String email, Long id);
 }

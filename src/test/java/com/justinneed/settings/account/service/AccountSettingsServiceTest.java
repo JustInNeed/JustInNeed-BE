@@ -25,26 +25,30 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class AccountSettingsServiceTest {
 
-    @Mock
-    private MemberRepository memberRepository;
+    @Mock private MemberRepository memberRepository;
 
-    @Mock
-    private AuthTokenService authTokenService;
+    @Mock private AuthTokenService authTokenService;
 
     private AccountSettingsService service;
     private Member member;
 
     @BeforeEach
     void setUp() {
-        service = new AccountSettingsService(memberRepository, authTokenService, mock(CommunityCardSync.class),
-                mock(CommunityProfileRepository.class));
+        service =
+                new AccountSettingsService(
+                        memberRepository,
+                        authTokenService,
+                        mock(CommunityCardSync.class),
+                        mock(CommunityProfileRepository.class));
         member = new Member(SocialProvider.KAKAO, "provider-id", "before", "user@example.com");
     }
 
     @Test
     void withdrawRevokesTokensAndMarksMemberWithdrawn() {
         when(memberRepository.findByIdAndWithdrawnAtIsNull(1L)).thenReturn(Optional.of(member));
-        var response = service.withdraw(1L, new AccountWithdrawRequest("WITHDRAW", "unused"), "access-token");
+        var response =
+                service.withdraw(
+                        1L, new AccountWithdrawRequest("WITHDRAW", "unused"), "access-token");
 
         assertThat(member.isWithdrawn()).isTrue();
         // 같은 소셜 계정으로 다시 가입할 수 있게 소셜 식별자 · 닉네임 · 이메일을 비운다
@@ -58,8 +62,12 @@ class AccountSettingsServiceTest {
 
     @Test
     void withdrawRejectsInvalidConfirmation() {
-        assertThatThrownBy(() -> service.withdraw(
-                1L, new AccountWithdrawRequest("DELETE", null), "access-token"))
+        assertThatThrownBy(
+                        () ->
+                                service.withdraw(
+                                        1L,
+                                        new AccountWithdrawRequest("DELETE", null),
+                                        "access-token"))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.INVALID_WITHDRAW_CONFIRMATION);

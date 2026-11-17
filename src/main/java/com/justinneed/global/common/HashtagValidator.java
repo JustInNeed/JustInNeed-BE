@@ -13,8 +13,7 @@ public final class HashtagValidator {
     private static final int MAX_TAG_COUNT = 10;
     private static final Pattern HASHTAG_PATTERN = Pattern.compile("^[가-힣a-zA-Z0-9]{1,10}$");
 
-    private HashtagValidator() {
-    }
+    private HashtagValidator() {}
 
     public static List<String> normalizeAndValidate(List<String> tags) {
         if (tags == null) {

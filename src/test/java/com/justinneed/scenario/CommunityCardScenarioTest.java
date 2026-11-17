@@ -46,7 +46,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 class CommunityCardScenarioTest extends ScenarioTestSupport {
 
     private static final String LINK = "https://x.example.com/y";
-    private static final String MINDMAP = """
+    private static final String MINDMAP =
+            """
             {"structureSource": "llm",
              "nodes": [
                {"id": "root:1", "type": "root", "keyword": "로마", "score": 1.0, "childCount": 1},
@@ -56,14 +57,16 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
                {"from": "root:1", "to": "topic:0", "type": "hierarchy", "primary": true},
                {"from": "topic:0", "to": "https://x.example.com/y#pid1", "type": "hierarchy", "primary": true}]}
             """;
-    private static final String RESULT = """
+    private static final String RESULT =
+            """
             {"modelSource": "global", "scoreMethod": "C", "state": {"unitFeatures": []},
              "mindmap": %s,
              "essay": {"source": "llm", "title": "다시 분석한 제목", "sections": [{"heading": "소제목", "body": "분석 본문"}]},
              "selected": [{"unitKey": "https://x.example.com/y#pid1", "pageUrl": "https://x.example.com/y", "pageTitle": "글",
                            "text": "원문", "score": 0.5}],
              "analysis": {"units": [], "summary": {}}, "pages": []}
-            """.formatted(MINDMAP);
+            """
+                    .formatted(MINDMAP);
 
     @Autowired private CommunityCardRepository cards;
     @Autowired private CommunityCardReader reader;
@@ -83,15 +86,27 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
     void seed() {
         me = member("sprout");
         viewer = member("viewer");
-        rome = session(me, "로마 동선", "2026-04-26T21:00:00", "2026-04-26T22:00:00", 2, false, false,
-                List.of("로마", "콜로세움"),
-                List.of(new Source("글", LINK, "발췌"), new Source("", "https://x.example.com/z", "발췌"),
-                        new Source("중복", LINK, "발췌"), new Source("위험", "javascript:alert(1)", "발췌")),
-                "## 소제목\n첫 **문단**\n\n둘째 문단");
+        rome =
+                session(
+                        me,
+                        "로마 동선",
+                        "2026-04-26T21:00:00",
+                        "2026-04-26T22:00:00",
+                        2,
+                        false,
+                        false,
+                        List.of("로마", "콜로세움"),
+                        List.of(
+                                new Source("글", LINK, "발췌"),
+                                        new Source("", "https://x.example.com/z", "발췌"),
+                                new Source("중복", LINK, "발췌"),
+                                        new Source("위험", "javascript:alert(1)", "발췌")),
+                        "## 소제목\n첫 **문단**\n\n둘째 문단");
     }
 
     private void patchSession(Map<String, Object> body) throws Exception {
-        mvc.perform(patch("/sessions/{id}", rome.getId()).with(as(me)).with(json(body))).andExpect(okEnvelope());
+        mvc.perform(patch("/sessions/{id}", rome.getId()).with(as(me)).with(json(body)))
+                .andExpect(okEnvelope());
     }
 
     private CommunityCardRow card() {
@@ -101,17 +116,24 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
     private void setResult(String mindmap) {
         SessionResult result = new SessionResult(rome.getId(), me.getId());
         results.saveAndFlush(result);
-        jdbc.update("update session_results set mindmap = JSON '" + mindmap + "' where session_id = ?", rome.getId());
+        jdbc.update(
+                "update session_results set mindmap = JSON '" + mindmap + "' where session_id = ?",
+                rome.getId());
     }
 
     private void showContent() {
-        CommunityProfile profile = communityProfiles.findById(me.getId()).orElseGet(() -> new CommunityProfile(me.getId()));
+        CommunityProfile profile =
+                communityProfiles
+                        .findById(me.getId())
+                        .orElseGet(() -> new CommunityProfile(me.getId()));
         profile.changeVisibility(NodeVisibility.CONTENT);
         communityProfiles.saveAndFlush(profile);
     }
 
     private List<String> nodeKeys() {
-        return nodes.findBySessionId(rome.getId()).stream().map(CommunityNode::getSourceKey).toList();
+        return nodes.findBySessionId(rome.getId()).stream()
+                .map(CommunityNode::getSourceKey)
+                .toList();
     }
 
     @Test
@@ -127,8 +149,10 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
         assertThat(card.getTitle()).isEqualTo("로마 동선");
         assertThat(card.getSnippet()).isEqualTo("첫 문단");
         assertThat(card.getHashtags()).containsExactly("로마", "콜로세움");
-        assertThat(card.getUrls()).containsExactly(new CommunityCard.RelatedUrl("글", LINK),
-                new CommunityCard.RelatedUrl(null, "https://x.example.com/z"));
+        assertThat(card.getUrls())
+                .containsExactly(
+                        new CommunityCard.RelatedUrl("글", LINK),
+                        new CommunityCard.RelatedUrl(null, "https://x.example.com/z"));
         assertThat(card.getUrlCount()).isEqualTo(2);
         assertThat(card.getAiNodeCount()).isZero();
         assertThat(card.getLastActivityAt()).isEqualTo(LocalDateTime.parse("2026-04-26T22:00:00"));
@@ -137,10 +161,14 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
 
         patchSession(Map.of("isPublic", false));
         assertThat(cards.findById(rome.getId())).isEmpty();
-        assertThat(nodes.findBySessionId(rome.getId())).extracting(CommunityNode::getId).isEqualTo(ids);
+        assertThat(nodes.findBySessionId(rome.getId()))
+                .extracting(CommunityNode::getId)
+                .isEqualTo(ids);
 
         patchSession(Map.of("isPublic", true));
-        assertThat(nodes.findBySessionId(rome.getId())).extracting(CommunityNode::getId).isEqualTo(ids);
+        assertThat(nodes.findBySessionId(rome.getId()))
+                .extracting(CommunityNode::getId)
+                .isEqualTo(ids);
     }
 
     @Test
@@ -153,7 +181,9 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
 
         patchSession(Map.of("tags", List.of("피렌체")));
         assertThat(card().getHashtags()).containsExactly("피렌체");
-        assertThat(hashtags.findByOwnerIdOrderByIdAsc(me.getId())).extracting(CommunityHashtag::getName).contains("피렌체");
+        assertThat(hashtags.findByOwnerIdOrderByIdAsc(me.getId()))
+                .extracting(CommunityHashtag::getName)
+                .contains("피렌체");
 
         patchSession(Map.of("editedMarkdown", "고친 본문"));
         assertThat(card().getSnippet()).isEqualTo("고친 본문");
@@ -218,16 +248,23 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("고정은 카드를 건드리지 않는다: 비공개 세션은 400 에 카드가 없고, 공개 세션은 해제해도 카드가 남는다")
     void pinDoesNotTouchCard() throws Exception {
-        mvc.perform(post("/community/me/pinned-sessions").with(as(me)).with(json(Map.of("sessionId", rome.getId()))))
+        mvc.perform(
+                        post("/community/me/pinned-sessions")
+                                .with(as(me))
+                                .with(json(Map.of("sessionId", rome.getId()))))
                 .andExpect(status().isBadRequest());
         assertThat(cards.findById(rome.getId())).isEmpty();
 
         patchSession(Map.of("isPublic", true));
-        mvc.perform(post("/community/me/pinned-sessions").with(as(me)).with(json(Map.of("sessionId", rome.getId()))))
+        mvc.perform(
+                        post("/community/me/pinned-sessions")
+                                .with(as(me))
+                                .with(json(Map.of("sessionId", rome.getId()))))
                 .andExpect(status().isCreated());
         assertThat(cards.findById(rome.getId())).isPresent();
 
-        mvc.perform(delete("/community/me/pinned-sessions/{id}", rome.getId()).with(as(me))).andExpect(okEnvelope());
+        mvc.perform(delete("/community/me/pinned-sessions/{id}", rome.getId()).with(as(me)))
+                .andExpect(okEnvelope());
         assertThat(cards.findById(rome.getId())).isPresent();
     }
 
@@ -236,17 +273,24 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
     void reanalysisAndAiResult() throws Exception {
         patchSession(Map.of("isPublic", true));
         ReflectionTestUtils.setField(rome, "status", SessionStatus.FAILED);
-        rawPayloads.saveAndFlush(new SessionRawPayload(rome.getId(), me.getId(),
-                Map.of("kind", "rbc-session", "pages", List.of()), LocalDateTime.now()));
+        rawPayloads.saveAndFlush(
+                new SessionRawPayload(
+                        rome.getId(),
+                        me.getId(),
+                        Map.of("kind", "rbc-session", "pages", List.of()),
+                        LocalDateTime.now()));
 
-        mvc.perform(post("/sessions/{id}/reanalyze", rome.getId()).with(as(me))).andExpect(okEnvelope());
+        mvc.perform(post("/sessions/{id}/reanalyze", rome.getId()).with(as(me)))
+                .andExpect(okEnvelope());
         assertThat(cards.findById(rome.getId())).isEmpty();
 
         ReflectionTestUtils.setField(rome, "status", SessionStatus.ANALYZING);
         sessions.saveAndFlush(rome);
-        mvc.perform(post("/internal/ai/sessions/{id}/result", rome.getId())
-                        .header(AiInternalToken.HEADER, internalToken.value())
-                        .contentType(MediaType.APPLICATION_JSON).content(RESULT))
+        mvc.perform(
+                        post("/internal/ai/sessions/{id}/result", rome.getId())
+                                .header(AiInternalToken.HEADER, internalToken.value())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(RESULT))
                 .andExpect(status().is2xxSuccessful());
 
         CommunityCardRow card = card();
@@ -254,14 +298,18 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
         assertThat(card.getSnippet()).isEqualTo("분석 본문");
         assertThat(card.getAiNodeCount()).isEqualTo(3);
         assertThat(card.getHashtags()).isEqualTo(rome.getTags());
-        assertThat(nodeKeys()).contains(SelectionKey.of("ai:root:1"), SelectionKey.of("ai:" + LINK + "#pid1"),
-                SelectionKey.of(LINK));
+        assertThat(nodeKeys())
+                .contains(
+                        SelectionKey.of("ai:root:1"),
+                        SelectionKey.of("ai:" + LINK + "#pid1"),
+                        SelectionKey.of(LINK));
     }
 
     @Test
     @DisplayName("비공개 세션의 AI 결과도 태그 행은 만든다 (프로필 수정 목록). 카드는 없다")
     void privateAiResultCreatesTagsOnly() throws Exception {
-        assertThat(hashtags.findByOwnerIdOrderByIdAsc(me.getId())).extracting(CommunityHashtag::getName)
+        assertThat(hashtags.findByOwnerIdOrderByIdAsc(me.getId()))
+                .extracting(CommunityHashtag::getName)
                 .contains("로마", "콜로세움");
         assertThat(cards.findById(rome.getId())).isEmpty();
         assertThat(nodeKeys()).isEmpty();
@@ -273,7 +321,10 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
     void withdrawRemovesCards() throws Exception {
         patchSession(Map.of("isPublic", true));
 
-        mvc.perform(delete("/settings/account").with(as(me)).with(json(Map.of("confirmText", "WITHDRAW"))))
+        mvc.perform(
+                        delete("/settings/account")
+                                .with(as(me))
+                                .with(json(Map.of("confirmText", "WITHDRAW"))))
                 .andExpect(status().isOk());
 
         assertThat(cards.existsById(rome.getId())).isFalse();
@@ -295,7 +346,10 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
         communityProfiles.saveAndFlush(profile);
         sessions.flush();
         // 예전 조회가 만들어 둔 URL 노드는 id 가 유지돼야 한다
-        Long legacyNode = nodes.saveAndFlush(new CommunityNode(me.getId(), rome.getId(), SelectionKey.of(LINK))).getId();
+        Long legacyNode =
+                nodes.saveAndFlush(
+                                new CommunityNode(me.getId(), rome.getId(), SelectionKey.of(LINK)))
+                        .getId();
 
         backfill.run(null);
 
@@ -303,10 +357,17 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
         assertThat(cards.findById(legacyPrivate.getId())).isEmpty();
         assertThat(cards.findById(legacyDeleted.getId())).isEmpty();
         assertThat(cards.findById(withdrawn.getId())).isEmpty();
-        assertThat(nodes.findBySessionId(rome.getId())).extracting(CommunityNode::getId).contains(legacyNode).hasSize(2);
-        assertThat(hashtags.findByOwnerIdOrderByIdAsc(me.getId())).extracting(CommunityHashtag::getName)
-                .contains("로마", "비공개태그").doesNotContain("삭제태그");
-        assertThat(hashtags.findByOwnerIdOrderByIdAsc(viewer.getId())).extracting(CommunityHashtag::getName).contains("관심");
+        assertThat(nodes.findBySessionId(rome.getId()))
+                .extracting(CommunityNode::getId)
+                .contains(legacyNode)
+                .hasSize(2);
+        assertThat(hashtags.findByOwnerIdOrderByIdAsc(me.getId()))
+                .extracting(CommunityHashtag::getName)
+                .contains("로마", "비공개태그")
+                .doesNotContain("삭제태그");
+        assertThat(hashtags.findByOwnerIdOrderByIdAsc(viewer.getId()))
+                .extracting(CommunityHashtag::getName)
+                .contains("관심");
         assertThat(hashtags.findByOwnerIdOrderByIdAsc(gone.getId())).isEmpty();
 
         var tagRows = hashtags.count();
@@ -342,8 +403,10 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
         assertThat(card.snippet()).isNull();
         assertThat(card.hashtags()).containsExactly("로마", "콜로세움");
         assertThat(card.nodeCount()).isEqualTo(2);
-        assertThat(card.relatedUrls()).containsExactly(new CommunityCard.RelatedUrl(null, LINK),
-                new CommunityCard.RelatedUrl(null, "https://x.example.com/z"));
+        assertThat(card.relatedUrls())
+                .containsExactly(
+                        new CommunityCard.RelatedUrl(null, LINK),
+                        new CommunityCard.RelatedUrl(null, "https://x.example.com/z"));
         assertThat(card.lastActivityAt()).isEqualTo(LocalDateTime.parse("2026-04-26T22:00:00"));
         assertThat(card.likeCount()).isZero();
         assertThat(card.bookmarkId()).isNull();
@@ -373,8 +436,10 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
         profile.replaceHiddenHashtags(List.of("콜로세움"));
         communityProfiles.saveAndFlush(profile);
 
-        assertThat(reader.card(rome.getId(), viewer.getId()).orElseThrow().hashtags()).containsExactly("로마");
-        assertThat(reader.card(rome.getId(), me.getId()).orElseThrow().hashtags()).containsExactly("로마");
+        assertThat(reader.card(rome.getId(), viewer.getId()).orElseThrow().hashtags())
+                .containsExactly("로마");
+        assertThat(reader.card(rome.getId(), me.getId()).orElseThrow().hashtags())
+                .containsExactly("로마");
     }
 
     @Test
@@ -382,16 +447,44 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
     void readerOrderAndWithdrawnOwner() throws Exception {
         patchSession(Map.of("isPublic", true));
         Member other = member("other");
-        BrowsingSession second = session(other, "둘째", "2026-04-26T21:00:00", "2026-04-26T22:00:00", 1, false, true,
-                List.of("파리"), List.of(new Source("글", LINK, "발췌")), "본문");
+        BrowsingSession second =
+                session(
+                        other,
+                        "둘째",
+                        "2026-04-26T21:00:00",
+                        "2026-04-26T22:00:00",
+                        1,
+                        false,
+                        true,
+                        List.of("파리"),
+                        List.of(new Source("글", LINK, "발췌")),
+                        "본문");
         Member gone = member("gone");
-        BrowsingSession third = session(gone, "셋째", "2026-04-26T21:00:00", "2026-04-26T22:00:00", 1, false, true,
-                List.of("파리"), List.of(new Source("글", LINK, "발췌")), "본문");
+        BrowsingSession third =
+                session(
+                        gone,
+                        "셋째",
+                        "2026-04-26T21:00:00",
+                        "2026-04-26T22:00:00",
+                        1,
+                        false,
+                        true,
+                        List.of("파리"),
+                        List.of(new Source("글", LINK, "발췌")),
+                        "본문");
         gone.withdraw(null, LocalDateTime.now());
         members.saveAndFlush(gone);
 
-        var ids = new ArrayList<>(List.of(second.getId(), 999_999L, third.getId(), rome.getId(), second.getId()));
-        assertThat(reader.cards(ids, viewer.getId())).extracting(CommunityCard::mindmapId)
+        var ids =
+                new ArrayList<>(
+                        List.of(
+                                second.getId(),
+                                999_999L,
+                                third.getId(),
+                                rome.getId(),
+                                second.getId()));
+        assertThat(reader.cards(ids, viewer.getId()))
+                .extracting(CommunityCard::mindmapId)
                 .containsExactly(second.getId(), rome.getId());
         assertThat(reader.card(third.getId(), viewer.getId())).isEmpty();
         assertThat(reader.cards(List.of(), viewer.getId())).isEmpty();
@@ -402,11 +495,27 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
     void readerJsonShape() throws Exception {
         patchSession(Map.of("isPublic", true));
 
-        var json = objectMapper.readTree(objectMapper.writeValueAsString(reader.card(rome.getId(), viewer.getId()).orElseThrow()));
+        var json =
+                objectMapper.readTree(
+                        objectMapper.writeValueAsString(
+                                reader.card(rome.getId(), viewer.getId()).orElseThrow()));
 
-        assertThat(json.propertyNames()).containsExactlyInAnyOrder("mindmapId", "owner", "title", "snippet", "hashtags",
-                "nodeCount", "likeCount", "likedByMe", "bookmarkCount", "bookmarkId", "exploringCount", "exploringByMe",
-                "lastActivityAt", "relatedUrls");
+        assertThat(json.propertyNames())
+                .containsExactlyInAnyOrder(
+                        "mindmapId",
+                        "owner",
+                        "title",
+                        "snippet",
+                        "hashtags",
+                        "nodeCount",
+                        "likeCount",
+                        "likedByMe",
+                        "bookmarkCount",
+                        "bookmarkId",
+                        "exploringCount",
+                        "exploringByMe",
+                        "lastActivityAt",
+                        "relatedUrls");
         assertThat(json.get("title").isNull()).isTrue();
         assertThat(json.get("relatedUrls").get(0).get("title").isNull()).isTrue();
         assertThat(json.get("lastActivityAt").asString()).isEqualTo("2026-04-26T22:00:00");
@@ -415,7 +524,9 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("행동이 없는 카드의 숫자는 0 이다")
     void countsWithoutActionsAreZero(@Autowired CardCounts counts) {
-        assertThat(counts.counts(List.of(rome.getId()), viewer.getId()).getOrDefault(rome.getId(), CardCounts.Count.ZERO))
+        assertThat(
+                        counts.counts(List.of(rome.getId()), viewer.getId())
+                                .getOrDefault(rome.getId(), CardCounts.Count.ZERO))
                 .isEqualTo(CardCounts.Count.ZERO);
     }
 }

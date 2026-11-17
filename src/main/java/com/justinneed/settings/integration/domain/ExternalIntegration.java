@@ -16,16 +16,13 @@ import java.time.LocalDateTime;
 @Table(
         name = "external_integrations",
         uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uk_external_integrations_member_provider",
-                        columnNames = {"member_id", "provider"}
-                ),
-                @UniqueConstraint(
-                        name = "uk_external_integrations_provider_email",
-                        columnNames = {"provider", "email"}
-                )
-        }
-)
+            @UniqueConstraint(
+                    name = "uk_external_integrations_member_provider",
+                    columnNames = {"member_id", "provider"}),
+            @UniqueConstraint(
+                    name = "uk_external_integrations_provider_email",
+                    columnNames = {"provider", "email"})
+        })
 public class ExternalIntegration extends BaseEntity {
 
     @Id
@@ -45,10 +42,10 @@ public class ExternalIntegration extends BaseEntity {
     @Column(name = "connected_at", nullable = false)
     private LocalDateTime connectedAt;
 
-    protected ExternalIntegration() {
-    }
+    protected ExternalIntegration() {}
 
-    public ExternalIntegration(Long memberId, IntegrationProvider provider, String email, LocalDateTime connectedAt) {
+    public ExternalIntegration(
+            Long memberId, IntegrationProvider provider, String email, LocalDateTime connectedAt) {
         this.memberId = memberId;
         this.provider = provider;
         this.email = email;

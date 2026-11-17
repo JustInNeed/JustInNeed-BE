@@ -30,7 +30,8 @@ public class ProfileSaveService {
     private final CommunityTags tags;
     private final CommunitySessionRepository sessions;
 
-    public ProfileSaveService(CommunityProfiles profiles, CommunityTags tags, CommunitySessionRepository sessions) {
+    public ProfileSaveService(
+            CommunityProfiles profiles, CommunityTags tags, CommunitySessionRepository sessions) {
         this.profiles = profiles;
         this.tags = tags;
         this.sessions = sessions;
@@ -38,8 +39,13 @@ public class ProfileSaveService {
 
     /** 프로필 수정 화면의 저장 한 번. 하나라도 실패하면 아무것도 저장되지 않는다. */
     @Transactional
-    public void save(Long userId, String bio, NodeVisibility visibility, List<String> interests,
-            List<Long> hiddenHashtagIds, List<Long> pinnedSessionIds) {
+    public void save(
+            Long userId,
+            String bio,
+            NodeVisibility visibility,
+            List<String> interests,
+            List<Long> hiddenHashtagIds,
+            List<Long> pinnedSessionIds) {
         CommunityProfile profile = profiles.lock(userId);
         // 화면이 받은 해시태그 id 는 저장 전 목록 기준이라 관심사를 바꾸기 전에 읽는다
         List<CommunityHashtag> owned = tags.owned(userId);
@@ -53,7 +59,8 @@ public class ProfileSaveService {
         profile.changeVisibility(visibility);
     }
 
-    private static List<String> hidden(CommunityProfile profile, List<CommunityHashtag> owned, List<Long> ids) {
+    private static List<String> hidden(
+            CommunityProfile profile, List<CommunityHashtag> owned, List<Long> ids) {
         Map<Long, String> names = new HashMap<>();
         owned.forEach(tag -> names.put(tag.getId(), tag.getNormalizedName()));
         // 태그 행이 없는 옛 항목은 id 가 없어 화면이 보낼 수 없다. 요청에 없다고 지우면 다시 공개되므로 그대로 둔다
@@ -78,8 +85,9 @@ public class ProfileSaveService {
         if (ids.isEmpty()) {
             return ids;
         }
-        Map<Long, PinCandidateRow> found = sessions.findPinCandidates(userId, ids).stream()
-                .collect(Collectors.toMap(PinCandidateRow::id, Function.identity()));
+        Map<Long, PinCandidateRow> found =
+                sessions.findPinCandidates(userId, ids).stream()
+                        .collect(Collectors.toMap(PinCandidateRow::id, Function.identity()));
         for (Long id : ids) {
             PinCandidateRow session = found.get(id);
             if (session == null) {

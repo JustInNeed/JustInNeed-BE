@@ -7,7 +7,10 @@ import org.springframework.stereotype.Component;
 
 // 앞선 실행이 끝난 뒤 주기만큼 쉬고 다시 돈다. app.collection.scheduler-enabled=false 면 등록하지 않는다
 @Component
-@ConditionalOnProperty(name = "app.collection.scheduler-enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(
+        name = "app.collection.scheduler-enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 public class CollectionRecoveryScheduler {
 
     private final CollectionRecoveryService recoveryService;

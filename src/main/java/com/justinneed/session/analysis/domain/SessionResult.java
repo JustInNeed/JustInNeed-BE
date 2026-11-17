@@ -13,15 +13,13 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 /**
- * AI 가 세션 하나를 분석해 돌려준 결과 (세션당 1행).
- * 화면 · 분석이 세션 단위로 통째로 읽으므로 항목마다 JSON 컬럼 하나로 둔다. 형식은 AI 출력(pipeline/output.py)을 그대로 따른다.
- * 줄글은 summaries.essay, 세션 제목 · 해시태그 · 출처는 sessions 에 둔다.
+ * AI 가 세션 하나를 분석해 돌려준 결과 (세션당 1행). 화면 · 분석이 세션 단위로 통째로 읽으므로 항목마다 JSON 컬럼 하나로 둔다. 형식은 AI
+ * 출력(pipeline/output.py)을 그대로 따른다. 줄글은 summaries.essay, 세션 제목 · 해시태그 · 출처는 sessions 에 둔다.
  */
 @Entity
 @Table(
         name = "session_results",
-        indexes = @Index(name = "idx_session_results_user", columnList = "user_id")
-)
+        indexes = @Index(name = "idx_session_results_user", columnList = "user_id"))
 public class SessionResult extends BaseEntity {
 
     @Id
@@ -74,8 +72,7 @@ public class SessionResult extends BaseEntity {
     @Column(name = "score_method", length = 10)
     private String scoreMethod;
 
-    protected SessionResult() {
-    }
+    protected SessionResult() {}
 
     public SessionResult(Long sessionId, Long userId) {
         this.sessionId = sessionId;
@@ -91,8 +88,7 @@ public class SessionResult extends BaseEntity {
             List<Map<String, Object>> pages,
             List<Map<String, Object>> unitFeatures,
             String modelSource,
-            String scoreMethod
-    ) {
+            String scoreMethod) {
         this.mindmap = mindmap;
         this.selectedUnits = new ArrayList<>(selectedUnits);
         this.analysisUnits = new ArrayList<>(analysisUnits);

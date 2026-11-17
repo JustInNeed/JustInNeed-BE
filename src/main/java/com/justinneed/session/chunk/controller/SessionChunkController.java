@@ -26,11 +26,10 @@ public class SessionChunkController {
     // 처음 받은 청크는 201. 이미 받은 청크, 지웠거나 수집이 끝난 세션의 청크는 저장하지 않고 200
     @PostMapping
     public ResponseEntity<ApiResponse<ChunkUploadResponse>> upload(
-            @AuthenticationPrincipal Long userId,
-            @Valid @RequestBody ChunkUploadRequest request
-    ) {
+            @AuthenticationPrincipal Long userId, @Valid @RequestBody ChunkUploadRequest request) {
         ChunkUploadResponse response = chunkService.receive(userId, request);
-        HttpStatus status = response.duplicate() || response.ignored() ? HttpStatus.OK : HttpStatus.CREATED;
+        HttpStatus status =
+                response.duplicate() || response.ignored() ? HttpStatus.OK : HttpStatus.CREATED;
         return ResponseEntity.status(status).body(ApiResponse.ok(response));
     }
 }

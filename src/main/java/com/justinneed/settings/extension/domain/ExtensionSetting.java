@@ -12,8 +12,8 @@ import jakarta.persistence.UniqueConstraint;
 @Entity
 @Table(
         name = "extension_settings",
-        uniqueConstraints = @UniqueConstraint(name = "uk_extension_settings_member", columnNames = "member_id")
-)
+        uniqueConstraints =
+                @UniqueConstraint(name = "uk_extension_settings_member", columnNames = "member_id"))
 public class ExtensionSetting extends BaseEntity {
 
     @Id
@@ -32,8 +32,7 @@ public class ExtensionSetting extends BaseEntity {
     @Column(name = "manual_scrap_enabled", nullable = false)
     private boolean manualScrapEnabled = true;
 
-    protected ExtensionSetting() {
-    }
+    protected ExtensionSetting() {}
 
     public ExtensionSetting(Long memberId) {
         this.memberId = memberId;

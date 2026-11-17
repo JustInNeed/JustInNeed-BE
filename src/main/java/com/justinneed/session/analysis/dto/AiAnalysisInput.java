@@ -11,6 +11,4 @@ public record AiAnalysisInput(
         // 현재 세션을 뺀 삭제되지 않은 결과 수
         long previousSessions,
         Map<String, Object> userModel,
-        Map<String, Object> globalModel
-) {
-}
+        Map<String, Object> globalModel) {}

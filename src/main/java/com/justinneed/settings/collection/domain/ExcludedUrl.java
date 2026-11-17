@@ -12,11 +12,10 @@ import jakarta.persistence.UniqueConstraint;
 @Entity
 @Table(
         name = "excluded_urls",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_excluded_url_member_url",
-                columnNames = {"member_id", "url"}
-        )
-)
+        uniqueConstraints =
+                @UniqueConstraint(
+                        name = "uk_excluded_url_member_url",
+                        columnNames = {"member_id", "url"}))
 public class ExcludedUrl extends BaseEntity {
 
     @Id
@@ -38,8 +37,7 @@ public class ExcludedUrl extends BaseEntity {
     @Column(name = "is_excluded", nullable = false)
     private boolean excluded;
 
-    protected ExcludedUrl() {
-    }
+    protected ExcludedUrl() {}
 
     public ExcludedUrl(Long memberId, String url, String domain, boolean defaultUrl) {
         this.memberId = memberId;

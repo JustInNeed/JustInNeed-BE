@@ -28,7 +28,9 @@ public class SharedSessionService {
     private final CommunitySharing sharing;
     private final CommunitySessionRepository sessions;
 
-    public SharedSessionService(CommunityProfiles profiles, CommunitySharing sharing,
+    public SharedSessionService(
+            CommunityProfiles profiles,
+            CommunitySharing sharing,
             CommunitySessionRepository sessions) {
         this.profiles = profiles;
         this.sharing = sharing;
@@ -38,15 +40,17 @@ public class SharedSessionService {
     @Transactional
     public void pin(Long userId, Long sessionId) {
         CommunityProfile profile = profiles.lock(userId);
-        BrowsingSession session = sessions.lockOwnedSession(userId, sessionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        BrowsingSession session =
+                sessions.lockOwnedSession(userId, sessionId)
+                        .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         if (session.getStatus() != SessionStatus.COMPLETED) {
             throw new CustomException(ErrorCode.SESSION_NOT_COMPLETED);
         }
         if (!session.isPublicSession()) {
             throw new CustomException(ErrorCode.PIN_REQUIRES_PUBLIC);
         }
-        List<Long> pins = new ArrayList<>(livePins(profile).stream().map(BrowsingSession::getId).toList());
+        List<Long> pins =
+                new ArrayList<>(livePins(profile).stream().map(BrowsingSession::getId).toList());
         if (!pins.contains(sessionId)) {
             pins.add(sessionId);
         }
@@ -58,20 +62,30 @@ public class SharedSessionService {
         CommunityProfile profile = profiles.read(userId);
         PageRequest paging = BookmarkQueryService.paging(page, size);
         List<BrowsingSession> visible = sharing.visibleSessions(profile);
-        Map<Long, BrowsingSession> byId = visible.stream()
-                .collect(Collectors.toMap(BrowsingSession::getId, Function.identity()));
-        List<Long> newest = visible.stream().sorted(CommunitySharing.NEWEST_SESSION_FIRST)
-                .map(BrowsingSession::getId).toList();
+        Map<Long, BrowsingSession> byId =
+                visible.stream()
+                        .collect(Collectors.toMap(BrowsingSession::getId, Function.identity()));
+        List<Long> newest =
+                visible.stream()
+                        .sorted(CommunitySharing.NEWEST_SESSION_FIRST)
+                        .map(BrowsingSession::getId)
+                        .toList();
         var found = sharing.pinnedFirst(profile, newest, paging);
-        return new SharedSessions(found.ids().stream()
-                .map(id -> sharing.project(profile, viewerId, byId.get(id))).toList(), found.hasNext(), found.totalPages());
+        return new SharedSessions(
+                found.ids().stream()
+                        .map(id -> sharing.project(profile, viewerId, byId.get(id)))
+                        .toList(),
+                found.hasNext(),
+                found.totalPages());
     }
 
     public SharedSessionView detail(Long userId, Long viewerId, Long sessionId) {
         CommunityProfile profile = profiles.read(userId);
-        BrowsingSession session = sharing.visibleSessions(profile).stream()
-                .filter(candidate -> candidate.getId().equals(sessionId)).findFirst()
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        BrowsingSession session =
+                sharing.visibleSessions(profile).stream()
+                        .filter(candidate -> candidate.getId().equals(sessionId))
+                        .findFirst()
+                        .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         return sharing.project(profile, viewerId, session);
     }
 
@@ -88,12 +102,16 @@ public class SharedSessionService {
     }
 
     private List<BrowsingSession> livePins(CommunityProfile profile) {
-        Map<Long, BrowsingSession> visible = sharing.visibleSessions(profile).stream()
-                .collect(Collectors.toMap(BrowsingSession::getId, Function.identity()));
+        Map<Long, BrowsingSession> visible =
+                sharing.visibleSessions(profile).stream()
+                        .collect(Collectors.toMap(BrowsingSession::getId, Function.identity()));
         // 세션 삭제는 고정 목록을 고치지 않으므로 읽을 때 거른다
-        return profile.getPinnedSessionIds().stream().filter(visible::containsKey).map(visible::get).toList();
+        return profile.getPinnedSessionIds().stream()
+                .filter(visible::containsKey)
+                .map(visible::get)
+                .toList();
     }
 
-    public record SharedSessions(List<SharedSessionView> sessions, boolean hasNext, int totalPages) {
-    }
+    public record SharedSessions(
+            List<SharedSessionView> sessions, boolean hasNext, int totalPages) {}
 }

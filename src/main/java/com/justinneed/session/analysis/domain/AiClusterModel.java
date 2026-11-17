@@ -15,14 +15,16 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 /**
- * AI 읽기 상태 군집 모델 (스케일러 + centroid + 군집 순서, AI 의 ClusterModel.to_dict 형식).
- * 전체 사용자 모델(GLOBAL, user_id 없음) 1개 + 개인 모델(USER) 사용자당 1개. 재학습하면 행을 교체한다.
+ * AI 읽기 상태 군집 모델 (스케일러 + centroid + 군집 순서, AI 의 ClusterModel.to_dict 형식). 전체 사용자 모델(GLOBAL, user_id
+ * 없음) 1개 + 개인 모델(USER) 사용자당 1개. 재학습하면 행을 교체한다.
  */
 @Entity
 @Table(
         name = "ai_cluster_models",
-        uniqueConstraints = @UniqueConstraint(name = "uk_ai_cluster_models_scope_user", columnNames = {"scope", "user_id"})
-)
+        uniqueConstraints =
+                @UniqueConstraint(
+                        name = "uk_ai_cluster_models_scope_user",
+                        columnNames = {"scope", "user_id"}))
 public class AiClusterModel {
 
     @Id
@@ -47,10 +49,13 @@ public class AiClusterModel {
     @Column(name = "fitted_at", nullable = false)
     private LocalDateTime fittedAt;
 
-    protected AiClusterModel() {
-    }
+    protected AiClusterModel() {}
 
-    public AiClusterModel(ClusterModelScope scope, Long userId, Map<String, Object> model, int sessionCount,
+    public AiClusterModel(
+            ClusterModelScope scope,
+            Long userId,
+            Map<String, Object> model,
+            int sessionCount,
             LocalDateTime fittedAt) {
         this.scope = scope;
         this.userId = scope == ClusterModelScope.GLOBAL ? null : userId;

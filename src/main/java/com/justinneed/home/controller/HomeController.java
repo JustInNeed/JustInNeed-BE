@@ -19,9 +19,7 @@ public class HomeController {
     }
 
     @GetMapping
-    public ApiResponse<HomeResponse> getHome(
-            @AuthenticationPrincipal Long userId
-    ) {
+    public ApiResponse<HomeResponse> getHome(@AuthenticationPrincipal Long userId) {
         return ApiResponse.ok(homeService.getHome(userId));
     }
 }

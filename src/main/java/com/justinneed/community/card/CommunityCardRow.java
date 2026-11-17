@@ -14,11 +14,13 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 /**
- * 공개 카드 조건을 만족하는 세션의 미리 계산해 둔 행. CommunityCardSync 만 쓴다.
- * 작성자의 공개 범위 · 비공개 해시태그는 저장하지 않고 읽을 때 적용한다 (바꿔도 행을 다시 쓰지 않도록).
+ * 공개 카드 조건을 만족하는 세션의 미리 계산해 둔 행. CommunityCardSync 만 쓴다. 작성자의 공개 범위 · 비공개 해시태그는 저장하지 않고 읽을 때 적용한다
+ * (바꿔도 행을 다시 쓰지 않도록).
  */
 @Entity
-@Table(name = "community_cards", indexes = @Index(name = "idx_community_cards_owner", columnList = "owner_id"))
+@Table(
+        name = "community_cards",
+        indexes = @Index(name = "idx_community_cards_owner", columnList = "owner_id"))
 public class CommunityCardRow extends BaseEntity {
 
     @Id
@@ -54,16 +56,21 @@ public class CommunityCardRow extends BaseEntity {
     @Column(name = "last_activity_at", nullable = false)
     private LocalDateTime lastActivityAt;
 
-    protected CommunityCardRow() {
-    }
+    protected CommunityCardRow() {}
 
     public CommunityCardRow(Long sessionId, Long ownerId) {
         this.sessionId = sessionId;
         this.ownerId = ownerId;
     }
 
-    public void replace(String title, String snippet, List<String> hashtags, List<RelatedUrl> urls,
-            int aiNodeCount, int urlCount, LocalDateTime lastActivityAt) {
+    public void replace(
+            String title,
+            String snippet,
+            List<String> hashtags,
+            List<RelatedUrl> urls,
+            int aiNodeCount,
+            int urlCount,
+            LocalDateTime lastActivityAt) {
         this.title = title;
         this.snippet = snippet;
         this.hashtags = new ArrayList<>(hashtags);

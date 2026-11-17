@@ -9,6 +9,4 @@ public record ExcludedUrlCreateResponse(
         String domain,
         boolean isDefault,
         boolean isExcluded,
-        LocalDateTime createdAt
-) {
-}
+        LocalDateTime createdAt) {}

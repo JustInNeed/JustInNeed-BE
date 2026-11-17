@@ -63,7 +63,8 @@ public class AnalysisRequestService {
     private final ApplicationEventPublisher eventPublisher;
     private final TransactionTemplate transactionTemplate;
 
-    public AnalysisRequestService(BrowsingSessionRepository sessionRepository,
+    public AnalysisRequestService(
+            BrowsingSessionRepository sessionRepository,
             SessionRawPayloadRepository rawPayloadRepository,
             SessionCollectionRepository collectionRepository,
             MemberRepository memberRepository,
@@ -88,8 +89,10 @@ public class AnalysisRequestService {
     // 합치기가 끝났을 때 호출 (ChunkSessionService). 원본은 같은 트랜잭션에서 session_raw_payloads 에 저장한다
     @Transactional
     public void finishCollection(Long sessionId) {
-        BrowsingSession session = sessionRepository.lockById(sessionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        BrowsingSession session =
+                sessionRepository
+                        .lockById(sessionId)
+                        .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         if (session.getStatus() != SessionStatus.COLLECTING) {
             throw new CustomException(ErrorCode.SESSION_NOT_COLLECTING);
         }
@@ -100,13 +103,17 @@ public class AnalysisRequestService {
     // 실패한 세션 다시 분석 (S-06). 두 번 눌러도 둘째 요청은 잠금 뒤 READY 를 보고 409 라 AI 요청은 한 번만 나간다
     @Transactional
     public SessionDetailResponse reanalyze(Long userId, Long sessionId) {
-        BrowsingSession session = sessionRepository.lockOwned(sessionId, userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        BrowsingSession session =
+                sessionRepository
+                        .lockOwned(sessionId, userId)
+                        .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         if (session.getStatus() != SessionStatus.FAILED) {
             throw new CustomException(ErrorCode.SESSION_NOT_FAILED);
         }
-        SessionRawPayload rawPayload = rawPayloadRepository.findById(sessionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.RAW_PAYLOAD_NOT_FOUND));
+        SessionRawPayload rawPayload =
+                rawPayloadRepository
+                        .findById(sessionId)
+                        .orElseThrow(() -> new CustomException(ErrorCode.RAW_PAYLOAD_NOT_FOUND));
         rawPayload.clearExpiry();
         collectionRepository.getOrCreate(sessionId).resetForReanalysis();
         session.markReady();
@@ -131,7 +138,9 @@ public class AnalysisRequestService {
 
     // 재전송할 때가 됐으면 보낸다. 네트워크 호출 동안 세션 행을 잡지 않도록 준비 · 전송 · 결과 기록을 나눈다
     public void resendIfDue(Long sessionId, LocalDateTime now) {
-        boolean due = Boolean.TRUE.equals(transactionTemplate.execute(status -> prepareResend(sessionId, now)));
+        boolean due =
+                Boolean.TRUE.equals(
+                        transactionTemplate.execute(status -> prepareResend(sessionId, now)));
         if (!due) {
             return;
         }
@@ -141,17 +150,22 @@ public class AnalysisRequestService {
 
     // GET /input 뒤 콜백을 기다리는 시간이 지났으면 FAILED
     public void failIfCallbackOverdue(Long sessionId, LocalDateTime now) {
-        transactionTemplate.executeWithoutResult(status -> {
-            BrowsingSession session = sessionRepository.lockById(sessionId).orElse(null);
-            if (session == null || session.isDeleted() || session.getStatus() != SessionStatus.ANALYZING) {
-                return;
-            }
-            LocalDateTime fetchedAt = collectionRepository.getOrCreate(sessionId).getInputFetchedAt();
-            if (fetchedAt != null && !fetchedAt.plus(settings.callbackTimeout()).isAfter(now)) {
-                log.warn("[ai analysis] session {} 콜백이 오지 않아 FAILED", sessionId);
-                failures.fail(session);
-            }
-        });
+        transactionTemplate.executeWithoutResult(
+                status -> {
+                    BrowsingSession session = sessionRepository.lockById(sessionId).orElse(null);
+                    if (session == null
+                            || session.isDeleted()
+                            || session.getStatus() != SessionStatus.ANALYZING) {
+                        return;
+                    }
+                    LocalDateTime fetchedAt =
+                            collectionRepository.getOrCreate(sessionId).getInputFetchedAt();
+                    if (fetchedAt != null
+                            && !fetchedAt.plus(settings.callbackTimeout()).isAfter(now)) {
+                        log.warn("[ai analysis] session {} 콜백이 오지 않아 FAILED", sessionId);
+                        failures.fail(session);
+                    }
+                });
     }
 
     private boolean send(AiAnalyzeRequest request) {
@@ -175,7 +189,8 @@ public class AnalysisRequestService {
             failures.fail(session);
             return false;
         }
-        if (!collection.isResendDue(settings.resendFirstDelay(), settings.resendSecondDelay(), now)) {
+        if (!collection.isResendDue(
+                settings.resendFirstDelay(), settings.resendSecondDelay(), now)) {
             return false;
         }
         collection.markResent(now);
@@ -198,7 +213,9 @@ public class AnalysisRequestService {
     }
 
     private boolean isAwaitingInput(BrowsingSession session) {
-        if (session == null || session.isDeleted() || session.getStatus() != SessionStatus.ANALYZING) {
+        if (session == null
+                || session.isDeleted()
+                || session.getStatus() != SessionStatus.ANALYZING) {
             return false;
         }
         SessionCollection collection = collectionRepository.getOrCreate(session.getId());

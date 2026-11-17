@@ -7,11 +7,9 @@ import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
 /**
- * 소셜 로그인 성공 후 FE 에 토큰 대신 넘기는 일회용 로그인 코드. (LoginCodeService 가 발급 · 교환)
- * 코드 원문은 저장하지 않고 SHA-256 해시만 보관한다.
- * - 로그인 성공 · 확장 연결 요청: 행 생성 (60초 유효)
- * - POST /auth/token 교환: 행 삭제 (한 번만 사용)
- * - 교환되지 않고 만료된 행은 LoginCodeCleanupScheduler 가 정리
+ * 소셜 로그인 성공 후 FE 에 토큰 대신 넘기는 일회용 로그인 코드. (LoginCodeService 가 발급 · 교환) 코드 원문은 저장하지 않고 SHA-256 해시만
+ * 보관한다. - 로그인 성공 · 확장 연결 요청: 행 생성 (60초 유효) - POST /auth/token 교환: 행 삭제 (한 번만 사용) - 교환되지 않고 만료된 행은
+ * LoginCodeCleanupScheduler 가 정리
  */
 @Entity
 @Table(name = "login_codes")
@@ -35,17 +33,22 @@ public class LoginCode {
     @Column(name = "group_id", length = 36)
     private String groupId;
 
-    protected LoginCode() {
-    }
+    protected LoginCode() {}
 
-    public LoginCode(String codeHash, Long memberId, boolean needsNickname, LocalDateTime expiresAt) {
+    public LoginCode(
+            String codeHash, Long memberId, boolean needsNickname, LocalDateTime expiresAt) {
         this.codeHash = codeHash;
         this.memberId = memberId;
         this.needsNickname = needsNickname;
         this.expiresAt = expiresAt;
     }
 
-    public LoginCode(String codeHash, Long memberId, boolean needsNickname, LocalDateTime expiresAt, String groupId) {
+    public LoginCode(
+            String codeHash,
+            Long memberId,
+            boolean needsNickname,
+            LocalDateTime expiresAt,
+            String groupId) {
         this(codeHash, memberId, needsNickname, expiresAt);
         this.groupId = groupId;
     }

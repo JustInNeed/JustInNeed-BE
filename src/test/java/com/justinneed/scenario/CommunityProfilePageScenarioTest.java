@@ -30,8 +30,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * 다른 사용자 프로필 화면 (/profile/{id}) 과 카드 상세의 관련 세션.
- * FE: ProfileView.tsx (isMine=false), MindmapDetailModal 의 sessions. 시드는 ScenarioTestSupport#seedWanderer.
+ * 다른 사용자 프로필 화면 (/profile/{id}) 과 카드 상세의 관련 세션. FE: ProfileView.tsx (isMine=false),
+ * MindmapDetailModal 의 sessions. 시드는 ScenarioTestSupport#seedWanderer.
  */
 @DisplayName("프로필 화면 · 관련 세션")
 class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
@@ -54,13 +54,22 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
         wanderer = seedWanderer();
     }
 
-    private BrowsingSession publicSession(Member owner, String title, String startedAt, String endedAt, boolean favorite,
+    private BrowsingSession publicSession(
+            Member owner,
+            String title,
+            String startedAt,
+            String endedAt,
+            boolean favorite,
             List<String> tags) {
-        return session(owner, title, startedAt, endedAt, 3, favorite, true, tags, List.of(LINK), "# 본문");
+        return session(
+                owner, title, startedAt, endedAt, 3, favorite, true, tags, List.of(LINK), "# 본문");
     }
 
     private void showContent() throws Exception {
-        mvc.perform(patch("/community/me/visibility").with(as(wanderer.member())).with(json(Map.of("visibility", "CONTENT"))))
+        mvc.perform(
+                        patch("/community/me/visibility")
+                                .with(as(wanderer.member()))
+                                .with(json(Map.of("visibility", "CONTENT"))))
                 .andExpect(okEnvelope());
     }
 
@@ -74,13 +83,25 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("관련 세션: 그 세션이 먼저, 이어서 공개 태그가 겹치는 같은 작성자의 공개 세션이 최신순으로, 최대 3개 온다")
     void relatedSessionsOrder() throws Exception {
-        BrowsingSession newest = publicSession(wanderer.member(), "새 글", "2026-04-22T10:00:00", "2026-04-22T11:00:00",
-                false, List.of("프라하"));
+        BrowsingSession newest =
+                publicSession(
+                        wanderer.member(),
+                        "새 글",
+                        "2026-04-22T10:00:00",
+                        "2026-04-22T11:00:00",
+                        false,
+                        List.of("프라하"));
 
         mvc.perform(get(RELATED, wanderer.nightjet().getId()).with(as(me)))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(
-                        ids(wanderer.nightjet(), newest, wanderer.prague()))));
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(
+                                        contains(
+                                                ids(
+                                                        wanderer.nightjet(),
+                                                        newest,
+                                                        wanderer.prague()))));
         mvc.perform(get(RELATED, wanderer.prague().getId()).with(as(me)))
                 .andExpect(jsonPath("$.data.sessions", hasSize(3)))
                 .andExpect(jsonPath("$.data.sessions[0].id").value(wanderer.prague().getId()))
@@ -90,20 +111,40 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("관련 세션의 최신순은 끝난 시각 기준이다: 늦게 시작했어도 먼저 끝난 세션이 뒤로 간다")
     void relatedSessionsOrderByEndTime() throws Exception {
-        BrowsingSession longRun = publicSession(wanderer.member(), "오래 본 글", "2026-04-21T08:00:00",
-                "2026-04-21T12:00:00", false, List.of("체코"));
-        BrowsingSession shortRun = publicSession(wanderer.member(), "잠깐 본 글", "2026-04-21T09:00:00",
-                "2026-04-21T09:10:00", false, List.of("체코"));
+        BrowsingSession longRun =
+                publicSession(
+                        wanderer.member(),
+                        "오래 본 글",
+                        "2026-04-21T08:00:00",
+                        "2026-04-21T12:00:00",
+                        false,
+                        List.of("체코"));
+        BrowsingSession shortRun =
+                publicSession(
+                        wanderer.member(),
+                        "잠깐 본 글",
+                        "2026-04-21T09:00:00",
+                        "2026-04-21T09:10:00",
+                        false,
+                        List.of("체코"));
 
         mvc.perform(get(RELATED, wanderer.prague().getId()).with(as(me)))
-                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(wanderer.prague(), longRun, shortRun))));
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(contains(ids(wanderer.prague(), longRun, shortRun))));
     }
 
     @Test
     @DisplayName("관련 세션 항목은 세션 목록 항목과 같은 필드다. URL_ONLY 면 제목은 빈 문자열, 즐겨찾기는 작성자 값과 상관없이 false")
     void relatedSessionFields() throws Exception {
-        BrowsingSession favorite = publicSession(wanderer.member(), "즐겨찾기한 글", "2026-04-22T10:00:00",
-                "2026-04-22T11:00:00", true, List.of("비엔나", "카페"));
+        BrowsingSession favorite =
+                publicSession(
+                        wanderer.member(),
+                        "즐겨찾기한 글",
+                        "2026-04-22T10:00:00",
+                        "2026-04-22T11:00:00",
+                        true,
+                        List.of("비엔나", "카페"));
 
         mvc.perform(get(RELATED, favorite.getId()).with(as(me)))
                 .andExpect(jsonPath("$.data.sessions[0].id").value(favorite.getId()))
@@ -133,12 +174,30 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("비공개 해시태그로만 겹치는 세션은 관련 세션이 아니고, 대소문자가 달라도 같은 태그다")
     void relatedSessionsUsePublicTagsOnly() throws Exception {
-        BrowsingSession onlyHidden = publicSession(wanderer.member(), "카페만", "2026-04-22T10:00:00",
-                "2026-04-22T11:00:00", false, List.of("카페"));
-        BrowsingSession upper = publicSession(wanderer.member(), "대문자", "2026-04-23T10:00:00", "2026-04-23T11:00:00",
-                false, List.of("ROME"));
-        BrowsingSession lower = publicSession(wanderer.member(), "소문자", "2026-04-22T10:00:00", "2026-04-22T11:00:00",
-                false, List.of("rome"));
+        BrowsingSession onlyHidden =
+                publicSession(
+                        wanderer.member(),
+                        "카페만",
+                        "2026-04-22T10:00:00",
+                        "2026-04-22T11:00:00",
+                        false,
+                        List.of("카페"));
+        BrowsingSession upper =
+                publicSession(
+                        wanderer.member(),
+                        "대문자",
+                        "2026-04-23T10:00:00",
+                        "2026-04-23T11:00:00",
+                        false,
+                        List.of("ROME"));
+        BrowsingSession lower =
+                publicSession(
+                        wanderer.member(),
+                        "소문자",
+                        "2026-04-22T10:00:00",
+                        "2026-04-22T11:00:00",
+                        false,
+                        List.of("rome"));
 
         mvc.perform(get(RELATED, onlyHidden.getId()).with(as(me)))
                 .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(onlyHidden))))
@@ -151,21 +210,40 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     @DisplayName("다른 사람의 세션 · 비공개 세션 · 태그가 안 겹치는 세션은 관련 세션이 아니다")
     void relatedSessionsStayWithinOwnersPublicSessions() throws Exception {
         Member other = member("foodtrip");
-        publicSession(other, "남의 글", "2026-04-22T10:00:00", "2026-04-22T11:00:00", false, List.of("프라하"));
-        session(wanderer.member(), "비공개 글", "2026-04-22T10:00:00", "2026-04-22T11:00:00", 1, false, false,
-                List.of("프라하"), List.of(LINK), "# 본문");
+        publicSession(
+                other, "남의 글", "2026-04-22T10:00:00", "2026-04-22T11:00:00", false, List.of("프라하"));
+        session(
+                wanderer.member(),
+                "비공개 글",
+                "2026-04-22T10:00:00",
+                "2026-04-22T11:00:00",
+                1,
+                false,
+                false,
+                List.of("프라하"),
+                List.of(LINK),
+                "# 본문");
 
         mvc.perform(get(RELATED, wanderer.prague().getId()).with(as(me)))
-                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(wanderer.prague(), wanderer.nightjet()))));
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(contains(ids(wanderer.prague(), wanderer.nightjet()))));
     }
 
     @Test
     @DisplayName("없거나 공개 카드가 아닌 세션 · 탈퇴한 작성자의 카드는 404")
     void relatedSessionsOfMissingCardAre404() throws Exception {
-        BrowsingSession inProgress = sessionWithStatus(wanderer.member(), "분석 중", "2026-04-22T10:00:00",
-                null, SessionStatus.ANALYZING, List.of("프라하"));
+        BrowsingSession inProgress =
+                sessionWithStatus(
+                        wanderer.member(),
+                        "분석 중",
+                        "2026-04-22T10:00:00",
+                        null,
+                        SessionStatus.ANALYZING,
+                        List.of("프라하"));
 
-        mvc.perform(get(RELATED, 999_999L).with(as(me))).andExpect(errorEnvelope(HttpStatus.NOT_FOUND, SESSION_NOT_FOUND));
+        mvc.perform(get(RELATED, 999_999L).with(as(me)))
+                .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, SESSION_NOT_FOUND));
         mvc.perform(get(RELATED, wanderer.slow().getId()).with(as(me)))
                 .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, SESSION_NOT_FOUND));
         mvc.perform(get(RELATED, inProgress.getId()).with(as(me)))
@@ -180,8 +258,11 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("비공개로 바꾼 세션의 관련 세션은 404")
     void relatedSessionsFollowPublicRule() throws Exception {
-        mvc.perform(patch("/sessions/{id}", wanderer.vienna().getId()).with(as(wanderer.member()))
-                .with(json(Map.of("isPublic", false)))).andExpect(okEnvelope());
+        mvc.perform(
+                        patch("/sessions/{id}", wanderer.vienna().getId())
+                                .with(as(wanderer.member()))
+                                .with(json(Map.of("isPublic", false))))
+                .andExpect(okEnvelope());
 
         mvc.perform(get(RELATED, wanderer.vienna().getId()).with(as(me)))
                 .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, SESSION_NOT_FOUND));
@@ -190,13 +271,23 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     // ---------- GET /community/profiles/{id}/mindmaps ----------
 
     @Test
-    @DisplayName("프로필 마인드맵 탭: 고정 카드가 고정 순서로 먼저, 나머지는 최신순으로 오고 비공개 세션은 빠진다. URL_ONLY 면 제목 · 요약은 null")
+    @DisplayName(
+            "프로필 마인드맵 탭: 고정 카드가 고정 순서로 먼저, 나머지는 최신순으로 오고 비공개 세션은 빠진다. URL_ONLY 면 제목 · 요약은 null")
     void profileMindmaps() throws Exception {
         mvc.perform(get(MINDMAPS, wanderer.id()).with(as(me)))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(
-                        ids(wanderer.prague(), wanderer.cafe(), wanderer.nightjet(), wanderer.vienna()))))
-                .andExpect(jsonPath("$.data.mindmaps[*].isPinned").value(contains(true, true, true, false)))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[*].mindmapId")
+                                .value(
+                                        contains(
+                                                ids(
+                                                        wanderer.prague(),
+                                                        wanderer.cafe(),
+                                                        wanderer.nightjet(),
+                                                        wanderer.vienna()))))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[*].isPinned")
+                                .value(contains(true, true, true, false)))
                 .andExpect(jsonPath("$.data.hasNext").value(false))
                 .andExpect(jsonPath("$.data.mindmaps[0].owner.userId").value(wanderer.id()))
                 .andExpect(jsonPath("$.data.mindmaps[0].owner.nickname").value("wanderer"))
@@ -209,31 +300,47 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("프로필 마인드맵 탭 페이지: hasNext 로 다음 페이지를 알리고, 고정 뒤에서는 같은 시각이면 나중 세션이 먼저다")
     void profileMindmapsPaging() throws Exception {
-        BrowsingSession tie = publicSession(wanderer.member(), "같은 시각", "2026-04-20T23:05:00", "2026-04-20T23:32:00",
-                false, List.of("체코"));
+        BrowsingSession tie =
+                publicSession(
+                        wanderer.member(),
+                        "같은 시각",
+                        "2026-04-20T23:05:00",
+                        "2026-04-20T23:32:00",
+                        false,
+                        List.of("체코"));
 
         mvc.perform(get(MINDMAPS, wanderer.id()).param("page", "0").param("size", "2").with(as(me)))
-                .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(wanderer.prague(), wanderer.cafe()))))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[*].mindmapId")
+                                .value(contains(ids(wanderer.prague(), wanderer.cafe()))))
                 .andExpect(jsonPath("$.data.hasNext").value(true))
                 .andExpect(jsonPath("$.data.totalPages").value(3));
         mvc.perform(get(MINDMAPS, wanderer.id()).param("page", "1").param("size", "2").with(as(me)))
-                .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(wanderer.nightjet(), tie))))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[*].mindmapId")
+                                .value(contains(ids(wanderer.nightjet(), tie))))
                 .andExpect(jsonPath("$.data.hasNext").value(true));
         mvc.perform(get(MINDMAPS, wanderer.id()).param("page", "2").param("size", "2").with(as(me)))
-                .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(wanderer.vienna()))))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[*].mindmapId")
+                                .value(contains(ids(wanderer.vienna()))))
                 .andExpect(jsonPath("$.data.hasNext").value(false));
     }
 
     @Test
     @DisplayName("페이지 값이 범위를 벗어나면 400, 없거나 탈퇴한 회원의 마인드맵 탭은 404")
     void profileMindmapsErrors() throws Exception {
-        mvc.perform(get(MINDMAPS, wanderer.id()).param("page", "-1").with(as(me))).andExpect(status().isBadRequest());
-        mvc.perform(get(MINDMAPS, wanderer.id()).param("size", "0").with(as(me))).andExpect(status().isBadRequest());
-        mvc.perform(get(MINDMAPS, 999_999L).with(as(me))).andExpect(errorEnvelope(HttpStatus.NOT_FOUND, MEMBER_NOT_FOUND));
+        mvc.perform(get(MINDMAPS, wanderer.id()).param("page", "-1").with(as(me)))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get(MINDMAPS, wanderer.id()).param("size", "0").with(as(me)))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get(MINDMAPS, 999_999L).with(as(me)))
+                .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, MEMBER_NOT_FOUND));
 
         withdraw(wanderer.member());
 
-        mvc.perform(get(MINDMAPS, wanderer.id()).with(as(me))).andExpect(errorEnvelope(HttpStatus.NOT_FOUND, MEMBER_NOT_FOUND));
+        mvc.perform(get(MINDMAPS, wanderer.id()).with(as(me)))
+                .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, MEMBER_NOT_FOUND));
     }
 
     // ---------- GET /community/profiles/{id} ----------
@@ -248,9 +355,15 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.following").value(false))
                 .andExpect(jsonPath("$.data.exploringCount").value(0));
 
-        mvc.perform(patch("/community/me/profile").with(as(wanderer.member())).with(json(Map.of("bio", "느리게 걷는 사람"))))
+        mvc.perform(
+                        patch("/community/me/profile")
+                                .with(as(wanderer.member()))
+                                .with(json(Map.of("bio", "느리게 걷는 사람"))))
                 .andExpect(okEnvelope());
-        mvc.perform(patch("/community/profiles/{id}/follow", wanderer.id()).with(as(me)).with(json(Map.of("following", true))))
+        mvc.perform(
+                        patch("/community/profiles/{id}/follow", wanderer.id())
+                                .with(as(me))
+                                .with(json(Map.of("following", true))))
                 .andExpect(okEnvelope());
         showContent();
 
@@ -268,10 +381,28 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     void totalNodeCountCountsDistinctUrls() throws Exception {
         Member traveler = member("traveler");
         Source second = new Source("둘째", "https://prague.example.com/b", "발췌");
-        session(traveler, "첫 세션", "2026-04-20T10:00:00", "2026-04-20T11:00:00", 2, false, true,
-                List.of("여행", "체코"), List.of(LINK, second), "# 본문");
-        session(traveler, "둘째 세션", "2026-04-21T10:00:00", "2026-04-21T11:00:00", 1, false, true,
-                List.of("여행"), List.of(LINK), "# 본문");
+        session(
+                traveler,
+                "첫 세션",
+                "2026-04-20T10:00:00",
+                "2026-04-20T11:00:00",
+                2,
+                false,
+                true,
+                List.of("여행", "체코"),
+                List.of(LINK, second),
+                "# 본문");
+        session(
+                traveler,
+                "둘째 세션",
+                "2026-04-21T10:00:00",
+                "2026-04-21T11:00:00",
+                1,
+                false,
+                true,
+                List.of("여행"),
+                List.of(LINK),
+                "# 본문");
 
         // 고유 URL = a, b → 2. 여행 = {a, b} ∪ {a} → 2, 체코 = {a, b} → 2
         mvc.perform(get("/community/profiles/{id}", traveler.getId()).with(as(me)))
@@ -286,17 +417,49 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     @DisplayName("내용까지 공개면 노드 수는 AI 노드를 홈과 같은 키로 합친 수다: 공백 · 대소문자만 다르면 하나고 AI 결과 없는 세션은 0 이다")
     void totalNodeCountMergesAiKeywords() throws Exception {
         Member traveler = member("traveler");
-        BrowsingSession first = session(traveler, "첫 세션", "2026-04-20T10:00:00", "2026-04-20T11:00:00", 2, false, true,
-                List.of("여행"), List.of(LINK), "# 본문");
-        BrowsingSession second = session(traveler, "둘째 세션", "2026-04-21T10:00:00", "2026-04-21T11:00:00", 1, false, true,
-                List.of("여행", "맛집"), List.of(LINK), "# 본문");
-        session(traveler, "결과 없는 세션", "2026-04-22T10:00:00", "2026-04-22T11:00:00", 1, false, true,
-                List.of("여행"), List.of(new Source("셋째", "https://prague.example.com/c", "발췌")), "# 본문");
+        BrowsingSession first =
+                session(
+                        traveler,
+                        "첫 세션",
+                        "2026-04-20T10:00:00",
+                        "2026-04-20T11:00:00",
+                        2,
+                        false,
+                        true,
+                        List.of("여행"),
+                        List.of(LINK),
+                        "# 본문");
+        BrowsingSession second =
+                session(
+                        traveler,
+                        "둘째 세션",
+                        "2026-04-21T10:00:00",
+                        "2026-04-21T11:00:00",
+                        1,
+                        false,
+                        true,
+                        List.of("여행", "맛집"),
+                        List.of(LINK),
+                        "# 본문");
+        session(
+                traveler,
+                "결과 없는 세션",
+                "2026-04-22T10:00:00",
+                "2026-04-22T11:00:00",
+                1,
+                false,
+                true,
+                List.of("여행"),
+                List.of(new Source("셋째", "https://prague.example.com/c", "발췌")),
+                "# 본문");
         saveKeywords(first, "프라하 성", "카를교");
         saveKeywords(second, "프라하성", "카를 교", "맛집 지도");
         cardSync.sync(first);
         cardSync.sync(second);
-        mvc.perform(patch("/community/me/visibility").with(as(traveler)).with(json(Map.of("visibility", "CONTENT"))))
+        mvc.perform(
+                        patch("/community/me/visibility")
+                                .with(as(traveler))
+                                .with(json(Map.of("visibility", "CONTENT"))))
                 .andExpect(okEnvelope());
 
         // 고유 키 = 프라하성, 카를교, 맛집지도 → 3. 여행 = 3, 맛집 = 3. 카드는 0 + 3 + 2 = 5 라 합과 다르다
@@ -312,18 +475,51 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     @DisplayName("비공개 세션이 있으면 방문자의 노드 수가 작성자 본인의 노드 수보다 많을 수 없다")
     void visitorNeverSeesMoreNodesThanOwner() throws Exception {
         Member traveler = member("traveler");
-        BrowsingSession open = session(traveler, "공개 세션", "2026-04-20T10:00:00", "2026-04-20T11:00:00", 2, false, true,
-                List.of("여행"), List.of(LINK), "# 본문");
-        BrowsingSession alsoOpen = session(traveler, "또 공개 세션", "2026-04-21T10:00:00", "2026-04-21T11:00:00", 1, false, true,
-                List.of("여행"), List.of(LINK), "# 본문");
-        BrowsingSession closed = session(traveler, "비공개 세션", "2026-04-22T10:00:00", "2026-04-22T11:00:00", 1, false, false,
-                List.of("여행"), List.of(LINK), "# 본문");
+        BrowsingSession open =
+                session(
+                        traveler,
+                        "공개 세션",
+                        "2026-04-20T10:00:00",
+                        "2026-04-20T11:00:00",
+                        2,
+                        false,
+                        true,
+                        List.of("여행"),
+                        List.of(LINK),
+                        "# 본문");
+        BrowsingSession alsoOpen =
+                session(
+                        traveler,
+                        "또 공개 세션",
+                        "2026-04-21T10:00:00",
+                        "2026-04-21T11:00:00",
+                        1,
+                        false,
+                        true,
+                        List.of("여행"),
+                        List.of(LINK),
+                        "# 본문");
+        BrowsingSession closed =
+                session(
+                        traveler,
+                        "비공개 세션",
+                        "2026-04-22T10:00:00",
+                        "2026-04-22T11:00:00",
+                        1,
+                        false,
+                        false,
+                        List.of("여행"),
+                        List.of(LINK),
+                        "# 본문");
         saveKeywords(open, "프라하 성", "카를교");
         saveKeywords(alsoOpen, "프라하성", "카를교");
         saveKeywords(closed, "프라하성", "맛집");
         cardSync.sync(open);
         cardSync.sync(alsoOpen);
-        mvc.perform(patch("/community/me/visibility").with(as(traveler)).with(json(Map.of("visibility", "CONTENT"))))
+        mvc.perform(
+                        patch("/community/me/visibility")
+                                .with(as(traveler))
+                                .with(json(Map.of("visibility", "CONTENT"))))
                 .andExpect(okEnvelope());
 
         // 본인 = 프라하성, 카를교, 맛집 → 3. 방문자 = 공개 두 세션의 프라하성, 카를교 → 2 (카드 합이면 4 로 본인보다 많다)
@@ -342,34 +538,79 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
         Source c = new Source("c", "https://prague.example.com/c", "발췌");
         Source d = new Source("d", "https://prague.example.com/d", "발췌");
         Source e = new Source("e", "https://prague.example.com/e", "발췌");
-        session(traveler, "하나", "2026-04-20T10:00:00", "2026-04-20T11:00:00", 1, false, true,
-                List.of("겹침"), List.of(LINK, b), "# 본문");
-        session(traveler, "둘", "2026-04-21T10:00:00", "2026-04-21T11:00:00", 1, false, true,
-                List.of("겹침"), List.of(LINK, b), "# 본문");
-        session(traveler, "셋", "2026-04-22T10:00:00", "2026-04-22T11:00:00", 1, false, true,
-                List.of("넓음"), List.of(c, d, e), "# 본문");
-        session(traveler, "넷", "2026-04-23T10:00:00", "2026-04-23T11:00:00", 1, false, true,
-                List.of("Beta", "alpha", "다", "라"), List.of(LINK), "# 본문");
+        session(
+                traveler,
+                "하나",
+                "2026-04-20T10:00:00",
+                "2026-04-20T11:00:00",
+                1,
+                false,
+                true,
+                List.of("겹침"),
+                List.of(LINK, b),
+                "# 본문");
+        session(
+                traveler,
+                "둘",
+                "2026-04-21T10:00:00",
+                "2026-04-21T11:00:00",
+                1,
+                false,
+                true,
+                List.of("겹침"),
+                List.of(LINK, b),
+                "# 본문");
+        session(
+                traveler,
+                "셋",
+                "2026-04-22T10:00:00",
+                "2026-04-22T11:00:00",
+                1,
+                false,
+                true,
+                List.of("넓음"),
+                List.of(c, d, e),
+                "# 본문");
+        session(
+                traveler,
+                "넷",
+                "2026-04-23T10:00:00",
+                "2026-04-23T11:00:00",
+                1,
+                false,
+                true,
+                List.of("Beta", "alpha", "다", "라"),
+                List.of(LINK),
+                "# 본문");
 
         // 넓음 = c, d, e → 3 / 겹침 = a, b → 2 (세션마다 더하면 4 로 1등이 된다)
         // alpha · Beta · 다 · 라 = a → 1. 소문자 이름 순이고 라 는 여섯째라 빠진다
         mvc.perform(get("/community/profiles/{id}", traveler.getId()).with(as(me)))
-                .andExpect(jsonPath("$.data.topHashtags[*].name").value(contains("넓음", "겹침", "alpha", "Beta", "다")))
-                .andExpect(jsonPath("$.data.topHashtags[*].nodeCount").value(contains(3, 2, 1, 1, 1)));
+                .andExpect(
+                        jsonPath("$.data.topHashtags[*].name")
+                                .value(contains("넓음", "겹침", "alpha", "Beta", "다")))
+                .andExpect(
+                        jsonPath("$.data.topHashtags[*].nodeCount").value(contains(3, 2, 1, 1, 1)));
     }
 
     // 키워드만 있는 AI 마인드맵. 노드 id 는 세션 안에서만 쓴다
     private void saveKeywords(BrowsingSession session, String... keywords) {
         List<String> nodes = new ArrayList<>();
         for (int i = 0; i < keywords.length; i++) {
-            nodes.add("{\"id\": \"topic:%d\", \"type\": \"topic\", \"keyword\": \"%s\", \"score\": 0.5, \"childCount\": 0}"
-                    .formatted(i, keywords[i]));
+            nodes.add(
+                    "{\"id\": \"topic:%d\", \"type\": \"topic\", \"keyword\": \"%s\", \"score\": 0.5, \"childCount\": 0}"
+                            .formatted(i, keywords[i]));
         }
-        String mindmap = "{\"structureSource\": \"llm\", \"nodes\": [%s], \"edges\": []}"
-                .formatted(String.join(",", nodes));
+        String mindmap =
+                "{\"structureSource\": \"llm\", \"nodes\": [%s], \"edges\": []}"
+                        .formatted(String.join(",", nodes));
         results.saveAndFlush(new SessionResult(session.getId(), session.getUserId()));
-        jdbc.update("update session_results set mindmap = JSON '" + mindmap + "', selected_units = JSON '[]'"
-                + " where session_id = ?", session.getId());
+        jdbc.update(
+                "update session_results set mindmap = JSON '"
+                        + mindmap
+                        + "', selected_units = JSON '[]'"
+                        + " where session_id = ?",
+                session.getId());
     }
 
     @Test
@@ -390,9 +631,13 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     void withdrawnProfileIs404() throws Exception {
         withdraw(wanderer.member());
 
-        for (String path : List.of("/community/profiles/{id}", "/community/profiles/{id}/mindmap",
-                "/community/profiles/{id}/shared-sessions")) {
-            mvc.perform(get(path, wanderer.id()).with(as(me))).andExpect(errorEnvelope(HttpStatus.NOT_FOUND, MEMBER_NOT_FOUND));
+        for (String path :
+                List.of(
+                        "/community/profiles/{id}",
+                        "/community/profiles/{id}/mindmap",
+                        "/community/profiles/{id}/shared-sessions")) {
+            mvc.perform(get(path, wanderer.id()).with(as(me)))
+                    .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, MEMBER_NOT_FOUND));
         }
     }
 
@@ -401,15 +646,24 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     void bioRules() throws Exception {
         String bio = "가".repeat(120);
 
-        mvc.perform(patch("/community/me/profile").with(as(wanderer.member())).with(json(Map.of("bio", "  " + "소개  "))))
+        mvc.perform(
+                        patch("/community/me/profile")
+                                .with(as(wanderer.member()))
+                                .with(json(Map.of("bio", "  " + "소개  "))))
                 .andExpect(jsonPath("$.data.bio").value("소개"));
-        mvc.perform(patch("/community/me/profile").with(as(wanderer.member())).with(json(Map.of("bio", bio))))
+        mvc.perform(
+                        patch("/community/me/profile")
+                                .with(as(wanderer.member()))
+                                .with(json(Map.of("bio", bio))))
                 .andExpect(okEnvelope());
         mvc.perform(patch("/community/me/profile").with(as(wanderer.member())).with(json("{}")))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "소개를 입력해 주세요."));
         assertThat(communityProfiles.findById(wanderer.id()).orElseThrow().getBio()).isEqualTo(bio);
 
-        mvc.perform(delete("/settings/account").with(as(wanderer.member())).with(json(Map.of("confirmText", "WITHDRAW"))))
+        mvc.perform(
+                        delete("/settings/account")
+                                .with(as(wanderer.member()))
+                                .with(json(Map.of("confirmText", "WITHDRAW"))))
                 .andExpect(okEnvelope());
 
         assertThat(communityProfiles.findById(wanderer.id()).orElseThrow().getBio()).isNull();
@@ -433,8 +687,12 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.sessions[0].endedAt").value("2026-04-20T23:32:00"))
                 .andExpect(jsonPath("$.data.sessions[0].pageCount").value(6))
                 .andExpect(jsonPath("$.data.sessions[0].status").value("COMPLETED"));
-        mvc.perform(get("/community/profiles/{id}/shared-sessions/{sessionId}", wanderer.id(), wanderer.prague().getId())
-                        .with(as(me)))
+        mvc.perform(
+                        get(
+                                        "/community/profiles/{id}/shared-sessions/{sessionId}",
+                                        wanderer.id(),
+                                        wanderer.prague().getId())
+                                .with(as(me)))
                 .andExpect(jsonPath("$.data.startedAt").value("2026-04-20T23:05:00"))
                 .andExpect(jsonPath("$.data.status").value("COMPLETED"));
     }

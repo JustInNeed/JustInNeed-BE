@@ -10,8 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * refresh_tokens 테이블에 남은 만료 행을 주기적으로 삭제한다.
- * (만료 토큰은 JWT 검증 단계에서 이미 거부되므로 보안 목적이 아니라 테이블 비대화 방지 목적)
+ * refresh_tokens 테이블에 남은 만료 행을 주기적으로 삭제한다. (만료 토큰은 JWT 검증 단계에서 이미 거부되므로 보안 목적이 아니라 테이블 비대화 방지 목적)
  */
 @Component
 public class RefreshTokenCleanupScheduler {

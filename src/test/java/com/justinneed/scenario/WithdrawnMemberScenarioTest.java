@@ -30,8 +30,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 
 /**
- * 탈퇴한 회원: 본인 토큰은 기기와 상관없이 401 이고, 다른 사람 화면에서는 없는 회원으로 보인다.
- * 다른 기기 토큰이나 서버 재시작 등으로 무효화 목록에 없는 토큰도 인증 필터에서 막혀야 한다.
+ * 탈퇴한 회원: 본인 토큰은 기기와 상관없이 401 이고, 다른 사람 화면에서는 없는 회원으로 보인다. 다른 기기 토큰이나 서버 재시작 등으로 무효화 목록에 없는 토큰도 인증
+ * 필터에서 막혀야 한다.
  */
 @DisplayName("탈퇴한 회원")
 class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
@@ -40,8 +40,7 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
     private static final String PRAGUE_CASTLE = "https://www.hrad.cz/en/prague-castle-for-visitors";
     private static final String PRAGUE_EU = "https://www.prague.eu/en";
 
-    @Autowired
-    private TagGroupRepository tagGroups;
+    @Autowired private TagGroupRepository tagGroups;
 
     @Value("${app.jwt.secret}")
     private String jwtSecret;
@@ -55,14 +54,24 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
         me = member("sprout");
         wanderer = seedWanderer();
         foodtrip = member("foodtrip");
-        session(foodtrip, "파리 미식 지도", "2026-04-26T12:00:00", "2026-04-26T13:30:00", 20, false, true,
+        session(
+                foodtrip,
+                "파리 미식 지도",
+                "2026-04-26T12:00:00",
+                "2026-04-26T13:30:00",
+                20,
+                false,
+                true,
                 List.of("파리", "미슐랭"),
                 List.of(new Source("파리 관광청", "https://www.parisinfo.com/", "마레 지구 산책 코스.")),
                 "# 파리 미식");
     }
 
     private void withdraw(Member member) throws Exception {
-        mvc.perform(delete("/settings/account").with(as(member)).with(json(Map.of("confirmText", "WITHDRAW"))))
+        mvc.perform(
+                        delete("/settings/account")
+                                .with(as(member))
+                                .with(json(Map.of("confirmText", "WITHDRAW"))))
                 .andExpect(okEnvelope());
     }
 
@@ -80,9 +89,21 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
     }
 
     private Long saveBundle(List<Long> hashtagIds) throws Exception {
-        return readLong(mvc.perform(post("/community/bookmarks").with(as(me)).with(json(Map.of(
-                        "targetType", "HASHTAG", "targetIds", hashtagIds, "saveType", "HASHTAG_BUNDLE"))))
-                .andExpect(status().isCreated()), "$.data.bookmarkId");
+        return readLong(
+                mvc.perform(
+                                post("/community/bookmarks")
+                                        .with(as(me))
+                                        .with(
+                                                json(
+                                                        Map.of(
+                                                                "targetType",
+                                                                "HASHTAG",
+                                                                "targetIds",
+                                                                hashtagIds,
+                                                                "saveType",
+                                                                "HASHTAG_BUNDLE"))))
+                        .andExpect(status().isCreated()),
+                "$.data.bookmarkId");
     }
 
     @Test
@@ -93,8 +114,10 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
 
         mvc.perform(get("/members/me").with(bearerToken(freshToken)))
                 .andExpect(status().isUnauthorized());
-        mvc.perform(patch("/members/me/nickname").with(bearerToken(freshToken))
-                        .with(json(Map.of("nickname", "comeback"))))
+        mvc.perform(
+                        patch("/members/me/nickname")
+                                .with(bearerToken(freshToken))
+                                .with(json(Map.of("nickname", "comeback"))))
                 .andExpect(status().isUnauthorized());
         mvc.perform(get("/community/me/hashtags").with(bearerToken(freshToken)))
                 .andExpect(status().isUnauthorized());
@@ -105,21 +128,31 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
     void otherDeviceTokenIsRejectedAfterWithdrawal() throws Exception {
         String phone = otherDeviceToken(me);
         String web = jwt.createAccessToken(me.getId());
-        List<String> protectedPaths = List.of("/members/me", "/sessions", "/sessions/hashtags", "/tag-groups",
-                "/settings/integrations", "/settings/collection/excluded-urls");
+        List<String> protectedPaths =
+                List.of(
+                        "/members/me",
+                        "/sessions",
+                        "/sessions/hashtags",
+                        "/tag-groups",
+                        "/settings/integrations",
+                        "/settings/collection/excluded-urls");
         for (String path : protectedPaths) {
             mvc.perform(get(path).with(bearerToken(phone))).andExpect(okEnvelope());
         }
 
-        mvc.perform(delete("/settings/account").with(bearerToken(web))
-                        .with(json(Map.of("confirmText", "WITHDRAW"))))
+        mvc.perform(
+                        delete("/settings/account")
+                                .with(bearerToken(web))
+                                .with(json(Map.of("confirmText", "WITHDRAW"))))
                 .andExpect(okEnvelope());
 
         for (String path : protectedPaths) {
             mvc.perform(get(path).with(bearerToken(phone))).andExpect(status().isUnauthorized());
         }
-        mvc.perform(post("/tag-groups").with(bearerToken(phone))
-                        .with(json(Map.of("hashtags", List.of("로마")))))
+        mvc.perform(
+                        post("/tag-groups")
+                                .with(bearerToken(phone))
+                                .with(json(Map.of("hashtags", List.of("로마")))))
                 .andExpect(status().isUnauthorized());
         assertThat(tagGroups.findByUserIdOrderByPositionAscIdAsc(me.getId())).isEmpty();
     }
@@ -138,7 +171,8 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("탈퇴한 회원의 프로필 · 마인드맵 · 공유 세션 · 관심 해시태그 · 세션 상세를 열거나 좋아요를 누르면 404")
     void withdrawnProfileIsNotFound() throws Exception {
-        mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me))).andExpect(okEnvelope());
+        mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me)))
+                .andExpect(okEnvelope());
 
         withdraw(wanderer.member());
 
@@ -155,8 +189,10 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
         mvc.perform(get("/community/sessions/{id}", wanderer.prague().getId()).with(as(me)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false));
-        mvc.perform(patch("/community/profiles/{id}/like", wanderer.id()).with(as(me))
-                        .with(json(Map.of("liked", true))))
+        mvc.perform(
+                        patch("/community/profiles/{id}/like", wanderer.id())
+                                .with(as(me))
+                                .with(json(Map.of("liked", true))))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false));
     }
@@ -164,12 +200,19 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("탈퇴한 회원은 해시태그 검색(프로필 · 마인드맵)과 관심 해시태그 추천에 더 이상 안 나온다")
     void withdrawnMemberIsHiddenFromSearchAndRecommendations() throws Exception {
-        mvc.perform(post("/community/me/interests").with(as(me)).with(json(Map.of("hashtag", "프라하"))))
+        mvc.perform(
+                        post("/community/me/interests")
+                                .with(as(me))
+                                .with(json(Map.of("hashtag", "프라하"))))
                 .andExpect(status().isCreated());
         mvc.perform(get("/community/search/profiles").param("q", "프라하").with(as(me)))
-                .andExpect(jsonPath("$.data.profiles[*].userId").value(hasItem(wanderer.id().intValue())));
+                .andExpect(
+                        jsonPath("$.data.profiles[*].userId")
+                                .value(hasItem(wanderer.id().intValue())));
         mvc.perform(get("/community/recommendations/mindmaps/interests").with(as(me)))
-                .andExpect(jsonPath("$.data.mindmaps[*].owner.userId").value(everyItem(is(wanderer.id().intValue()))))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[*].owner.userId")
+                                .value(everyItem(is(wanderer.id().intValue()))))
                 .andExpect(jsonPath("$.data.mindmaps", hasSize(2)));
 
         withdraw(wanderer.member());
@@ -186,13 +229,17 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.mindmaps", hasSize(0)));
         // 다른 회원은 그대로 검색된다
         mvc.perform(get("/community/search/profiles").param("q", "미슐랭").with(as(me)))
-                .andExpect(jsonPath("$.data.profiles[*].userId").value(contains(ids(foodtrip.getId()))));
+                .andExpect(
+                        jsonPath("$.data.profiles[*].userId")
+                                .value(contains(ids(foodtrip.getId()))));
     }
 
     @Test
     @DisplayName("탈퇴한 회원의 해시태그는 내 해시태그 묶음 북마크 · 최근 저장 기반 추천에서 빠진다 (다 빠진 묶음은 목록에서 사라짐)")
     void withdrawnOwnersHashtagsDisappearFromBookmarks() throws Exception {
-        Long mixed = saveBundle(List.of(hashtagId(wanderer.member(), "프라하"), hashtagId(foodtrip, "미슐랭")));
+        Long mixed =
+                saveBundle(
+                        List.of(hashtagId(wanderer.member(), "프라하"), hashtagId(foodtrip, "미슐랭")));
         saveBundle(wanderer.member(), "비엔나");
         mvc.perform(get("/community/me/bookmarks/hashtag-bundles").with(as(me)))
                 .andExpect(jsonPath("$.data.bundles", hasSize(2)));
@@ -212,11 +259,28 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("탈퇴한 회원의 마인드맵에서 저장한 미니 마인드맵은 목록에서 빠지고, '원래 마인드맵에서 보기'는 sourceAvailable=false")
     void miniMindmapOfWithdrawnOwnerIsUnavailable() throws Exception {
-        List<Long> nodes = List.of(nodeId(me, wanderer.member(), PRAGUE_CASTLE), nodeId(me, wanderer.member(), PRAGUE_EU));
-        Long bookmarkId = readLong(mvc.perform(post("/community/bookmarks").with(as(me)).with(json(Map.of(
-                        "targetType", "NODE", "targetIds", nodes, "saveType", "MINI_MINDMAP",
-                        "sourceMindmapId", wanderer.id()))))
-                .andExpect(status().isCreated()), "$.data.bookmarkId");
+        List<Long> nodes =
+                List.of(
+                        nodeId(me, wanderer.member(), PRAGUE_CASTLE),
+                        nodeId(me, wanderer.member(), PRAGUE_EU));
+        Long bookmarkId =
+                readLong(
+                        mvc.perform(
+                                        post("/community/bookmarks")
+                                                .with(as(me))
+                                                .with(
+                                                        json(
+                                                                Map.of(
+                                                                        "targetType",
+                                                                        "NODE",
+                                                                        "targetIds",
+                                                                        nodes,
+                                                                        "saveType",
+                                                                        "MINI_MINDMAP",
+                                                                        "sourceMindmapId",
+                                                                        wanderer.id()))))
+                                .andExpect(status().isCreated()),
+                        "$.data.bookmarkId");
 
         withdraw(wanderer.member());
 

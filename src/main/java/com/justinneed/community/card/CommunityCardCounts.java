@@ -19,7 +19,9 @@ class CommunityCardCounts implements CardCounts {
     private final MindmapExplorationRepository explorations;
     private final CommunityBookmarkRepository bookmarks;
 
-    CommunityCardCounts(MindmapLikeRepository likes, MindmapExplorationRepository explorations,
+    CommunityCardCounts(
+            MindmapLikeRepository likes,
+            MindmapExplorationRepository explorations,
             CommunityBookmarkRepository bookmarks) {
         this.likes = likes;
         this.explorations = explorations;
@@ -40,14 +42,21 @@ class CommunityCardCounts implements CardCounts {
         if (viewerId != null) {
             liked.addAll(likes.findLikedSessions(viewerId, sessionIds));
             exploring.addAll(explorations.findExploringSessions(viewerId, sessionIds));
-            bookmarks.findCardBookmarks(viewerId, sessionIds)
+            bookmarks
+                    .findCardBookmarks(viewerId, sessionIds)
                     .forEach(mine -> bookmarkIds.put(mine.getSessionId(), mine.getBookmarkId()));
         }
         Map<Long, Count> counts = new HashMap<>();
         for (Long id : Set.copyOf(sessionIds)) {
-            counts.put(id, new Count(likeCounts.getOrDefault(id, 0L), liked.contains(id),
-                    bookmarkCounts.getOrDefault(id, 0L), bookmarkIds.get(id),
-                    exploringCounts.getOrDefault(id, 0L), exploring.contains(id)));
+            counts.put(
+                    id,
+                    new Count(
+                            likeCounts.getOrDefault(id, 0L),
+                            liked.contains(id),
+                            bookmarkCounts.getOrDefault(id, 0L),
+                            bookmarkIds.get(id),
+                            exploringCounts.getOrDefault(id, 0L),
+                            exploring.contains(id)));
         }
         return counts;
     }

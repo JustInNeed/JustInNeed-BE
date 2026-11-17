@@ -15,30 +15,40 @@ import java.util.regex.Pattern;
  * <p>LLM 없이 도메인 규칙으로만 분류한다. 도메인 목록은 {@link SiteCategoryDomains} 참고.
  *
  * <p>규칙 우선순위 (먼저 일치하는 규칙이 이긴다)
+ *
  * <ol>
- *     <li>도메인 규칙: host 가 도메인과 같거나 그 서브도메인이면 일치. 여러 도메인이 일치하면 가장 긴(구체적인) 도메인이 이긴다.
- *         예) {@code n.news.naver.com} → {@code news.naver.com}(뉴스), {@code mlbpark.donga.com}(커뮤니티) &gt; {@code donga.com}(뉴스)</li>
- *     <li>접두사 규칙: host 맨 앞 라벨. 예) {@code docs.}, {@code developer.} → 공식문서, {@code blog.} → 블로그</li>
- *     <li>접미사 규칙: 예) {@code .go.kr}, {@code .ac.kr}, {@code .edu}, {@code .gov} → 공식문서</li>
- *     <li>어디에도 해당하지 않으면 기타. null / 파싱 불가 URL 도 기타.</li>
+ *   <li>도메인 규칙: host 가 도메인과 같거나 그 서브도메인이면 일치. 여러 도메인이 일치하면 가장 긴(구체적인) 도메인이 이긴다. 예) {@code
+ *       n.news.naver.com} → {@code news.naver.com}(뉴스), {@code mlbpark.donga.com}(커뮤니티) &gt; {@code
+ *       donga.com}(뉴스)
+ *   <li>접두사 규칙: host 맨 앞 라벨. 예) {@code docs.}, {@code developer.} → 공식문서, {@code blog.} → 블로그
+ *   <li>접미사 규칙: 예) {@code .go.kr}, {@code .ac.kr}, {@code .edu}, {@code .gov} → 공식문서
+ *   <li>어디에도 해당하지 않으면 기타. null / 파싱 불가 URL 도 기타.
  * </ol>
  *
- * <p>host 는 소문자로 바꾸고 {@code www.} 와 포트를 제거한 뒤 비교한다.
- * {@code naver.com}, {@code daum.net} 자체는 어떤 목록에도 없으므로 블로그/뉴스/카페 등 서브도메인 외의 페이지(검색, 메인 등)는 기타가 된다.
+ * <p>host 는 소문자로 바꾸고 {@code www.} 와 포트를 제거한 뒤 비교한다. {@code naver.com}, {@code daum.net} 자체는 어떤 목록에도
+ * 없으므로 블로그/뉴스/카페 등 서브도메인 외의 페이지(검색, 메인 등)는 기타가 된다.
  *
  * <p>TODO: 추후 기타 비율이 너무 높아지면, 알 수 없는 도메인마다 LLM 에 한 번 물어보고 결과를 도메인 단위로 캐싱하는 방식을 검토한다. (현재 미구현)
  */
 public enum SiteCategory {
     BLOG("블로그", SiteCategoryDomains.BLOG_DOMAINS, SiteCategoryDomains.BLOG_PREFIXES, List.of()),
-    OFFICIAL_DOCS("공식문서", SiteCategoryDomains.OFFICIAL_DOCS_DOMAINS, SiteCategoryDomains.OFFICIAL_DOCS_PREFIXES,
+    OFFICIAL_DOCS(
+            "공식문서",
+            SiteCategoryDomains.OFFICIAL_DOCS_DOMAINS,
+            SiteCategoryDomains.OFFICIAL_DOCS_PREFIXES,
             SiteCategoryDomains.OFFICIAL_DOCS_SUFFIXES),
-    COMMUNITY("커뮤니티", SiteCategoryDomains.COMMUNITY_DOMAINS, SiteCategoryDomains.COMMUNITY_PREFIXES, List.of()),
+    COMMUNITY(
+            "커뮤니티",
+            SiteCategoryDomains.COMMUNITY_DOMAINS,
+            SiteCategoryDomains.COMMUNITY_PREFIXES,
+            List.of()),
     NEWS("뉴스", SiteCategoryDomains.NEWS_DOMAINS, SiteCategoryDomains.NEWS_PREFIXES, List.of()),
     ETC("기타", SiteCategoryDomains.ETC_DOMAINS, List.of(), List.of());
 
     private static final String WWW_PREFIX = "www.";
     private static final Pattern SCHEME = Pattern.compile("^[a-zA-Z][a-zA-Z0-9+.-]*://");
-    private static final Pattern AFTER_AUTHORITY = Pattern.compile("^([a-zA-Z][a-zA-Z0-9+.-]*://[^/?#]*).*$", Pattern.DOTALL);
+    private static final Pattern AFTER_AUTHORITY =
+            Pattern.compile("^([a-zA-Z][a-zA-Z0-9+.-]*://[^/?#]*).*$", Pattern.DOTALL);
     private static final Map<String, SiteCategory> DOMAIN_INDEX = buildDomainIndex();
 
     private final String displayName;
@@ -46,7 +56,11 @@ public enum SiteCategory {
     private final List<String> hostPrefixes;
     private final List<String> hostSuffixes;
 
-    SiteCategory(String displayName, List<String> domains, List<String> hostPrefixes, List<String> hostSuffixes) {
+    SiteCategory(
+            String displayName,
+            List<String> domains,
+            List<String> hostPrefixes,
+            List<String> hostSuffixes) {
         this.displayName = displayName;
         this.domains = domains;
         this.hostPrefixes = hostPrefixes;
@@ -54,14 +68,10 @@ public enum SiteCategory {
     }
 
     public static SiteCategory classify(String url) {
-        return extractHost(url)
-                .map(SiteCategory::classifyHost)
-                .orElse(ETC);
+        return extractHost(url).map(SiteCategory::classifyHost).orElse(ETC);
     }
 
-    /**
-     * URL 에서 비교용 host 를 꺼낸다. (소문자, {@code www.} / 포트 / 끝의 점 제거) 파싱할 수 없으면 empty.
-     */
+    /** URL 에서 비교용 host 를 꺼낸다. (소문자, {@code www.} / 포트 / 끝의 점 제거) 파싱할 수 없으면 empty. */
     public static Optional<String> extractHost(String url) {
         if (url == null || url.isBlank()) {
             return Optional.empty();
@@ -93,9 +103,7 @@ public enum SiteCategory {
         return host.isEmpty() ? Optional.empty() : Optional.of(host);
     }
 
-    /**
-     * 밑줄 등이 섞여 {@link URI#getHost()} 가 null 인 경우 authority 에서 직접 host 를 꺼낸다.
-     */
+    /** 밑줄 등이 섞여 {@link URI#getHost()} 가 null 인 경우 authority 에서 직접 host 를 꺼낸다. */
     private static String hostFromAuthority(String authority) {
         if (authority == null) {
             return null;
@@ -140,7 +148,13 @@ public enum SiteCategory {
                 SiteCategory previous = index.putIfAbsent(domain, category);
                 if (previous != null) {
                     throw new IllegalStateException(
-                            "중복된 사이트 카테고리 도메인: " + domain + " (" + previous + ", " + category + ")");
+                            "중복된 사이트 카테고리 도메인: "
+                                    + domain
+                                    + " ("
+                                    + previous
+                                    + ", "
+                                    + category
+                                    + ")");
                 }
             }
         }

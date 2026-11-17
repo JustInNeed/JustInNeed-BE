@@ -18,7 +18,8 @@ public class InterestService {
     private final CommunitySharing sharing;
     private final CommunityTags tags;
 
-    public InterestService(CommunityProfiles profiles, CommunitySharing sharing, CommunityTags tags) {
+    public InterestService(
+            CommunityProfiles profiles, CommunitySharing sharing, CommunityTags tags) {
         this.profiles = profiles;
         this.sharing = sharing;
         this.tags = tags;
@@ -27,7 +28,8 @@ public class InterestService {
     public List<String> get(Long userId, Long viewerId) {
         var profile = profiles.read(userId);
         return profile.getInterests().stream()
-                .filter(tag -> userId.equals(viewerId) || !sharing.isHidden(profile, tag)).toList();
+                .filter(tag -> userId.equals(viewerId) || !sharing.isHidden(profile, tag))
+                .toList();
     }
 
     @Transactional

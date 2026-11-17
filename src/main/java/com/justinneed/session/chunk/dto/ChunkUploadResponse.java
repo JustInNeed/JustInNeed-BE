@@ -9,12 +9,15 @@ public record ChunkUploadResponse(
         boolean duplicate,
         // 지운 세션의 청크라 저장하지 않음 (200 으로 답해 확장이 재전송을 멈추게 한다)
         boolean ignored,
-        LocalDateTime receivedAt
-) {
+        LocalDateTime receivedAt) {
 
     public static ChunkUploadResponse of(SessionRawChunk chunk, boolean duplicate) {
-        return new ChunkUploadResponse(chunk.getCollectorSessionId(), chunk.getN(),
-                duplicate, false, chunk.getReceivedAt());
+        return new ChunkUploadResponse(
+                chunk.getCollectorSessionId(),
+                chunk.getN(),
+                duplicate,
+                false,
+                chunk.getReceivedAt());
     }
 
     public static ChunkUploadResponse ignored(String sessionId, int n, LocalDateTime receivedAt) {

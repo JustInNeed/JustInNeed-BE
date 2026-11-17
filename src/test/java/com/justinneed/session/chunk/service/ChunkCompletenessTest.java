@@ -23,8 +23,15 @@ class ChunkCompletenessTest {
         return chunk(USER, SESSION, n, from, to, last, last ? n : null, USER);
     }
 
-    private static SessionRawChunk chunk(Long user, String session, int n, int from, int to,
-                                         boolean last, Integer maxN, Long memberId) {
+    private static SessionRawChunk chunk(
+            Long user,
+            String session,
+            int n,
+            int from,
+            int to,
+            boolean last,
+            Integer maxN,
+            Long memberId) {
         var records = new ArrayList<Map<String, Object>>();
         for (int s = from; s <= to; s++) {
             records.add(Map.of("seq", s, "k", "flush"));
@@ -35,13 +42,19 @@ class ChunkCompletenessTest {
         payload.put("fromSeq", records.isEmpty() ? null : from);
         payload.put("toSeq", records.isEmpty() ? null : to);
         payload.put("records", records);
-        return new SessionRawChunk(user, session, n, last, maxN, last ? "user" : null, payload, LocalDateTime.now());
+        return new SessionRawChunk(
+                user, session, n, last, maxN, last ? "user" : null, payload, LocalDateTime.now());
     }
 
     @Test
     @DisplayName("final 이 오고 1..maxN 이 다 있고 seq 가 이어지면 COMPLETE (순서가 섞여 와도)")
     void complete() {
-        var r = ChunkCompleteness.check(List.of(chunk(3, 20, 29, true), chunk(1, 0, 9, false), chunk(2, 10, 19, false)));
+        var r =
+                ChunkCompleteness.check(
+                        List.of(
+                                chunk(3, 20, 29, true),
+                                chunk(1, 0, 9, false),
+                                chunk(2, 10, 19, false)));
         assertThat(r.state()).isEqualTo(State.COMPLETE);
         assertThat(r.maxN()).isEqualTo(3);
         assertThat(r.missing()).isEmpty();
@@ -65,7 +78,12 @@ class ChunkCompletenessTest {
     @Test
     @DisplayName("빈 번호가 있으면 WAITING 과 빈 번호 — seq 끊김은 모순으로 치지 않는다")
     void missingMiddle() {
-        var r = ChunkCompleteness.check(List.of(chunk(1, 0, 9, false), chunk(4, 30, 39, true), chunk(2, 10, 19, false)));
+        var r =
+                ChunkCompleteness.check(
+                        List.of(
+                                chunk(1, 0, 9, false),
+                                chunk(4, 30, 39, true),
+                                chunk(2, 10, 19, false)));
         assertThat(r.state()).isEqualTo(State.WAITING);
         assertThat(r.missing()).containsExactly(3);
         assertThat(r.problems()).isEmpty();
@@ -97,8 +115,16 @@ class ChunkCompletenessTest {
     @Test
     @DisplayName("final 이 둘이거나, final 뒤에 번호가 있거나, maxN ≠ n 이면 BROKEN")
     void finalContradictions() {
-        assertThat(ChunkCompleteness.check(List.of(chunk(1, 0, 9, true), chunk(2, 10, 19, true))).state()).isEqualTo(State.BROKEN);
-        assertThat(ChunkCompleteness.check(List.of(chunk(1, 0, 9, true), chunk(2, 10, 19, false))).state()).isEqualTo(State.BROKEN);
+        assertThat(
+                        ChunkCompleteness.check(
+                                        List.of(chunk(1, 0, 9, true), chunk(2, 10, 19, true)))
+                                .state())
+                .isEqualTo(State.BROKEN);
+        assertThat(
+                        ChunkCompleteness.check(
+                                        List.of(chunk(1, 0, 9, true), chunk(2, 10, 19, false)))
+                                .state())
+                .isEqualTo(State.BROKEN);
         var wrongMax = chunk(USER, SESSION, 2, 10, 19, true, 5, USER);
         assertThat(ChunkCompleteness.check(List.of(chunk(1, 0, 9, false), wrongMax)).problems())
                 .anyMatch(p -> p.contains("maxN 5 ≠ n 2"));
@@ -108,7 +134,8 @@ class ChunkCompletenessTest {
     @DisplayName("memberId 가 저장 회원과 다르거나, 회원 · 세션이 섞이면 BROKEN")
     void memberAndSessionMix() {
         var otherMember = chunk(USER, SESSION, 2, 10, 19, true, 2, 9L);
-        assertThat(ChunkCompleteness.check(List.of(chunk(1, 0, 9, false), otherMember)).state()).isEqualTo(State.BROKEN);
+        assertThat(ChunkCompleteness.check(List.of(chunk(1, 0, 9, false), otherMember)).state())
+                .isEqualTo(State.BROKEN);
         var otherSession = chunk(USER, "s-2", 2, 10, 19, true, 2, USER);
         assertThat(ChunkCompleteness.check(List.of(chunk(1, 0, 9, false), otherSession)).problems())
                 .anyMatch(p -> p.contains("세션 id 가 2개"));

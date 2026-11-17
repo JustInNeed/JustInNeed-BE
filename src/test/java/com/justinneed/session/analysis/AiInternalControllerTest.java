@@ -44,25 +44,20 @@ class AiInternalControllerTest {
     // 다른 테스트가 커밋한 user_id=1 행과 섞이지 않게 쓴다
     private static final Long USER_ID = 7001L;
     private static final Long OTHER_USER_ID = 7002L;
-    private static final Map<String, Object> RAW = Map.of("kind", "rbc-session", "pages", List.of());
+    private static final Map<String, Object> RAW =
+            Map.of("kind", "rbc-session", "pages", List.of());
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
 
-    @Autowired
-    private BrowsingSessionRepository sessionRepository;
+    @Autowired private BrowsingSessionRepository sessionRepository;
 
-    @Autowired
-    private SessionRawPayloadRepository rawRepository;
+    @Autowired private SessionRawPayloadRepository rawRepository;
 
-    @Autowired
-    private SessionResultRepository resultRepository;
+    @Autowired private SessionResultRepository resultRepository;
 
-    @Autowired
-    private AiClusterModelRepository modelRepository;
+    @Autowired private AiClusterModelRepository modelRepository;
 
-    @Autowired
-    private SessionCollectionRepository collectionRepository;
+    @Autowired private SessionCollectionRepository collectionRepository;
 
     private Long sessionId;
 
@@ -79,7 +74,9 @@ class AiInternalControllerTest {
         for (String path : List.of("input", "history")) {
             mockMvc.perform(get("/internal/ai/sessions/{id}/" + path, sessionId))
                     .andExpect(status().isUnauthorized());
-            mockMvc.perform(get("/internal/ai/sessions/{id}/" + path, sessionId).header(AiInternalToken.HEADER, "wrong"))
+            mockMvc.perform(
+                            get("/internal/ai/sessions/{id}/" + path, sessionId)
+                                    .header(AiInternalToken.HEADER, "wrong"))
                     .andExpect(status().isUnauthorized());
         }
 
@@ -89,7 +86,13 @@ class AiInternalControllerTest {
     @Test
     @DisplayName("input 은 공통 envelope 의 data 로 원본 · 사용자 · 이전 세션 수 · 모델을 주고, 호출 시각을 남긴다")
     void inputShape() throws Exception {
-        modelRepository.save(new AiClusterModel(ClusterModelScope.USER, USER_ID, Map.of("scope", "user"), 12, LocalDateTime.now()));
+        modelRepository.save(
+                new AiClusterModel(
+                        ClusterModelScope.USER,
+                        USER_ID,
+                        Map.of("scope", "user"),
+                        12,
+                        LocalDateTime.now()));
         LocalDateTime before = LocalDateTime.now().minusSeconds(1);
 
         mockMvc.perform(input(sessionId))
@@ -132,8 +135,12 @@ class AiInternalControllerTest {
     @Test
     @DisplayName("ANALYZING 이 아니면 409, 시각을 남기지 않는다")
     void notAnalyzing() throws Exception {
-        for (SessionStatus status : List.of(SessionStatus.COLLECTING, SessionStatus.READY, SessionStatus.COMPLETED,
-                SessionStatus.FAILED)) {
+        for (SessionStatus status :
+                List.of(
+                        SessionStatus.COLLECTING,
+                        SessionStatus.READY,
+                        SessionStatus.COMPLETED,
+                        SessionStatus.FAILED)) {
             Long id = session(USER_ID, status).getId();
             rawRepository.save(new SessionRawPayload(id, USER_ID, RAW, LocalDateTime.now()));
 
@@ -166,7 +173,8 @@ class AiInternalControllerTest {
 
         mockMvc.perform(input(sessionId)).andExpect(status().isNotFound());
 
-        assertThat(sessionRepository.findById(sessionId).orElseThrow().getStatus()).isEqualTo(SessionStatus.FAILED);
+        assertThat(sessionRepository.findById(sessionId).orElseThrow().getStatus())
+                .isEqualTo(SessionStatus.FAILED);
         assertThat(collection().getFailedAt()).isNotNull();
         assertThat(collection().getInputFetchedAt()).isNull();
     }
@@ -175,17 +183,25 @@ class AiInternalControllerTest {
     @DisplayName("history 는 이전 세션 유닛 피처를 주고 현재 세션 · 지운 세션 · 다른 사용자의 값은 뺀다")
     void historyShape() throws Exception {
         result(sessionId, USER_ID, List.of(Map.of("x", "current")));
-        result(session(USER_ID, SessionStatus.COMPLETED).getId(), USER_ID,
+        result(
+                session(USER_ID, SessionStatus.COMPLETED).getId(),
+                USER_ID,
                 List.of(Map.of("x", "prev-1"), Map.of("x", "prev-2")));
         BrowsingSession deleted = session(USER_ID, SessionStatus.COMPLETED);
         result(deleted.getId(), USER_ID, List.of(Map.of("x", "deleted")));
         deleted.delete();
-        result(session(OTHER_USER_ID, SessionStatus.COMPLETED).getId(), OTHER_USER_ID, List.of(Map.of("x", "other")));
+        result(
+                session(OTHER_USER_ID, SessionStatus.COMPLETED).getId(),
+                OTHER_USER_ID,
+                List.of(Map.of("x", "other")));
 
         mockMvc.perform(history(sessionId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.unitFeatures[*].x", containsInAnyOrder("prev-1", "prev-2")));
+                .andExpect(
+                        jsonPath(
+                                "$.data.unitFeatures[*].x",
+                                containsInAnyOrder("prev-1", "prev-2")));
     }
 
     @Test
@@ -209,21 +225,22 @@ class AiInternalControllerTest {
     }
 
     private BrowsingSession session(Long userId, SessionStatus status) {
-        BrowsingSession session = new BrowsingSession(userId, "세션", LocalDateTime.of(2026, 10, 30, 10, 0));
+        BrowsingSession session =
+                new BrowsingSession(userId, "세션", LocalDateTime.of(2026, 10, 30, 10, 0));
         switch (status) {
             case READY -> session.markReady();
             case ANALYZING -> session.startAnalysis(LocalDateTime.of(2026, 10, 30, 10, 30));
             case COMPLETED -> session.complete(LocalDateTime.of(2026, 10, 30, 10, 30), 1);
             case FAILED -> session.failAnalysis();
-            default -> {
-            }
+            default -> {}
         }
         return sessionRepository.saveAndFlush(session);
     }
 
     private void result(Long id, Long userId, List<Map<String, Object>> unitFeatures) {
         SessionResult result = new SessionResult(id, userId);
-        result.replace(null, List.of(), List.of(), Map.of(), List.of(), unitFeatures, "global", "C");
+        result.replace(
+                null, List.of(), List.of(), Map.of(), List.of(), unitFeatures, "global", "C");
         resultRepository.saveAndFlush(result);
     }
 }

@@ -11,14 +11,13 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 /**
- * 확장이 보낸 청크를 합친 세션 원본 (수집기 stepC json 형식, 세션당 1행).
- * 분석 화면은 원본이 아니라 AI 결과로 집계하므로, 원본은 분석 완료 또는 실패 후 21일만 보관한다.
+ * 확장이 보낸 청크를 합친 세션 원본 (수집기 stepC json 형식, 세션당 1행). 분석 화면은 원본이 아니라 AI 결과로 집계하므로, 원본은 분석 완료 또는 실패 후
+ * 21일만 보관한다.
  */
 @Entity
 @Table(
         name = "session_raw_payloads",
-        indexes = @Index(name = "idx_session_raw_payloads_expires", columnList = "expires_at")
-)
+        indexes = @Index(name = "idx_session_raw_payloads_expires", columnList = "expires_at"))
 public class SessionRawPayload {
 
     public static final int RETENTION_DAYS = 21;
@@ -41,10 +40,10 @@ public class SessionRawPayload {
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 
-    protected SessionRawPayload() {
-    }
+    protected SessionRawPayload() {}
 
-    public SessionRawPayload(Long sessionId, Long userId, Map<String, Object> payload, LocalDateTime receivedAt) {
+    public SessionRawPayload(
+            Long sessionId, Long userId, Map<String, Object> payload, LocalDateTime receivedAt) {
         this.sessionId = sessionId;
         this.userId = userId;
         this.payload = payload;

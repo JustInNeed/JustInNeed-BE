@@ -32,8 +32,7 @@ public class MemberController {
     @PatchMapping("/me/nickname")
     public ApiResponse<MemberResponse> updateNickname(
             @AuthenticationPrincipal Long memberId,
-            @Valid @RequestBody NicknameUpdateRequest request
-    ) {
+            @Valid @RequestBody NicknameUpdateRequest request) {
         return ApiResponse.ok(memberService.updateNickname(memberId, request.nickname()));
     }
 
@@ -41,8 +40,8 @@ public class MemberController {
     @GetMapping("/nickname/available")
     public ApiResponse<NicknameAvailabilityResponse> checkNicknameAvailability(
             @AuthenticationPrincipal Long memberId,
-            @Valid @ModelAttribute NicknameUpdateRequest request
-    ) {
-        return ApiResponse.ok(memberService.checkNicknameAvailability(memberId, request.nickname()));
+            @Valid @ModelAttribute NicknameUpdateRequest request) {
+        return ApiResponse.ok(
+                memberService.checkNicknameAvailability(memberId, request.nickname()));
     }
 }

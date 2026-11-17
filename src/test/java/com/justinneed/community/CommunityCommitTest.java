@@ -2,6 +2,7 @@ package com.justinneed.community;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+
 import com.justinneed.auth.domain.Member;
 import com.justinneed.auth.domain.SocialProvider;
 import com.justinneed.auth.repository.MemberRepository;
@@ -33,7 +34,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.transaction.support.TransactionTemplate;
 
-@SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:community_committed;MODE=PostgreSQL;LOCK_TIMEOUT=10000")
+@SpringBootTest(
+        properties =
+                "spring.datasource.url=jdbc:h2:mem:community_committed;MODE=PostgreSQL;LOCK_TIMEOUT=10000")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class CommunityCommitTest {
     @Autowired MemberRepository members;
@@ -59,13 +62,23 @@ class CommunityCommitTest {
         var ready = new CountDownLatch(2);
         var start = new CountDownLatch(1);
         try {
-            Callable<Long> save = () -> {
-                ready.countDown();
-                if (!start.await(5, TimeUnit.SECONDS)) throw new IllegalStateException("Start timeout");
-                interactions.like(actor, owner, true);
-                interactions.exploring(actor, TargetType.NODE, node, true);
-                return bookmarks.save(actor, TargetType.NODE, List.of(node), SaveType.MINI_MINDMAP, owner, null).bookmarkId();
-            };
+            Callable<Long> save =
+                    () -> {
+                        ready.countDown();
+                        if (!start.await(5, TimeUnit.SECONDS))
+                            throw new IllegalStateException("Start timeout");
+                        interactions.like(actor, owner, true);
+                        interactions.exploring(actor, TargetType.NODE, node, true);
+                        return bookmarks
+                                .save(
+                                        actor,
+                                        TargetType.NODE,
+                                        List.of(node),
+                                        SaveType.MINI_MINDMAP,
+                                        owner,
+                                        null)
+                                .bookmarkId();
+                    };
             var first = pool.submit(save);
             var second = pool.submit(save);
             assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
@@ -73,29 +86,46 @@ class CommunityCommitTest {
             Long id = first.get(20, TimeUnit.SECONDS);
             assertThat(second.get(20, TimeUnit.SECONDS)).isEqualTo(id);
             assertThat(graphs.profile(owner, actor).likeCount()).isEqualTo(1);
-            assertThat(interactions.status(actor, TargetType.NODE, node).exploringCount()).isEqualTo(1);
+            assertThat(interactions.status(actor, TargetType.NODE, node).exploringCount())
+                    .isEqualTo(1);
             var snapshot = queries.mindmaps(actor, 0, 10).mindmaps().get(0);
             assertThat(snapshot.nodes()).hasSize(1);
             assertThat(snapshot.hashtags()).hasSize(1);
             assertThat(snapshot.edges()).hasSize(1);
             assertThat(snapshot.nodes().get(0).content()).isNull();
 
-            new TransactionTemplate(manager).executeWithoutResult(status -> sessions.findById(s).orElseThrow()
-                    .update(null, null, false, null, null));
-            assertThat(interactions.exploring(actor, TargetType.NODE, node, false).exploring()).isFalse();
+            new TransactionTemplate(manager)
+                    .executeWithoutResult(
+                            status ->
+                                    sessions.findById(s)
+                                            .orElseThrow()
+                                            .update(null, null, false, null, null));
+            assertThat(interactions.exploring(actor, TargetType.NODE, node, false).exploring())
+                    .isFalse();
             assertThat(graphs.original(actor, id).highlightedNodeIds()).isEmpty();
             // 원본이 비공개면 북마크는 숨겨지고 행은 남는다. 다시 공개하면 같은 스냅샷이 돌아온다
             assertThat(queries.mindmaps(actor, 0, 10).mindmaps()).isEmpty();
             assertThat(bookmarkRows.findById(id)).isPresent();
-            new TransactionTemplate(manager).executeWithoutResult(status -> sessions.findById(s).orElseThrow()
-                    .update(null, null, true, null, null));
+            new TransactionTemplate(manager)
+                    .executeWithoutResult(
+                            status ->
+                                    sessions.findById(s)
+                                            .orElseThrow()
+                                            .update(null, null, true, null, null));
             assertThat(queries.mindmaps(actor, 0, 10).mindmaps().get(0)).isEqualTo(snapshot);
-            new TransactionTemplate(manager).executeWithoutResult(status -> sessions.findById(s).orElseThrow()
-                    .update(null, null, false, null, null));
+            new TransactionTemplate(manager)
+                    .executeWithoutResult(
+                            status ->
+                                    sessions.findById(s)
+                                            .orElseThrow()
+                                            .update(null, null, false, null, null));
             assertThat(trending.trending(TrendingService.Period.TODAY, 10).hashtags()).isEmpty();
             bookmarks.delete(actor, id);
             assertThat(bookmarkRows.findById(id)).isEmpty();
-        } finally { start.countDown(); pool.shutdownNow(); }
+        } finally {
+            start.countDown();
+            pool.shutdownNow();
+        }
     }
 
     @Test
@@ -109,18 +139,37 @@ class CommunityCommitTest {
         var pool = Executors.newFixedThreadPool(2);
         var start = new CountDownLatch(1);
         try {
-            var a = pool.submit(() -> {
-                start.await();
-                return bookmarks.save(left, TargetType.NODE, List.of(rightNode), SaveType.MINI_MINDMAP, right, null);
-            });
-            var b = pool.submit(() -> {
-                start.await();
-                return bookmarks.save(right, TargetType.NODE, List.of(leftNode), SaveType.MINI_MINDMAP, left, null);
-            });
+            var a =
+                    pool.submit(
+                            () -> {
+                                start.await();
+                                return bookmarks.save(
+                                        left,
+                                        TargetType.NODE,
+                                        List.of(rightNode),
+                                        SaveType.MINI_MINDMAP,
+                                        right,
+                                        null);
+                            });
+            var b =
+                    pool.submit(
+                            () -> {
+                                start.await();
+                                return bookmarks.save(
+                                        right,
+                                        TargetType.NODE,
+                                        List.of(leftNode),
+                                        SaveType.MINI_MINDMAP,
+                                        left,
+                                        null);
+                            });
             start.countDown();
             assertThat(a.get(20, TimeUnit.SECONDS).bookmarkId()).isNotNull();
             assertThat(b.get(20, TimeUnit.SECONDS).bookmarkId()).isNotNull();
-        } finally { start.countDown(); pool.shutdownNow(); }
+        } finally {
+            start.countDown();
+            pool.shutdownNow();
+        }
     }
 
     @Test
@@ -131,7 +180,8 @@ class CommunityCommitTest {
         var node = graphs.graph(owner, null).nodes().get(0).nodeId();
         interactions.exploring(actor, TargetType.NODE, node, true);
         members.deleteById(owner);
-        assertThatCode(() -> trending.trending(TrendingService.Period.TODAY, 10)).doesNotThrowAnyException();
+        assertThatCode(() -> trending.trending(TrendingService.Period.TODAY, 10))
+                .doesNotThrowAnyException();
     }
 
     @Test
@@ -142,23 +192,34 @@ class CommunityCommitTest {
         try {
             var saves = new ArrayList<Future<?>>();
             for (int i = 0; i < 4; i++) {
-                saves.add(pool.submit(() -> {
-                    start.await();
-                    communityTags.ensure(owner, List.of("Same", "other"));
-                    return null;
-                }));
+                saves.add(
+                        pool.submit(
+                                () -> {
+                                    start.await();
+                                    communityTags.ensure(owner, List.of("Same", "other"));
+                                    return null;
+                                }));
             }
             start.countDown();
             for (var save : saves) save.get(20, TimeUnit.SECONDS);
             assertThat(communityTags.index(owner)).containsOnlyKeys("same", "other");
-        } finally { start.countDown(); pool.shutdownNow(); }
+        } finally {
+            start.countDown();
+            pool.shutdownNow();
+        }
     }
 
     private Long member() {
-        return members.saveAndFlush(new Member(SocialProvider.KAKAO, UUID.randomUUID().toString(),
-                // members.nickname 은 unique(최대 16자) → 테스트마다 다른 닉네임 사용
-                "T" + UUID.randomUUID().toString().substring(0, 7), null)).getId();
+        return members.saveAndFlush(
+                        new Member(
+                                SocialProvider.KAKAO,
+                                UUID.randomUUID().toString(),
+                                // members.nickname 은 unique(최대 16자) → 테스트마다 다른 닉네임 사용
+                                "T" + UUID.randomUUID().toString().substring(0, 7),
+                                null))
+                .getId();
     }
+
     private Long session(Long owner) {
         var s = new BrowsingSession(owner, "private", LocalDateTime.now());
         s.complete(LocalDateTime.now(), 1);

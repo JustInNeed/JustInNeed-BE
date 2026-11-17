@@ -25,9 +25,13 @@ class ProfileExploringCountScenarioTest extends ScenarioTestSupport {
     void sumsExploringCountOfOwnerCards() throws Exception {
         Member me = member("sprout");
         Wanderer wanderer = seedWanderer();
-        given(counts.counts(argThat(CardIds::hasFourCards), eq(me.getId()))).willReturn(Map.of(
-                wanderer.prague().getId(), new CardCounts.Count(9, false, 9, null, 3, true),
-                wanderer.vienna().getId(), new CardCounts.Count(9, false, 9, null, 2, false)));
+        given(counts.counts(argThat(CardIds::hasFourCards), eq(me.getId())))
+                .willReturn(
+                        Map.of(
+                                wanderer.prague().getId(),
+                                        new CardCounts.Count(9, false, 9, null, 3, true),
+                                wanderer.vienna().getId(),
+                                        new CardCounts.Count(9, false, 9, null, 2, false)));
 
         mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me)))
                 .andExpect(okEnvelope())

@@ -27,8 +27,7 @@ public class JwtTokenProvider {
     public JwtTokenProvider(
             @Value("${app.jwt.secret}") String secret,
             @Value("${app.jwt.access-token-validity-seconds}") long accessValiditySeconds,
-            @Value("${app.jwt.refresh-token-validity-seconds}") long refreshValiditySeconds
-    ) {
+            @Value("${app.jwt.refresh-token-validity-seconds}") long refreshValiditySeconds) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.accessValiditySeconds = accessValiditySeconds;
         this.refreshValiditySeconds = refreshValiditySeconds;
@@ -92,10 +91,6 @@ public class JwtTokenProvider {
     }
 
     private Claims parse(String token) {
-        return Jwts.parser()
-                .verifyWith(key)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+        return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
     }
 }

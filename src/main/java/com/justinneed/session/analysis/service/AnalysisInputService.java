@@ -46,7 +46,8 @@ public class AnalysisInputService {
     private final SessionCollectionRepository collectionRepository;
     private final AnalysisFailures failures;
 
-    public AnalysisInputService(BrowsingSessionRepository sessionRepository,
+    public AnalysisInputService(
+            BrowsingSessionRepository sessionRepository,
             SessionRawPayloadRepository rawPayloadRepository,
             SessionResultRepository resultRepository,
             AiClusterModelRepository clusterModelRepository,
@@ -62,8 +63,10 @@ public class AnalysisInputService {
 
     @Transactional(noRollbackFor = CustomException.class)
     public AiAnalysisInput input(Long sessionId) {
-        BrowsingSession session = sessionRepository.lockById(sessionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        BrowsingSession session =
+                sessionRepository
+                        .lockById(sessionId)
+                        .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         if (session.isDeleted() || session.getStatus() != SessionStatus.ANALYZING) {
             throw new CustomException(ErrorCode.ANALYSIS_NOT_IN_PROGRESS);
         }
@@ -88,19 +91,23 @@ public class AnalysisInputService {
     // 같은 사용자의 이전 세션 유닛 피처 (AI 가 개인 군집 재학습에 쓴다). 현재 세션과 지운 세션은 뺀다
     @Transactional(readOnly = true)
     public AiSessionHistory history(Long sessionId) {
-        BrowsingSession session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
-        List<Map<String, Object>> unitFeatures = resultRepository.findActiveByUserId(session.getUserId()).stream()
-                .filter(result -> !result.getSessionId().equals(sessionId))
-                .flatMap(result -> result.getUnitFeatures().stream())
-                .toList();
+        BrowsingSession session =
+                sessionRepository
+                        .findById(sessionId)
+                        .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        List<Map<String, Object>> unitFeatures =
+                resultRepository.findActiveByUserId(session.getUserId()).stream()
+                        .filter(result -> !result.getSessionId().equals(sessionId))
+                        .flatMap(result -> result.getUnitFeatures().stream())
+                        .toList();
         return new AiSessionHistory(unitFeatures);
     }
 
     private Map<String, Object> model(ClusterModelScope scope, Long userId) {
-        var model = scope == ClusterModelScope.GLOBAL
-                ? clusterModelRepository.findFirstByScope(scope)
-                : clusterModelRepository.findByScopeAndUserId(scope, userId);
+        var model =
+                scope == ClusterModelScope.GLOBAL
+                        ? clusterModelRepository.findFirstByScope(scope)
+                        : clusterModelRepository.findByScopeAndUserId(scope, userId);
         return model.map(AiClusterModel::getModel).orElse(null);
     }
 }

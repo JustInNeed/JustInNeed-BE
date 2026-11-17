@@ -73,8 +73,17 @@ class RecommendationRankingTest extends CommunityTestSupport {
         var oneNewHigh = card(ownerId, 5, "다");
         var twoOlder = card(ownerId, -5, "가", "나");
 
-        recommend(INTERESTS, "limit", "5").andExpect(jsonPath("$.data.mindmaps[*].mindmapId")
-                .value(contains(ids(threeOldest, twoOlder, oneNewHigh, oneNewLow, oneOld))));
+        recommend(INTERESTS, "limit", "5")
+                .andExpect(
+                        jsonPath("$.data.mindmaps[*].mindmapId")
+                                .value(
+                                        contains(
+                                                ids(
+                                                        threeOldest,
+                                                        twoOlder,
+                                                        oneNewHigh,
+                                                        oneNewLow,
+                                                        oneOld))));
     }
 
     @Test
@@ -84,8 +93,9 @@ class RecommendationRankingTest extends CommunityTestSupport {
         var best = card(ownerId, 0, "가", "나");
         var next = card(ownerId, 10, "가");
 
-        recommend(INTERESTS, "limit", "2").andExpect(jsonPath("$.data.mindmaps[*].mindmapId")
-                .value(contains(ids(best, next))));
+        recommend(INTERESTS, "limit", "2")
+                .andExpect(
+                        jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(best, next))));
     }
 
     @Test
@@ -102,28 +112,40 @@ class RecommendationRankingTest extends CommunityTestSupport {
         recommend(INTERESTS, "limit", "10")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.basisHashtags").value(contains("여행")))
-                .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(first, second))))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[*].mindmapId")
+                                .value(contains(ids(first, second))))
                 .andExpect(jsonPath("$.data.mindmaps[0].owner.userId").value(ownerId))
                 .andExpect(jsonPath("$.data.mindmaps[0].owner.nickname").value("Owner"))
                 .andExpect(jsonPath("$.data.mindmaps[0].title").value("제목1"))
                 .andExpect(jsonPath("$.data.mindmaps[0].hashtags").value(contains("여행", "로마")))
-                .andExpect(jsonPath("$.data.mindmaps[0].lastActivityAt").value("2026-10-01T12:01:00"))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[0].lastActivityAt").value("2026-10-01T12:01:00"))
                 .andExpect(jsonPath("$.data.mindmaps[0].relatedUrls[0].title").value("글 제목"))
-                .andExpect(jsonPath("$.data.mindmaps[0].relatedUrls[0].url").value("https://example.com/1"));
+                .andExpect(
+                        jsonPath("$.data.mindmaps[0].relatedUrls[0].url")
+                                .value("https://example.com/1"));
     }
 
     @Test
     void urlOnlyCardsHideTitleAndHiddenTagsDoNotCountAsMatches() throws Exception {
         interests("가", "숨김");
         var two = card(ownerId, 0, "가", "숨김");
-        var newer = card(members.saveAndFlush(
-                new Member(SocialProvider.KAKAO, "third", "Third", null)).getId(), 1, "가");
+        var newer =
+                card(
+                        members.saveAndFlush(
+                                        new Member(SocialProvider.KAKAO, "third", "Third", null))
+                                .getId(),
+                        1,
+                        "가");
         var profile = new CommunityProfile(ownerId);
         profile.replaceHiddenHashtags(List.of("숨김"));
         profiles.saveAndFlush(profile);
 
         // 숨긴 태그를 세면 two 가 앞선다
-        recommend(INTERESTS).andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(newer, two))))
+        recommend(INTERESTS)
+                .andExpect(
+                        jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(newer, two))))
                 .andExpect(jsonPath("$.data.mindmaps[1].title").value(nullValue()))
                 .andExpect(jsonPath("$.data.mindmaps[1].snippet").value(nullValue()))
                 .andExpect(jsonPath("$.data.mindmaps[1].relatedUrls[0].title").value(nullValue()));
@@ -139,7 +161,8 @@ class RecommendationRankingTest extends CommunityTestSupport {
         BrowsingSession saved = sessions.saveAndFlush(session);
         cardSync.sync(saved);
 
-        recommend(INTERESTS).andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(saved))))
+        recommend(INTERESTS)
+                .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(saved))))
                 .andExpect(jsonPath("$.data.mindmaps[0].nodeCount").value(0));
     }
 
@@ -149,7 +172,8 @@ class RecommendationRankingTest extends CommunityTestSupport {
         card(ownerId, 0, "JavaScript");
         var exact = card(ownerId, 1, "JAVA");
 
-        recommend(INTERESTS).andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(exact))));
+        recommend(INTERESTS)
+                .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(exact))));
     }
 
     @Test
@@ -180,7 +204,8 @@ class RecommendationRankingTest extends CommunityTestSupport {
     void recentBookmarksDoNotExcludeTheCardIJustSaved() throws Exception {
         var saved = card(ownerId, 0, "여행");
         var tag = hashtags.findByOwnerIdOrderByIdAsc(ownerId).get(0).getId();
-        bookmarks.save(viewerId, TargetType.HASHTAG, List.of(tag), SaveType.HASHTAG_BUNDLE, null, null);
+        bookmarks.save(
+                viewerId, TargetType.HASHTAG, List.of(tag), SaveType.HASHTAG_BUNDLE, null, null);
 
         recommend(RECENT)
                 .andExpect(jsonPath("$.data.basisHashtags").value(contains("여행")))

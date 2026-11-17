@@ -37,16 +37,15 @@ class OAuthFailurePathTest {
     private static final String FAILURE = "http://localhost:3000/login?error=oauth";
     private static final Map<String, Object> PROFILE = Map.of("id", 91L);
 
-    @Mock
-    private MemberRepository members;
+    @Mock private MemberRepository members;
 
-    @Mock
-    private LoginCodeService loginCodes;
+    @Mock private LoginCodeService loginCodes;
 
     @Test
     @DisplayName("회원 조회 중 DB 오류는 인증 실패로 바뀌어 실패 핸들러가 로그인 화면으로 보낸다")
     void databaseErrorBecomesAuthenticationFailure() {
-        when(members.findBySocialProviderAndProviderId(any(), any())).thenThrow(new QueryTimeoutException("timeout"));
+        when(members.findBySocialProviderAndProviderId(any(), any()))
+                .thenThrow(new QueryTimeoutException("timeout"));
         CustomOAuth2UserService service = new CustomOAuth2UserService(members);
 
         assertThatThrownBy(() -> service.resolve("kakao", PROFILE))
@@ -61,27 +60,38 @@ class OAuthFailurePathTest {
         when(members.findBySocialProviderAndProviderId(SocialProvider.KAKAO, "91"))
                 .thenReturn(Optional.empty())
                 .thenReturn(Optional.of(winner));
-        when(members.save(any(Member.class))).thenThrow(new DataIntegrityViolationException("uk_member_provider"));
+        when(members.save(any(Member.class)))
+                .thenThrow(new DataIntegrityViolationException("uk_member_provider"));
         CustomOAuth2UserService service = new CustomOAuth2UserService(members);
 
         var principal = service.resolve("kakao", PROFILE);
 
-        assertThat(principal.getAttributes().get(CustomOAuth2UserService.ATTR_MEMBER_ID)).isEqualTo(7L);
+        assertThat(principal.getAttributes().get(CustomOAuth2UserService.ATTR_MEMBER_ID))
+                .isEqualTo(7L);
     }
 
     @Test
     @DisplayName("로그인 코드 저장이 실패하면 500 이 아니라 로그인 화면(?error=oauth)으로 돌아간다")
     void codeIssueFailureRedirectsToLogin() throws Exception {
-        when(loginCodes.issue(anyLong(), anyBoolean())).thenThrow(new QueryTimeoutException("timeout"));
+        when(loginCodes.issue(anyLong(), anyBoolean()))
+                .thenThrow(new QueryTimeoutException("timeout"));
         OAuth2SuccessHandler handler = new OAuth2SuccessHandler(loginCodes, SUCCESS, FAILURE);
-        var principal = new DefaultOAuth2User(List.of(new SimpleGrantedAuthority("ROLE_USER")),
-                Map.of(CustomOAuth2UserService.ATTR_MEMBER_ID, 7L,
-                        CustomOAuth2UserService.ATTR_NEEDS_NICKNAME, false,
-                        CustomOAuth2UserService.ATTR_PROVIDER_ID, "91"),
-                CustomOAuth2UserService.ATTR_PROVIDER_ID);
+        var principal =
+                new DefaultOAuth2User(
+                        List.of(new SimpleGrantedAuthority("ROLE_USER")),
+                        Map.of(
+                                CustomOAuth2UserService.ATTR_MEMBER_ID,
+                                7L,
+                                CustomOAuth2UserService.ATTR_NEEDS_NICKNAME,
+                                false,
+                                CustomOAuth2UserService.ATTR_PROVIDER_ID,
+                                "91"),
+                        CustomOAuth2UserService.ATTR_PROVIDER_ID);
         var response = new MockHttpServletResponse();
 
-        handler.onAuthenticationSuccess(new MockHttpServletRequest(), response,
+        handler.onAuthenticationSuccess(
+                new MockHttpServletRequest(),
+                response,
                 new TestingAuthenticationToken(principal, null));
 
         assertThat(response.getRedirectedUrl()).isEqualTo(FAILURE);

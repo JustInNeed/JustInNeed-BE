@@ -20,16 +20,16 @@ import java.util.regex.Pattern;
  */
 final class ExcludedUrlParser {
 
-    private static final Pattern DOMAIN_PATTERN = Pattern.compile(
-            "^(?=.{1,253}$)([A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+[A-Za-z]{2,63}$");
+    private static final Pattern DOMAIN_PATTERN =
+            Pattern.compile(
+                    "^(?=.{1,253}$)([A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+[A-Za-z]{2,63}$");
     private static final Pattern TRAILING_SLASHES = Pattern.compile("/+$");
     private static final String SCHEME_SEPARATOR = "://";
     private static final String WWW_PREFIX = "www.";
     // url 컬럼 길이이자 (member_id, url) 유니크 인덱스에 들어가는 크기. 한글은 글자당 3바이트라 바이트로 잰다
     private static final int MAX_URL_BYTES = 2048;
 
-    private ExcludedUrlParser() {
-    }
+    private ExcludedUrlParser() {}
 
     static ParsedUrl parse(String rawUrl) {
         if (rawUrl == null) {
@@ -40,7 +40,11 @@ final class ExcludedUrlParser {
             throw new CustomException(ErrorCode.INVALID_URL);
         }
         try {
-            URI uri = new URI(value.contains(SCHEME_SEPARATOR) ? value : "https" + SCHEME_SEPARATOR + value);
+            URI uri =
+                    new URI(
+                            value.contains(SCHEME_SEPARATOR)
+                                    ? value
+                                    : "https" + SCHEME_SEPARATOR + value);
             String scheme = uri.getScheme().toLowerCase(Locale.ROOT);
             String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
             if (!(scheme.equals("http") || scheme.equals("https"))
@@ -49,7 +53,11 @@ final class ExcludedUrlParser {
                 throw new CustomException(ErrorCode.INVALID_URL);
             }
             String domain = withoutWww(host);
-            String url = domain + port(uri.getPort()) + path(uri.getRawPath()) + query(uri.getRawQuery());
+            String url =
+                    domain
+                            + port(uri.getPort())
+                            + path(uri.getRawPath())
+                            + query(uri.getRawQuery());
             if (url.getBytes(StandardCharsets.UTF_8).length > MAX_URL_BYTES) {
                 throw new CustomException(ErrorCode.INVALID_URL);
             }
@@ -61,7 +69,8 @@ final class ExcludedUrlParser {
 
     // www.com 처럼 떼면 도메인이 안 되는 경우는 그대로 둔다
     private static String withoutWww(String host) {
-        boolean removable = host.startsWith(WWW_PREFIX) && host.indexOf('.', WWW_PREFIX.length()) > 0;
+        boolean removable =
+                host.startsWith(WWW_PREFIX) && host.indexOf('.', WWW_PREFIX.length()) > 0;
         return removable ? host.substring(WWW_PREFIX.length()) : host;
     }
 
@@ -77,6 +86,5 @@ final class ExcludedUrlParser {
         return rawQuery == null || rawQuery.isEmpty() ? "" : "?" + rawQuery;
     }
 
-    record ParsedUrl(String url, String domain) {
-    }
+    record ParsedUrl(String url, String domain) {}
 }

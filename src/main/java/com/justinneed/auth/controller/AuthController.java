@@ -32,7 +32,8 @@ public class AuthController {
 
     // 소셜 로그인 콜백(?code=)으로 받은 일회용 코드를 access/refresh 토큰으로 교환. (60초 안에 한 번만, 아니면 401)
     @PostMapping("/token")
-    public ApiResponse<LoginTokenResponse> token(@RequestBody(required = false) TokenExchangeRequest request) {
+    public ApiResponse<LoginTokenResponse> token(
+            @RequestBody(required = false) TokenExchangeRequest request) {
         String code = request == null ? null : request.code();
         return ApiResponse.ok(loginCodeService.exchange(code));
     }
@@ -47,17 +48,16 @@ public class AuthController {
     @PostMapping("/extension-code")
     public ApiResponse<ExtensionCodeResponse> extensionCode(
             @AuthenticationPrincipal Long memberId,
-            @RequestHeader("Authorization") String authorization
-    ) {
-        return ApiResponse.ok(loginCodeService.issueForExtension(memberId, resolveBearer(authorization)));
+            @RequestHeader("Authorization") String authorization) {
+        return ApiResponse.ok(
+                loginCodeService.issueForExtension(memberId, resolveBearer(authorization)));
     }
 
     // 로그아웃: refresh 화이트리스트에서 삭제 + access 즉시 무효화. (멱등 — 토큰이 없거나 만료여도 200)
     @PostMapping("/logout")
     public ApiResponse<Void> logout(
             @RequestHeader(value = "Authorization", required = false) String authorization,
-            @RequestBody(required = false) LogoutRequest request
-    ) {
+            @RequestBody(required = false) LogoutRequest request) {
         String accessToken = resolveBearer(authorization);
         String refreshToken = request == null ? null : request.refreshToken();
         authTokenService.logout(accessToken, refreshToken);

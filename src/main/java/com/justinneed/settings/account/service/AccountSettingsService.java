@@ -24,8 +24,11 @@ public class AccountSettingsService {
     private final CommunityCardSync cards;
     private final CommunityProfileRepository communityProfiles;
 
-    public AccountSettingsService(MemberRepository memberRepository, AuthTokenService authTokenService,
-            CommunityCardSync cards, CommunityProfileRepository communityProfiles) {
+    public AccountSettingsService(
+            MemberRepository memberRepository,
+            AuthTokenService authTokenService,
+            CommunityCardSync cards,
+            CommunityProfileRepository communityProfiles) {
         this.memberRepository = memberRepository;
         this.authTokenService = authTokenService;
         this.cards = cards;
@@ -33,7 +36,8 @@ public class AccountSettingsService {
     }
 
     @Transactional
-    public AccountWithdrawResponse withdraw(Long memberId, AccountWithdrawRequest request, String accessToken) {
+    public AccountWithdrawResponse withdraw(
+            Long memberId, AccountWithdrawRequest request, String accessToken) {
         if (!WITHDRAW_CONFIRM_TEXT.equals(request.confirmText())) {
             throw new CustomException(ErrorCode.INVALID_WITHDRAW_CONFIRMATION);
         }
@@ -50,7 +54,8 @@ public class AccountSettingsService {
     }
 
     private Member findActiveMember(Long memberId) {
-        return memberRepository.findByIdAndWithdrawnAtIsNull(memberId)
+        return memberRepository
+                .findByIdAndWithdrawnAtIsNull(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
     }
 }

@@ -5,11 +5,10 @@ import static org.hamcrest.Matchers.matchesPattern;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.justinneed.community.bookmark.BookmarkCommandService;
 import com.justinneed.community.bookmark.SaveType;
 import com.justinneed.community.bookmark.TargetType;
@@ -28,8 +27,8 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /**
- * FE 는 오류 message 를 그대로 토스트로 보여준다. 한글이 없는 문구가 나가면 안 된다.
- * Bean Validation 기본 문구는 요청 언어를 따르므로 Accept-Language 를 en 으로 고정해 영어로 새는지 본다.
+ * FE 는 오류 message 를 그대로 토스트로 보여준다. 한글이 없는 문구가 나가면 안 된다. Bean Validation 기본 문구는 요청 언어를 따르므로
+ * Accept-Language 를 en 으로 고정해 영어로 새는지 본다.
  */
 class CommunityErrorMessageTest extends CommunityTestSupport {
     private static final String KOREAN = ".*[가-힣].*";
@@ -38,7 +37,8 @@ class CommunityErrorMessageTest extends CommunityTestSupport {
     @Autowired BookmarkCommandService bookmarks;
 
     private ResultActions send(MockHttpServletRequestBuilder request) throws Exception {
-        return mvc.perform(request.header("Authorization", auth(viewerId)).header("Accept-Language", "en"));
+        return mvc.perform(
+                request.header("Authorization", auth(viewerId)).header("Accept-Language", "en"));
     }
 
     private ResultActions send(HttpMethod method, String path, String body) throws Exception {
@@ -106,37 +106,60 @@ class CommunityErrorMessageTest extends CommunityTestSupport {
                 Arguments.of(HttpMethod.PATCH, "/community/profiles/1/like", "{}"),
                 Arguments.of(HttpMethod.PATCH, "/community/profiles/0/like", "{\"liked\":true}"),
                 Arguments.of(HttpMethod.PATCH, "/community/exploring", "{}"),
-                Arguments.of(HttpMethod.PATCH, "/community/exploring",
+                Arguments.of(
+                        HttpMethod.PATCH,
+                        "/community/exploring",
                         "{\"targetType\":\"HASHTAG\",\"targetId\":0,\"exploring\":true}"),
-                Arguments.of(HttpMethod.PATCH, "/community/exploring",
+                Arguments.of(
+                        HttpMethod.PATCH,
+                        "/community/exploring",
                         "{\"targetType\":\"BOGUS\",\"targetId\":1,\"exploring\":true}"),
                 Arguments.of(HttpMethod.POST, "/community/bookmarks", "{}"),
-                Arguments.of(HttpMethod.POST, "/community/bookmarks",
+                Arguments.of(
+                        HttpMethod.POST,
+                        "/community/bookmarks",
                         "{\"targetType\":\"HASHTAG\",\"targetIds\":[],\"saveType\":\"HASHTAG_BUNDLE\"}"),
-                Arguments.of(HttpMethod.POST, "/community/bookmarks",
+                Arguments.of(
+                        HttpMethod.POST,
+                        "/community/bookmarks",
                         "{\"targetType\":\"HASHTAG\",\"targetIds\":[null],\"saveType\":\"HASHTAG_BUNDLE\"}"),
-                Arguments.of(HttpMethod.POST, "/community/bookmarks",
+                Arguments.of(
+                        HttpMethod.POST,
+                        "/community/bookmarks",
                         "{\"targetType\":\"HASHTAG\",\"targetIds\":[0],\"saveType\":\"HASHTAG_BUNDLE\"}"),
-                Arguments.of(HttpMethod.POST, "/community/bookmarks",
+                Arguments.of(
+                        HttpMethod.POST,
+                        "/community/bookmarks",
                         "{\"targetType\":\"HASHTAG\",\"targetIds\":[1],\"saveType\":\"HASHTAG_BUNDLE\",\"sourceMindmapId\":0}"),
-                Arguments.of(HttpMethod.POST, "/community/bookmarks",
+                Arguments.of(
+                        HttpMethod.POST,
+                        "/community/bookmarks",
                         "{\"targetType\":\"HASHTAG\",\"targetIds\":[1,1],\"saveType\":\"HASHTAG_BUNDLE\"}"),
-                Arguments.of(HttpMethod.POST, "/community/bookmarks",
+                Arguments.of(
+                        HttpMethod.POST,
+                        "/community/bookmarks",
                         "{\"targetType\":\"HASHTAG\",\"targetIds\":[1],\"saveType\":\"BOGUS\"}"),
                 Arguments.of(HttpMethod.PATCH, "/community/me/hashtags/visibility", "{}"),
                 Arguments.of(HttpMethod.PATCH, "/community/me/hashtags/1/visibility", "{}"),
                 Arguments.of(HttpMethod.POST, "/community/me/pinned-sessions", "{}"),
                 Arguments.of(HttpMethod.POST, "/community/me/pinned-sessions", "{\"sessionId\":0}"),
                 Arguments.of(HttpMethod.PATCH, "/community/me/pinned-sessions/order", "{}"),
-                Arguments.of(HttpMethod.PATCH, "/community/me/pinned-sessions/order", "{\"sessionIds\":[0]}"),
+                Arguments.of(
+                        HttpMethod.PATCH,
+                        "/community/me/pinned-sessions/order",
+                        "{\"sessionIds\":[0]}"),
                 Arguments.of(HttpMethod.POST, "/community/me/interests", "{}"),
                 Arguments.of(HttpMethod.PATCH, "/community/me/visibility", "{}"));
     }
 
     @Test
     void selfLikeIsKorean() throws Exception {
-        expectKorean400(mvc.perform(patch("/community/profiles/{id}/like", ownerId).header("Authorization", auth(ownerId))
-                .contentType(MediaType.APPLICATION_JSON).content("{\"liked\":true}")));
+        expectKorean400(
+                mvc.perform(
+                        patch("/community/profiles/{id}/like", ownerId)
+                                .header("Authorization", auth(ownerId))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"liked\":true}")));
     }
 
     @Test
@@ -146,24 +169,44 @@ class CommunityErrorMessageTest extends CommunityTestSupport {
         var tag = graph.hashtags().get(0).hashtagId();
         var node = graph.nodes().get(0).nodeId();
         // 미니 마인드맵인데 sourceMindmapId 없음
-        expectKorean400(send(HttpMethod.POST, "/community/bookmarks",
-                "{\"targetType\":\"NODE\",\"targetIds\":[" + node + "],\"saveType\":\"MINI_MINDMAP\"}"));
+        expectKorean400(
+                send(
+                        HttpMethod.POST,
+                        "/community/bookmarks",
+                        "{\"targetType\":\"NODE\",\"targetIds\":["
+                                + node
+                                + "],\"saveType\":\"MINI_MINDMAP\"}"));
         // 묶음의 sourceMindmapId 가 대상과 다름
-        expectKorean400(send(HttpMethod.POST, "/community/bookmarks", "{\"targetType\":\"HASHTAG\",\"targetIds\":[" + tag
-                + "],\"saveType\":\"HASHTAG_BUNDLE\",\"sourceMindmapId\":" + viewerId + "}"));
+        expectKorean400(
+                send(
+                        HttpMethod.POST,
+                        "/community/bookmarks",
+                        "{\"targetType\":\"HASHTAG\",\"targetIds\":["
+                                + tag
+                                + "],\"saveType\":\"HASHTAG_BUNDLE\",\"sourceMindmapId\":"
+                                + viewerId
+                                + "}"));
     }
 
     @Test
     void originalOfBundleIsKorean() throws Exception {
         session(ownerId, true, "Java");
         var tag = graphs.graph(ownerId, null).hashtags().get(0).hashtagId();
-        var saved = bookmarks.save(viewerId, TargetType.HASHTAG, List.of(tag), SaveType.HASHTAG_BUNDLE, null, null);
+        var saved =
+                bookmarks.save(
+                        viewerId,
+                        TargetType.HASHTAG,
+                        List.of(tag),
+                        SaveType.HASHTAG_BUNDLE,
+                        null,
+                        null);
         expectKorean400(send(get("/community/me/bookmarks/{id}/original", saved.bookmarkId())));
     }
 
     @Test
     void everyErrorCodeIsKorean() {
-        assertThat(ErrorCode.values()).allSatisfy(code -> assertThat(code.getMessage()).matches(KOREAN));
+        assertThat(ErrorCode.values())
+                .allSatisfy(code -> assertThat(code.getMessage()).matches(KOREAN));
     }
 
     @Test

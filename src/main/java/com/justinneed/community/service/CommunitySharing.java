@@ -21,9 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 public class CommunitySharing {
-    public static final Comparator<BrowsingSession> NEWEST_SESSION_FIRST = Comparator
-            .comparing(CommunitySharing::lastActivityAt, Comparator.reverseOrder())
-            .thenComparing(BrowsingSession::getId, Comparator.reverseOrder());
+    public static final Comparator<BrowsingSession> NEWEST_SESSION_FIRST =
+            Comparator.comparing(CommunitySharing::lastActivityAt, Comparator.reverseOrder())
+                    .thenComparing(BrowsingSession::getId, Comparator.reverseOrder());
 
     private final CommunitySessionRepository sessions;
 
@@ -56,8 +56,11 @@ public class CommunitySharing {
         Set<Long> ordered = new LinkedHashSet<>(profile.getPinnedSessionIds());
         ordered.retainAll(new HashSet<>(ids));
         ordered.addAll(ids);
-        List<Long> found = ordered.stream().skip(paging.getOffset()).limit(paging.getPageSize() + 1L).toList();
-        return new PinnedPage(found.stream().limit(paging.getPageSize()).toList(), found.size() > paging.getPageSize(),
+        List<Long> found =
+                ordered.stream().skip(paging.getOffset()).limit(paging.getPageSize() + 1L).toList();
+        return new PinnedPage(
+                found.stream().limit(paging.getPageSize()).toList(),
+                found.size() > paging.getPageSize(),
                 totalPages(ordered.size(), paging.getPageSize()));
     }
 
@@ -67,16 +70,25 @@ public class CommunitySharing {
     }
 
     public boolean isHidden(CommunityProfile profile, String tag) {
-        return profile.getHiddenHashtags().stream().anyMatch(hidden -> hidden.equalsIgnoreCase(tag));
+        return profile.getHiddenHashtags().stream()
+                .anyMatch(hidden -> hidden.equalsIgnoreCase(tag));
     }
 
-    public SharedSessionView project(CommunityProfile profile, Long viewerId, BrowsingSession session) {
+    public SharedSessionView project(
+            CommunityProfile profile, Long viewerId, BrowsingSession session) {
         boolean owner = profile.getUserId().equals(viewerId);
         // 세션 상세(SessionDetailResponse.forViewer)처럼 다른 사용자에게는 http(s) 링크만 준다
-        List<Source> sources = owner ? session.getSources()
-                : session.getSources().stream().filter(source -> HttpUrl.isValid(source.url())).toList();
-        return SharedSessionView.from(session, owner ? session.getTags() : visibleTags(profile, session.getTags()),
-                sources, owner || profile.getVisibility() == NodeVisibility.CONTENT,
+        List<Source> sources =
+                owner
+                        ? session.getSources()
+                        : session.getSources().stream()
+                                .filter(source -> HttpUrl.isValid(source.url()))
+                                .toList();
+        return SharedSessionView.from(
+                session,
+                owner ? session.getTags() : visibleTags(profile, session.getTags()),
+                sources,
+                owner || profile.getVisibility() == NodeVisibility.CONTENT,
                 profile.getPinnedSessionIds().contains(session.getId()));
     }
 
@@ -90,6 +102,5 @@ public class CommunitySharing {
         return (int) ((total + size - 1) / size);
     }
 
-    public record PinnedPage(List<Long> ids, boolean hasNext, int totalPages) {
-    }
+    public record PinnedPage(List<Long> ids, boolean hasNext, int totalPages) {}
 }

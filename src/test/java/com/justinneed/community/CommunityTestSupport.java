@@ -37,8 +37,15 @@ public abstract class CommunityTestSupport {
 
     @BeforeEach
     void createMembers() {
-        ownerId = members.saveAndFlush(new Member(SocialProvider.KAKAO, "community-owner", "Owner", null)).getId();
-        viewerId = members.saveAndFlush(new Member(SocialProvider.NAVER, "community-viewer", "Viewer", null)).getId();
+        ownerId =
+                members.saveAndFlush(
+                                new Member(SocialProvider.KAKAO, "community-owner", "Owner", null))
+                        .getId();
+        viewerId =
+                members.saveAndFlush(
+                                new Member(
+                                        SocialProvider.NAVER, "community-viewer", "Viewer", null))
+                        .getId();
     }
 
     /** 프로필 행을 테스트에서 바로 저장했을 때의 해시태그 행 (실제로는 관심사 · 비공개 설정을 저장하며 만들어진다). */
@@ -55,7 +62,8 @@ public abstract class CommunityTestSupport {
         BrowsingSession session = new BrowsingSession(owner, "private title", LocalDateTime.now());
         session.complete(LocalDateTime.now(), 1);
         session.update(null, null, isPublic, false, List.of(tags));
-        session.replaceSources(List.of(new Source("private source", "https://example.com", "private excerpt")));
+        session.replaceSources(
+                List.of(new Source("private source", "https://example.com", "private excerpt")));
         new Summary(session, "private markdown");
         BrowsingSession saved = sessions.saveAndFlush(session);
         cardSync.sync(saved);

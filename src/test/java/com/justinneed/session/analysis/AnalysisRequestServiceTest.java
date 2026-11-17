@@ -3,10 +3,10 @@ package com.justinneed.session.analysis;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
@@ -46,25 +46,20 @@ import org.springframework.web.client.ResourceAccessException;
 class AnalysisRequestServiceTest {
 
     private static final Long USER_ID = 1L;
-    private static final Map<String, Object> RAW = Map.of("kind", "rbc-session", "pages", List.of());
+    private static final Map<String, Object> RAW =
+            Map.of("kind", "rbc-session", "pages", List.of());
 
-    @MockitoBean
-    private AiAnalysisClient aiClient;
+    @MockitoBean private AiAnalysisClient aiClient;
 
-    @Autowired
-    private AnalysisRequestService service;
+    @Autowired private AnalysisRequestService service;
 
-    @Autowired
-    private BrowsingSessionRepository sessionRepository;
+    @Autowired private BrowsingSessionRepository sessionRepository;
 
-    @Autowired
-    private SessionRawPayloadRepository rawRepository;
+    @Autowired private SessionRawPayloadRepository rawRepository;
 
-    @Autowired
-    private SessionCollectionRepository collectionRepository;
+    @Autowired private SessionCollectionRepository collectionRepository;
 
-    @Autowired
-    private MemberRepository memberRepository;
+    @Autowired private MemberRepository memberRepository;
 
     @AfterEach
     void tearDown() {
@@ -89,23 +84,41 @@ class AnalysisRequestServiceTest {
 
     @Test
     void 분석을_시작하면_원본의_종료_시각을_KST_로_세션에_남긴다() {
-        Long sessionId = session(SessionStatus.READY, Map.of(
-                "session", Map.of("endedAt", "2026-10-04T09:33:54.171Z"),
-                "pages", List.of(Map.of("meta", Map.of("endedAt", "2026-10-04T23:00:00Z")))));
+        Long sessionId =
+                session(
+                        SessionStatus.READY,
+                        Map.of(
+                                "session", Map.of("endedAt", "2026-10-04T09:33:54.171Z"),
+                                "pages",
+                                        List.of(
+                                                Map.of(
+                                                        "meta",
+                                                        Map.of(
+                                                                "endedAt",
+                                                                "2026-10-04T23:00:00Z")))));
 
         service.requestAnalysis(sessionId);
 
-        assertThat(endedAt(sessionId)).isEqualTo(LocalDateTime.of(2026, 10, 4, 18, 33, 54, 171_000_000));
+        assertThat(endedAt(sessionId))
+                .isEqualTo(LocalDateTime.of(2026, 10, 4, 18, 33, 54, 171_000_000));
     }
 
     @Test
     void 원본에_세션_종료_시각이_없으면_페이지_종료_시각_중_가장_늦은_값을_쓴다() {
-        Long sessionId = session(SessionStatus.READY, Map.of(
-                "session", Map.of("sessionId", "abc"),
-                "pages", List.of(
-                        Map.of("meta", Map.of("endedAt", "2026-10-04T09:00:00Z")),
-                        Map.of("meta", Map.of("endedAt", "2026-10-04T09:30:00Z")),
-                        Map.of("meta", Map.of("url", "https://a.com")))));
+        Long sessionId =
+                session(
+                        SessionStatus.READY,
+                        Map.of(
+                                "session", Map.of("sessionId", "abc"),
+                                "pages",
+                                        List.of(
+                                                Map.of(
+                                                        "meta",
+                                                        Map.of("endedAt", "2026-10-04T09:00:00Z")),
+                                                Map.of(
+                                                        "meta",
+                                                        Map.of("endedAt", "2026-10-04T09:30:00Z")),
+                                                Map.of("meta", Map.of("url", "https://a.com")))));
 
         service.requestAnalysis(sessionId);
 
@@ -124,8 +137,13 @@ class AnalysisRequestServiceTest {
 
     @Test
     void AI_첫_호출이_실패해도_FAILED_로_두지_않고_종료_시각을_남긴다() {
-        doThrow(new ResourceAccessException("connection refused")).when(aiClient).requestAnalysis(any());
-        Long sessionId = session(SessionStatus.READY, Map.of("session", Map.of("endedAt", "2026-10-04T09:33:54Z")));
+        doThrow(new ResourceAccessException("connection refused"))
+                .when(aiClient)
+                .requestAnalysis(any());
+        Long sessionId =
+                session(
+                        SessionStatus.READY,
+                        Map.of("session", Map.of("endedAt", "2026-10-04T09:33:54Z")));
 
         service.requestAnalysis(sessionId);
 
@@ -136,7 +154,8 @@ class AnalysisRequestServiceTest {
 
     @Test
     void 탈퇴한_회원의_세션은_AI_로_보내지_않고_FAILED_로_둔다() {
-        Member withdrawn = memberRepository.save(new Member(SocialProvider.KAKAO, "withdrawn-1", null, null));
+        Member withdrawn =
+                memberRepository.save(new Member(SocialProvider.KAKAO, "withdrawn-1", null, null));
         withdrawn.withdraw(null, LocalDateTime.now());
         memberRepository.save(withdrawn);
         Long sessionId = session(SessionStatus.READY, RAW, withdrawn.getId());
@@ -182,7 +201,9 @@ class AnalysisRequestServiceTest {
     void 재전송에_응답이_없으면_2분_뒤_다시_보내고_또_없으면_FAILED() {
         Long sessionId = analyzing();
         LocalDateTime requestedAt = collection(sessionId).getAiRequestedAt();
-        doThrow(new ResourceAccessException("connection refused")).when(aiClient).requestAnalysis(any());
+        doThrow(new ResourceAccessException("connection refused"))
+                .when(aiClient)
+                .requestAnalysis(any());
 
         service.resendIfDue(sessionId, requestedAt.plusMinutes(1));
         assertThat(status(sessionId)).isEqualTo(SessionStatus.ANALYZING);
@@ -246,10 +267,13 @@ class AnalysisRequestServiceTest {
     void 재전송하는_사이_GET_이_오면_응답이_없어도_세지_않는다() {
         Long sessionId = analyzing();
         LocalDateTime requestedAt = collection(sessionId).getAiRequestedAt();
-        doAnswer(invocation -> {
-            markInputFetched(sessionId, LocalDateTime.now());
-            throw new ResourceAccessException("read timed out");
-        }).when(aiClient).requestAnalysis(any());
+        doAnswer(
+                        invocation -> {
+                            markInputFetched(sessionId, LocalDateTime.now());
+                            throw new ResourceAccessException("read timed out");
+                        })
+                .when(aiClient)
+                .requestAnalysis(any());
 
         service.resendIfDue(sessionId, requestedAt.plusMinutes(1));
 
@@ -288,7 +312,9 @@ class AnalysisRequestServiceTest {
     @Test
     void AI_요청이_실패해도_재전송_규칙을_따르므로_상태는_ANALYZING_이다() {
         Long sessionId = session(SessionStatus.READY);
-        doThrow(new ResourceAccessException("connection refused")).when(aiClient).requestAnalysis(any());
+        doThrow(new ResourceAccessException("connection refused"))
+                .when(aiClient)
+                .requestAnalysis(any());
 
         service.requestAnalysis(sessionId);
 
@@ -337,7 +363,8 @@ class AnalysisRequestServiceTest {
     }
 
     private Long session(SessionStatus status, Map<String, Object> raw, Long userId) {
-        BrowsingSession session = new BrowsingSession(userId, "세션", LocalDateTime.of(2026, 10, 30, 10, 0));
+        BrowsingSession session =
+                new BrowsingSession(userId, "세션", LocalDateTime.of(2026, 10, 30, 10, 0));
         if (status == SessionStatus.READY || status == SessionStatus.ANALYZING) {
             session.markReady();
         }

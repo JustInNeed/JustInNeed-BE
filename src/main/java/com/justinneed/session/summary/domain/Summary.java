@@ -17,8 +17,7 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "summaries")
 public class Summary {
 
-    @Id
-    private Long sessionId;
+    @Id private Long sessionId;
 
     @MapsId
     @OneToOne(fetch = FetchType.LAZY)
@@ -33,8 +32,7 @@ public class Summary {
     @Column(name = "essay")
     private Map<String, Object> essay;
 
-    protected Summary() {
-    }
+    protected Summary() {}
 
     public Summary(BrowsingSession session, String markdown) {
         this.session = session;

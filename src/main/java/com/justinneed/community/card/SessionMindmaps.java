@@ -35,11 +35,16 @@ public class SessionMindmaps {
         if (sessions.isEmpty()) {
             return mindmaps;
         }
-        Map<Long, BrowsingSession> byId = sessions.stream()
-                .collect(Collectors.toMap(BrowsingSession::getId, Function.identity()));
+        Map<Long, BrowsingSession> byId =
+                sessions.stream()
+                        .collect(Collectors.toMap(BrowsingSession::getId, Function.identity()));
         for (SessionMindmapRow row : results.findMindmapRows(byId.keySet())) {
-            mindmaps.put(row.sessionId(), SessionMindmapBuilder.build(
-                    parse(row.mindmap()), parse(row.selectedUnits()), byId.get(row.sessionId()).getSources()));
+            mindmaps.put(
+                    row.sessionId(),
+                    SessionMindmapBuilder.build(
+                            parse(row.mindmap()),
+                            parse(row.selectedUnits()),
+                            byId.get(row.sessionId()).getSources()));
         }
         byId.keySet().forEach(id -> mindmaps.putIfAbsent(id, SessionMindmapResponse.EMPTY));
         return mindmaps;

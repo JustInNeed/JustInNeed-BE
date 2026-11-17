@@ -25,14 +25,14 @@ public final class SessionHashtagSelector {
 
     public static final int MAX_HASHTAG_COUNT = 5;
 
-    private static final Comparator<Candidate> CANDIDATE_ORDER = Comparator
-            .comparingInt(Candidate::typeRank)
-            .thenComparing(Candidate::score, Comparator.nullsLast(Comparator.reverseOrder()))
-            .thenComparing(Candidate::childCount, Comparator.reverseOrder())
-            .thenComparingInt(Candidate::index);
+    private static final Comparator<Candidate> CANDIDATE_ORDER =
+            Comparator.comparingInt(Candidate::typeRank)
+                    .thenComparing(
+                            Candidate::score, Comparator.nullsLast(Comparator.reverseOrder()))
+                    .thenComparing(Candidate::childCount, Comparator.reverseOrder())
+                    .thenComparingInt(Candidate::index);
 
-    private SessionHashtagSelector() {
-    }
+    private SessionHashtagSelector() {}
 
     public static List<String> select(AiMindmap mindmap) {
         if (mindmap == null || mindmap.nodes() == null) {
@@ -90,6 +90,6 @@ public final class SessionHashtagSelector {
         return builder.toString();
     }
 
-    private record Candidate(String keyword, int typeRank, Double score, int childCount, int index) {
-    }
+    private record Candidate(
+            String keyword, int typeRank, Double score, int childCount, int index) {}
 }

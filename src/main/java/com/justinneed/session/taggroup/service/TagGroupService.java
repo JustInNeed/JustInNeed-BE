@@ -28,7 +28,8 @@ public class TagGroupService {
     private final TagGroupRepository tagGroupRepository;
     private final BrowsingSessionRepository sessionRepository;
 
-    public TagGroupService(TagGroupRepository tagGroupRepository, BrowsingSessionRepository sessionRepository) {
+    public TagGroupService(
+            TagGroupRepository tagGroupRepository, BrowsingSessionRepository sessionRepository) {
         this.tagGroupRepository = tagGroupRepository;
         this.sessionRepository = sessionRepository;
     }
@@ -44,7 +45,8 @@ public class TagGroupService {
 
     @Transactional
     public TagGroupResponse createTagGroup(Long userId, TagGroupCreateRequest request) {
-        List<String> hashtags = HashtagValidator.normalizeAndValidate(emptyIfNull(request.hashtags()));
+        List<String> hashtags =
+                HashtagValidator.normalizeAndValidate(emptyIfNull(request.hashtags()));
         rejectEmptyHashtags(hashtags);
         List<TagGroup> existing = tagGroupRepository.findByUserIdOrderByPositionAscIdAsc(userId);
         int position = request.position() == null ? existing.size() : request.position();
@@ -61,7 +63,8 @@ public class TagGroupService {
     }
 
     @Transactional
-    public TagGroupResponse updateTagGroup(Long userId, Long groupId, TagGroupUpdateRequest request) {
+    public TagGroupResponse updateTagGroup(
+            Long userId, Long groupId, TagGroupUpdateRequest request) {
         TagGroup group = getOwnedGroup(userId, groupId);
         List<String> hashtags = HashtagValidator.normalizeAndValidate(request.hashtags());
         rejectEmptyHashtags(hashtags);
@@ -81,8 +84,8 @@ public class TagGroupService {
     @Transactional
     public List<TagGroupResponse> updateOrder(Long userId, TagGroupOrderRequest request) {
         List<TagGroup> groups = tagGroupRepository.findByUserIdOrderByPositionAscIdAsc(userId);
-        Map<Long, TagGroup> groupById = groups.stream()
-                .collect(Collectors.toMap(TagGroup::getId, Function.identity()));
+        Map<Long, TagGroup> groupById =
+                groups.stream().collect(Collectors.toMap(TagGroup::getId, Function.identity()));
 
         if (request.groupIds().size() != groups.size()
                 || !new HashSet<>(request.groupIds()).equals(groupById.keySet())) {
@@ -96,11 +99,13 @@ public class TagGroupService {
     }
 
     private TagGroup getOwnedGroup(Long userId, Long groupId) {
-        return tagGroupRepository.findByIdAndUserId(groupId, userId)
+        return tagGroupRepository
+                .findByIdAndUserId(groupId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.TAG_GROUP_NOT_FOUND));
     }
 
-    private List<SessionListResponse> matchingSessions(TagGroup group, List<BrowsingSession> sessions) {
+    private List<SessionListResponse> matchingSessions(
+            TagGroup group, List<BrowsingSession> sessions) {
         return sessions.stream()
                 .filter(session -> session.hasAnyTag(group.getHashtags()))
                 .map(SessionListResponse::from)

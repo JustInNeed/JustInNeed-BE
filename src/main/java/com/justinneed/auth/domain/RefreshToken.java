@@ -12,18 +12,15 @@ import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
 
 /**
- * 발급된 refresh 토큰의 화이트리스트. (members 와는 별개 테이블, member_id 로 연결)
- * 토큰 원문은 저장하지 않고 SHA-256 해시만 보관한다.
- * - 로그인: 행 생성
- * - 재발급: 기존 행 삭제 + 새 행 생성 (회전)
- * - 로그아웃: 같은 묶음(group_id)의 행 전체 삭제
+ * 발급된 refresh 토큰의 화이트리스트. (members 와는 별개 테이블, member_id 로 연결) 토큰 원문은 저장하지 않고 SHA-256 해시만 보관한다. -
+ * 로그인: 행 생성 - 재발급: 기존 행 삭제 + 새 행 생성 (회전) - 로그아웃: 같은 묶음(group_id)의 행 전체 삭제
  */
 @Entity
 @Table(
         name = "refresh_tokens",
-        uniqueConstraints = @UniqueConstraint(name = "uk_refresh_token_hash", columnNames = "token_hash"),
-        indexes = @Index(name = "idx_refresh_tokens_group", columnList = "group_id")
-)
+        uniqueConstraints =
+                @UniqueConstraint(name = "uk_refresh_token_hash", columnNames = "token_hash"),
+        indexes = @Index(name = "idx_refresh_tokens_group", columnList = "group_id"))
 public class RefreshToken extends BaseEntity {
 
     @Id
@@ -43,8 +40,7 @@ public class RefreshToken extends BaseEntity {
     @Column(name = "group_id", length = 36)
     private String groupId;
 
-    protected RefreshToken() {
-    }
+    protected RefreshToken() {}
 
     public RefreshToken(Long memberId, String tokenHash, LocalDateTime expiresAt) {
         this.memberId = memberId;

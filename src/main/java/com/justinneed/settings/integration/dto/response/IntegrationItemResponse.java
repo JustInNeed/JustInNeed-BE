@@ -5,11 +5,7 @@ import com.justinneed.settings.integration.domain.IntegrationProvider;
 import java.time.LocalDateTime;
 
 public record IntegrationItemResponse(
-        String provider,
-        boolean isConnected,
-        String email,
-        LocalDateTime connectedAt
-) {
+        String provider, boolean isConnected, String email, LocalDateTime connectedAt) {
 
     public static IntegrationItemResponse disconnected(IntegrationProvider provider) {
         return new IntegrationItemResponse(provider.getApiName(), false, null, null);
@@ -20,7 +16,6 @@ public record IntegrationItemResponse(
                 integration.getProvider().getApiName(),
                 true,
                 integration.getEmail(),
-                integration.getConnectedAt()
-        );
+                integration.getConnectedAt());
     }
 }

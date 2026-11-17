@@ -47,7 +47,8 @@ public final class RawLinkVisits {
         }
 
         for (Object page : pageList) {
-            if (!(page instanceof Map<?, ?> pageMap) || !(pageMap.get("meta") instanceof Map<?, ?> meta)) {
+            if (!(page instanceof Map<?, ?> pageMap)
+                    || !(pageMap.get("meta") instanceof Map<?, ?> meta)) {
                 continue;
             }
             String url = firstText((Map<String, Object>) meta, "url", "pageId");
@@ -56,7 +57,10 @@ public final class RawLinkVisits {
             }
             LocalDateTime enteredAt = toKst(meta.get("enteredAt"));
             String title = firstText((Map<String, Object>) meta, "title");
-            visits.merge(url, new LinkVisit(url, title, enteredAt, SiteCategory.classify(url)), RawLinkVisits::earlier);
+            visits.merge(
+                    url,
+                    new LinkVisit(url, title, enteredAt, SiteCategory.classify(url)),
+                    RawLinkVisits::earlier);
             if (meta.get("pageId") instanceof String pageId) {
                 linkByPageId.put(pageId, url);
             }
@@ -80,7 +84,10 @@ public final class RawLinkVisits {
             return Optional.empty();
         }
         return pages.stream()
-                .filter(page -> page instanceof Map<?, ?> map && map.get("meta") instanceof Map<?, ?>)
+                .filter(
+                        page ->
+                                page instanceof Map<?, ?> map
+                                        && map.get("meta") instanceof Map<?, ?>)
                 .map(page -> toKst(((Map<?, ?>) ((Map<?, ?>) page).get("meta")).get("endedAt")))
                 .filter(Objects::nonNull)
                 .max(Comparator.naturalOrder());
@@ -131,10 +138,5 @@ public final class RawLinkVisits {
     }
 
     public record LinkVisit(
-            String url,
-            String title,
-            LocalDateTime firstVisitedAt,
-            SiteCategory category
-    ) {
-    }
+            String url, String title, LocalDateTime firstVisitedAt, SiteCategory category) {}
 }

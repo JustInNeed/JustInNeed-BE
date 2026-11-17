@@ -14,7 +14,8 @@ public class CommunityProfiles {
     private final CommunityMemberRepository members;
     private final CommunityProfileRepository profiles;
 
-    public CommunityProfiles(CommunityMemberRepository members, CommunityProfileRepository profiles) {
+    public CommunityProfiles(
+            CommunityMemberRepository members, CommunityProfileRepository profiles) {
         this.members = members;
         this.profiles = profiles;
     }
@@ -32,6 +33,7 @@ public class CommunityProfiles {
     public CommunityProfile lock(Long userId) {
         // Lock the existing member row even before the first profile is created.
         members.lockById(userId).orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
-        return profiles.findById(userId).orElseGet(() -> profiles.save(new CommunityProfile(userId)));
+        return profiles.findById(userId)
+                .orElseGet(() -> profiles.save(new CommunityProfile(userId)));
     }
 }

@@ -18,7 +18,8 @@ import tools.jackson.databind.json.JsonMapper;
 class SessionMindmapsTest {
 
     private final SessionResultRepository results = mock(SessionResultRepository.class);
-    private final SessionMindmaps mindmaps = new SessionMindmaps(results, JsonMapper.builder().build());
+    private final SessionMindmaps mindmaps =
+            new SessionMindmaps(results, JsonMapper.builder().build());
 
     private BrowsingSession session(long id) {
         BrowsingSession session = new BrowsingSession(1L, "제목", LocalDateTime.now());
@@ -28,7 +29,8 @@ class SessionMindmapsTest {
 
     @Test
     void unparsableJsonIsAnEmptyMindmap() {
-        when(results.findMindmapRows(any())).thenReturn(List.of(new SessionMindmapRow(7L, "{끊긴 JSON", "[1")));
+        when(results.findMindmapRows(any()))
+                .thenReturn(List.of(new SessionMindmapRow(7L, "{끊긴 JSON", "[1")));
 
         assertThat(mindmaps.of(session(7L))).isEqualTo(SessionMindmapResponse.EMPTY);
     }

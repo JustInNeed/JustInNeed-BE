@@ -7,6 +7,4 @@ public record AccountWithdrawResponse(
         Long userId,
         boolean withdrawn,
         boolean extensionLogin,
-        LocalDateTime withdrawnAt
-) {
-}
+        LocalDateTime withdrawnAt) {}

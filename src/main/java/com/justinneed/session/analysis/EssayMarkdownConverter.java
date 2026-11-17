@@ -14,8 +14,8 @@ import java.util.List;
  * 본문
  * </pre>
  *
- * 대제목은 본문에 넣지 않는다. 제목은 사용자가 고칠 수 있어 FE 가 복사 · 내보내기 때 지금 제목을 붙인다.
- * 세션 제목은 essay 대제목을 그대로 쓰고, sessions.title 컬럼 길이(100자)를 넘으면 자른다.
+ * 대제목은 본문에 넣지 않는다. 제목은 사용자가 고칠 수 있어 FE 가 복사 · 내보내기 때 지금 제목을 붙인다. 세션 제목은 essay 대제목을 그대로 쓰고,
+ * sessions.title 컬럼 길이(100자)를 넘으면 자른다.
  */
 public final class EssayMarkdownConverter {
 
@@ -23,8 +23,7 @@ public final class EssayMarkdownConverter {
 
     private static final String BLOCK_SEPARATOR = "\n\n";
 
-    private EssayMarkdownConverter() {
-    }
+    private EssayMarkdownConverter() {}
 
     // 비어 있는 소제목/본문은 건너뛴다. essay 가 null 이거나 내용이 없으면 빈 문자열.
     public static String toMarkdown(AiEssay essay) {

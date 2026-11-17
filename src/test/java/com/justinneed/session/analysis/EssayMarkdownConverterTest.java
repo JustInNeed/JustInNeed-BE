@@ -13,12 +13,17 @@ class EssayMarkdownConverterTest {
 
     @Test
     void convertsSectionsToMarkdownWithoutTitle() {
-        AiEssay essay = new AiEssay("대제목", List.of(
-                new AiEssaySection("소제목1", "본문1", List.of("u1")),
-                new AiEssaySection("소제목2", "본문2", List.of("u2"))
-        ), "llm");
+        AiEssay essay =
+                new AiEssay(
+                        "대제목",
+                        List.of(
+                                new AiEssaySection("소제목1", "본문1", List.of("u1")),
+                                new AiEssaySection("소제목2", "본문2", List.of("u2"))),
+                        "llm");
 
-        assertThat(EssayMarkdownConverter.toMarkdown(essay)).isEqualTo("""
+        assertThat(EssayMarkdownConverter.toMarkdown(essay))
+                .isEqualTo(
+                        """
                 ## 소제목1
 
                 본문1
@@ -30,11 +35,17 @@ class EssayMarkdownConverterTest {
 
     @Test
     void trimsStringsAndKeepsParagraphBreaksInBody() {
-        AiEssay essay = new AiEssay("  대제목  ", List.of(
-                new AiEssaySection("\n 소제목\n이어짐 ", "\r\n 첫 문단\r\n\r\n둘째 문단 \n", null)
-        ), "llm");
+        AiEssay essay =
+                new AiEssay(
+                        "  대제목  ",
+                        List.of(
+                                new AiEssaySection(
+                                        "\n 소제목\n이어짐 ", "\r\n 첫 문단\r\n\r\n둘째 문단 \n", null)),
+                        "llm");
 
-        assertThat(EssayMarkdownConverter.toMarkdown(essay)).isEqualTo("""
+        assertThat(EssayMarkdownConverter.toMarkdown(essay))
+                .isEqualTo(
+                        """
                 ## 소제목 이어짐
 
                 첫 문단
@@ -44,14 +55,19 @@ class EssayMarkdownConverterTest {
 
     @Test
     void skipsEmptyTitleHeadingAndBody() {
-        AiEssay essay = new AiEssay(" ", Arrays.asList(
-                new AiEssaySection(null, "소제목 없는 본문", null),
-                new AiEssaySection("본문 없는 소제목", "  ", null),
-                new AiEssaySection("", "", null),
-                null
-        ), "fallback");
+        AiEssay essay =
+                new AiEssay(
+                        " ",
+                        Arrays.asList(
+                                new AiEssaySection(null, "소제목 없는 본문", null),
+                                new AiEssaySection("본문 없는 소제목", "  ", null),
+                                new AiEssaySection("", "", null),
+                                null),
+                        "fallback");
 
-        assertThat(EssayMarkdownConverter.toMarkdown(essay)).isEqualTo("""
+        assertThat(EssayMarkdownConverter.toMarkdown(essay))
+                .isEqualTo(
+                        """
                 소제목 없는 본문
 
                 ## 본문 없는 소제목""");
@@ -63,7 +79,8 @@ class EssayMarkdownConverterTest {
         assertThat(EssayMarkdownConverter.toMarkdown(new AiEssay(null, null, null))).isEmpty();
         assertThat(EssayMarkdownConverter.toMarkdown(new AiEssay("", List.of(), "llm"))).isEmpty();
         // 소제목 · 본문이 없으면 대제목만 있어도 본문은 비어 있다
-        assertThat(EssayMarkdownConverter.toMarkdown(new AiEssay("대제목", List.of(), "llm"))).isEmpty();
+        assertThat(EssayMarkdownConverter.toMarkdown(new AiEssay("대제목", List.of(), "llm")))
+                .isEmpty();
     }
 
     @Test
@@ -77,7 +94,8 @@ class EssayMarkdownConverterTest {
     @Test
     void truncatesSessionTitleTo100Characters() {
         String exact = "가".repeat(100);
-        assertThat(EssayMarkdownConverter.toSessionTitle(new AiEssay(exact, null, null))).isEqualTo(exact);
+        assertThat(EssayMarkdownConverter.toSessionTitle(new AiEssay(exact, null, null)))
+                .isEqualTo(exact);
 
         String tooLong = "가".repeat(99) + "나다라";
         assertThat(EssayMarkdownConverter.toSessionTitle(new AiEssay(tooLong, null, null)))
@@ -97,7 +115,8 @@ class EssayMarkdownConverterTest {
     @Test
     void truncatesByUtf16LengthLikeTheTitleValidator() {
         // 이모지는 UTF-16 2자라 100자 제한에 50개까지 들어간다.
-        String truncated = EssayMarkdownConverter.toSessionTitle(new AiEssay("😀".repeat(60), null, null));
+        String truncated =
+                EssayMarkdownConverter.toSessionTitle(new AiEssay("😀".repeat(60), null, null));
 
         assertThat(truncated).isEqualTo("😀".repeat(50));
         assertThat(truncated).hasSize(EssayMarkdownConverter.MAX_TITLE_LENGTH);
@@ -105,7 +124,8 @@ class EssayMarkdownConverterTest {
 
     @Test
     void deserializesAiEssayJson() throws Exception {
-        String json = """
+        String json =
+                """
                 {"title": "대제목", "sections": [{"heading": "소제목", "body": "본문", "unitKeys": ["u1", "u2"]}],
                  "source": "llm", "extra": "무시"}
                 """;
@@ -114,7 +134,8 @@ class EssayMarkdownConverterTest {
 
         assertThat(essay.title()).isEqualTo("대제목");
         assertThat(essay.source()).isEqualTo("llm");
-        assertThat(essay.sections()).containsExactly(new AiEssaySection("소제목", "본문", List.of("u1", "u2")));
+        assertThat(essay.sections())
+                .containsExactly(new AiEssaySection("소제목", "본문", List.of("u1", "u2")));
         assertThat(EssayMarkdownConverter.toMarkdown(essay)).isEqualTo("## 소제목\n\n본문");
     }
 }

@@ -8,9 +8,8 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 
 /**
- * 세션 수집 · AI 호출의 진행 상태 (세션당 1행).
- * sessions 는 목록 조회용으로 가볍게 두고, 스케줄러가 쓰는 시각과 횟수는 여기에 모은다.
- * 값을 바꾸는 쪽은 세션 행을 먼저 잠근다 (BrowsingSessionRepository.lockById).
+ * 세션 수집 · AI 호출의 진행 상태 (세션당 1행). sessions 는 목록 조회용으로 가볍게 두고, 스케줄러가 쓰는 시각과 횟수는 여기에 모은다. 값을 바꾸는 쪽은 세션
+ * 행을 먼저 잠근다 (BrowsingSessionRepository.lockById).
  */
 @Entity
 @Table(name = "session_collections")
@@ -51,8 +50,7 @@ public class SessionCollection {
     @Column(name = "failed_at")
     private LocalDateTime failedAt;
 
-    protected SessionCollection() {
-    }
+    protected SessionCollection() {}
 
     public SessionCollection(Long sessionId) {
         this.sessionId = sessionId;

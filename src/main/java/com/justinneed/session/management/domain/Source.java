@@ -8,9 +8,7 @@ public record Source(
         String title,
         String url,
         String excerpt,
-        @JsonFormat(shape = JsonFormat.Shape.STRING)
-        LocalDateTime visitedAt
-) {
+        @JsonFormat(shape = JsonFormat.Shape.STRING) LocalDateTime visitedAt) {
 
     public Source(String title, String url, String excerpt) {
         this(title, url, excerpt, null);

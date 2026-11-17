@@ -34,18 +34,20 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 세션 행 잠금: 세션을 바꾸는 요청이 겹쳐도 앞선 저장이 사라지지 않고, 지운 세션이 되살아나지 않는다.
- * 다른 트랜잭션이 행을 잡은 동안 요청을 차례로 밀어 넣어, 잠금이 없으면 둘 다 옛 값을 읽게 만든다.
- * 실제로 커밋해야 하므로 테스트 트랜잭션을 쓰지 않고 DB 를 따로 쓴다 (만든 행은 매번 지운다).
+ * 세션 행 잠금: 세션을 바꾸는 요청이 겹쳐도 앞선 저장이 사라지지 않고, 지운 세션이 되살아나지 않는다. 다른 트랜잭션이 행을 잡은 동안 요청을 차례로 밀어 넣어, 잠금이
+ * 없으면 둘 다 옛 값을 읽게 만든다. 실제로 커밋해야 하므로 테스트 트랜잭션을 쓰지 않고 DB 를 따로 쓴다 (만든 행은 매번 지운다).
  */
-@TestPropertySource(properties = "spring.datasource.url=jdbc:h2:mem:session-lock;MODE=PostgreSQL;"
-        + "DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000")
+@TestPropertySource(
+        properties =
+                "spring.datasource.url=jdbc:h2:mem:session-lock;MODE=PostgreSQL;"
+                        + "DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000")
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @DisplayName("세션 동시 저장")
 class SessionLockScenarioTest extends ScenarioTestSupport {
 
     private static final String AI_TITLE = "AI 가 정한 제목";
-    private static final String RESULT = """
+    private static final String RESULT =
+            """
             {"modelSource": "global", "scoreMethod": "C", "state": {"unitFeatures": []},
              "mindmap": {"structureSource": "llm",
                          "nodes": [{"id": "root:1", "type": "root", "keyword": "로마", "score": 1.0, "childCount": 0}],
@@ -54,25 +56,28 @@ class SessionLockScenarioTest extends ScenarioTestSupport {
              "selected": [], "analysis": {"units": [], "summary": {}}, "pages": []}
             """;
 
-    @Autowired
-    private JdbcTemplate jdbc;
+    @Autowired private JdbcTemplate jdbc;
 
-    @Autowired
-    private PlatformTransactionManager transactionManager;
+    @Autowired private PlatformTransactionManager transactionManager;
 
-    @Autowired
-    private SessionRawPayloadRepository rawPayloads;
+    @Autowired private SessionRawPayloadRepository rawPayloads;
 
-    @Autowired
-    private AiInternalToken internalToken;
+    @Autowired private AiInternalToken internalToken;
 
     private final ExecutorService pool = Executors.newFixedThreadPool(2);
 
     @AfterEach
     void cleanUp() {
         pool.shutdownNow();
-        for (String table : List.of("summaries", "session_results", "session_raw_payloads", "community_cards",
-                "community_profiles", "sessions", "members")) {
+        for (String table :
+                List.of(
+                        "summaries",
+                        "session_results",
+                        "session_raw_payloads",
+                        "community_cards",
+                        "community_profiles",
+                        "sessions",
+                        "members")) {
             jdbc.update("delete from " + table);
         }
     }
@@ -110,9 +115,12 @@ class SessionLockScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         Long id = analyzing(me);
 
-        race(id, favourite(id, me), post("/internal/ai/sessions/{id}/failure", id)
-                .header(AiInternalToken.HEADER, internalToken.value())
-                .with(json("{\"reason\": \"x\"}")));
+        race(
+                id,
+                favourite(id, me),
+                post("/internal/ai/sessions/{id}/failure", id)
+                        .header(AiInternalToken.HEADER, internalToken.value())
+                        .with(json("{\"reason\": \"x\"}")));
 
         BrowsingSession session = reload(id);
         assertThat(session.getStatus()).isEqualTo(SessionStatus.FAILED);
@@ -136,7 +144,8 @@ class SessionLockScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         Long id = completed(me);
 
-        List<Integer> statuses = race(id, favourite(id, me), delete("/sessions/{id}", id).with(as(me)));
+        List<Integer> statuses =
+                race(id, favourite(id, me), delete("/sessions/{id}", id).with(as(me)));
 
         assertThat(isDeleted(id)).isTrue();
         // 부하가 크면 삭제가 먼저 잠금을 잡아 즐겨찾기가 404 일 수 있다. 저장에 성공했으면 삭제가 덮으면 안 된다
@@ -160,9 +169,14 @@ class SessionLockScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         Long id = completed(me);
 
-        race(id,
-                patch("/sessions/{id}", id).with(as(me)).with(json(Map.of("tags", List.of("로마", "새태그")))),
-                patch("/sessions/{id}", id).with(as(me)).with(json(Map.of("title", "자동 저장", "editedMarkdown", "본문"))));
+        race(
+                id,
+                patch("/sessions/{id}", id)
+                        .with(as(me))
+                        .with(json(Map.of("tags", List.of("로마", "새태그")))),
+                patch("/sessions/{id}", id)
+                        .with(as(me))
+                        .with(json(Map.of("title", "자동 저장", "editedMarkdown", "본문"))));
 
         BrowsingSession session = reload(id);
         assertThat(session.getTags()).containsExactly("로마", "새태그");
@@ -177,12 +191,20 @@ class SessionLockScenarioTest extends ScenarioTestSupport {
         Long id = completed(me);
 
         // 본문만 저장하면 sessions 행을 건드리지 않으므로, 커밋 전 요약 행으로 두 요청을 INSERT 앞에 세운다
-        List<Integer> statuses = race(status -> {
-                    jdbc.update("insert into summaries (session_id, markdown) values (?, '')", id);
-                    status.setRollbackOnly();
-                },
-                patch("/sessions/{id}", id).with(as(me)).with(json(Map.of("editedMarkdown", "첫 번째"))),
-                patch("/sessions/{id}", id).with(as(me)).with(json(Map.of("editedMarkdown", "두 번째"))));
+        List<Integer> statuses =
+                race(
+                        status -> {
+                            jdbc.update(
+                                    "insert into summaries (session_id, markdown) values (?, '')",
+                                    id);
+                            status.setRollbackOnly();
+                        },
+                        patch("/sessions/{id}", id)
+                                .with(as(me))
+                                .with(json(Map.of("editedMarkdown", "첫 번째"))),
+                        patch("/sessions/{id}", id)
+                                .with(as(me))
+                                .with(json(Map.of("editedMarkdown", "두 번째"))));
 
         assertThat(statuses).containsExactly(200, 200);
         assertThat(reload(id).getSummary().getMarkdown()).isIn("첫 번째", "두 번째");
@@ -200,7 +222,8 @@ class SessionLockScenarioTest extends ScenarioTestSupport {
         // 비공개가 먼저면 400. 부하가 크면 고정이 먼저 잠글 수 있고, 그래도 뒤이은 비공개가 고정을 지운다
         assertThat(statuses.get(1)).isIn(400, 201);
         assertThat(reload(id).isPublicSession()).isFalse();
-        assertThat(communityProfiles.findById(me.getId()).orElseThrow().getPinnedSessionIds()).isEmpty();
+        assertThat(communityProfiles.findById(me.getId()).orElseThrow().getPinnedSessionIds())
+                .isEmpty();
     }
 
     @Test
@@ -210,35 +233,53 @@ class SessionLockScenarioTest extends ScenarioTestSupport {
         Long id = published(me);
 
         List<Future<Integer>> response = new ArrayList<>();
-        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
-            jdbc.queryForObject("select id from members where id = ? for update", Long.class, me.getId());
-            response.add(send(makePrivate(id, me)));
-            pause();
-            // 요청이 세션을 먼저 잡았다면 여기서 서로를 기다려 잠금 오류가 난다
-            jdbc.queryForObject("select id from sessions where id = ? for update", Long.class, id);
-        });
+        new TransactionTemplate(transactionManager)
+                .executeWithoutResult(
+                        status -> {
+                            jdbc.queryForObject(
+                                    "select id from members where id = ? for update",
+                                    Long.class,
+                                    me.getId());
+                            response.add(send(makePrivate(id, me)));
+                            pause();
+                            // 요청이 세션을 먼저 잡았다면 여기서 서로를 기다려 잠금 오류가 난다
+                            jdbc.queryForObject(
+                                    "select id from sessions where id = ? for update",
+                                    Long.class,
+                                    id);
+                        });
 
         assertThat(response.get(0).get(20, TimeUnit.SECONDS)).isEqualTo(200);
         assertThat(reload(id).isPublicSession()).isFalse();
     }
 
-    private List<Integer> race(Long id, MockHttpServletRequestBuilder first, MockHttpServletRequestBuilder second)
+    private List<Integer> race(
+            Long id, MockHttpServletRequestBuilder first, MockHttpServletRequestBuilder second)
             throws Exception {
-        return race(status -> jdbc.queryForObject("select id from sessions where id = ? for update", Long.class, id),
-                first, second);
+        return race(
+                status ->
+                        jdbc.queryForObject(
+                                "select id from sessions where id = ? for update", Long.class, id),
+                first,
+                second);
     }
 
     // 다른 트랜잭션이 붙잡고 있는 동안 요청을 순서대로 보내 둘 다 앞에 세운 뒤 놓는다. 응답 코드를 보낸 순서대로 돌려준다
-    private List<Integer> race(Consumer<TransactionStatus> hold, MockHttpServletRequestBuilder first,
-            MockHttpServletRequestBuilder second) throws Exception {
+    private List<Integer> race(
+            Consumer<TransactionStatus> hold,
+            MockHttpServletRequestBuilder first,
+            MockHttpServletRequestBuilder second)
+            throws Exception {
         List<Future<Integer>> responses = new ArrayList<>();
-        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
-            hold.accept(status);
-            responses.add(send(first));
-            pause();
-            responses.add(send(second));
-            pause();
-        });
+        new TransactionTemplate(transactionManager)
+                .executeWithoutResult(
+                        status -> {
+                            hold.accept(status);
+                            responses.add(send(first));
+                            pause();
+                            responses.add(send(second));
+                            pause();
+                        });
         List<Integer> statuses = new ArrayList<>();
         for (Future<Integer> response : responses) {
             statuses.add(response.get(20, TimeUnit.SECONDS));
@@ -273,24 +314,55 @@ class SessionLockScenarioTest extends ScenarioTestSupport {
     }
 
     private MockHttpServletRequestBuilder pin(Long id, Member me) {
-        return post("/community/me/pinned-sessions").with(as(me)).with(json(Map.of("sessionId", id)));
+        return post("/community/me/pinned-sessions")
+                .with(as(me))
+                .with(json(Map.of("sessionId", id)));
     }
 
     private Long analyzing(Member owner) {
-        Long id = sessionWithStatus(owner, "분석 중", "2026-10-30T09:00:00", "2026-10-30T10:00:00",
-                SessionStatus.ANALYZING, List.of()).getId();
-        rawPayloads.save(new SessionRawPayload(id, owner.getId(), Map.of("pages", List.of()), LocalDateTime.now()));
+        Long id =
+                sessionWithStatus(
+                                owner,
+                                "분석 중",
+                                "2026-10-30T09:00:00",
+                                "2026-10-30T10:00:00",
+                                SessionStatus.ANALYZING,
+                                List.of())
+                        .getId();
+        rawPayloads.save(
+                new SessionRawPayload(
+                        id, owner.getId(), Map.of("pages", List.of()), LocalDateTime.now()));
         return id;
     }
 
     private Long completed(Member owner) {
-        return session(owner, "완료", "2026-10-30T09:00:00", "2026-10-30T10:00:00", 1, false, false,
-                List.of("로마"), List.of(), null).getId();
+        return session(
+                        owner,
+                        "완료",
+                        "2026-10-30T09:00:00",
+                        "2026-10-30T10:00:00",
+                        1,
+                        false,
+                        false,
+                        List.of("로마"),
+                        List.of(),
+                        null)
+                .getId();
     }
 
     private Long published(Member owner) {
-        return session(owner, "공개", "2026-10-30T09:00:00", "2026-10-30T10:00:00", 1, false, true,
-                List.of("로마"), List.of(), null).getId();
+        return session(
+                        owner,
+                        "공개",
+                        "2026-10-30T09:00:00",
+                        "2026-10-30T10:00:00",
+                        1,
+                        false,
+                        true,
+                        List.of("로마"),
+                        List.of(),
+                        null)
+                .getId();
     }
 
     private BrowsingSession reload(Long id) {
@@ -298,6 +370,7 @@ class SessionLockScenarioTest extends ScenarioTestSupport {
     }
 
     private boolean isDeleted(Long id) {
-        return jdbc.queryForObject("select deleted_at is not null from sessions where id = ?", Boolean.class, id);
+        return jdbc.queryForObject(
+                "select deleted_at is not null from sessions where id = ?", Boolean.class, id);
     }
 }

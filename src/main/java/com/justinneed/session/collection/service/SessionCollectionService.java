@@ -34,7 +34,8 @@ public class SessionCollectionService {
     private final SessionCollectionRepository collectionRepository;
     private final TransactionTemplate transactionTemplate;
 
-    public SessionCollectionService(BrowsingSessionRepository sessionRepository,
+    public SessionCollectionService(
+            BrowsingSessionRepository sessionRepository,
             SessionCollectionRepository collectionRepository,
             PlatformTransactionManager transactionManager) {
         this.sessionRepository = sessionRepository;
@@ -48,7 +49,8 @@ public class SessionCollectionService {
             return existing;
         }
         try {
-            return transactionTemplate.execute(status -> insert(userId, collectorSessionId, startedAt));
+            return transactionTemplate.execute(
+                    status -> insert(userId, collectorSessionId, startedAt));
         } catch (DataIntegrityViolationException race) {
             Long winner = findId(userId, collectorSessionId);
             if (winner == null) {
@@ -59,8 +61,10 @@ public class SessionCollectionService {
     }
 
     private Long insert(Long userId, String collectorSessionId, LocalDateTime startedAt) {
-        BrowsingSession session = sessionRepository.saveAndFlush(
-                new BrowsingSession(userId, temporaryTitle(userId), startedAt, collectorSessionId));
+        BrowsingSession session =
+                sessionRepository.saveAndFlush(
+                        new BrowsingSession(
+                                userId, temporaryTitle(userId), startedAt, collectorSessionId));
         collectionRepository.save(new SessionCollection(session.getId()));
         return session.getId();
     }
@@ -68,8 +72,10 @@ public class SessionCollectionService {
     // 2026.11.02의 1번째 세션. 분석이 성공하면 AI 결과 제목으로 바뀐다. 번호는 표시용이라 동시 요청으로 겹칠 수 있다
     private String temporaryTitle(Long userId) {
         LocalDate today = LocalDate.now(KST);
-        long order = sessionRepository.countCreatedBetween(userId,
-                today.atStartOfDay(), today.plusDays(1).atStartOfDay()) + 1;
+        long order =
+                sessionRepository.countCreatedBetween(
+                                userId, today.atStartOfDay(), today.plusDays(1).atStartOfDay())
+                        + 1;
         return today.format(TITLE_DATE) + "의 " + order + "번째 세션";
     }
 

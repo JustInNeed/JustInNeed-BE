@@ -20,11 +20,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 @ExtendWith(MockitoExtension.class)
 class MemberServiceTest {
 
-    @Mock
-    private MemberRepository memberRepository;
+    @Mock private MemberRepository memberRepository;
 
-    @InjectMocks
-    private MemberService memberService;
+    @InjectMocks private MemberService memberService;
 
     @Test
     @DisplayName("중복 확인을 통과했어도 저장 순간 유니크 제약에 걸리면 DUPLICATE_NICKNAME 으로 바꾼다")
@@ -32,7 +30,8 @@ class MemberServiceTest {
         Member member = new Member(SocialProvider.KAKAO, "provider-id", null, null);
         when(memberRepository.findByIdAndWithdrawnAtIsNull(1L)).thenReturn(Optional.of(member));
         when(memberRepository.existsByNicknameIgnoreCaseAndIdNot("justin", 1L)).thenReturn(false);
-        when(memberRepository.saveAndFlush(member)).thenThrow(new DataIntegrityViolationException("uk_nickname"));
+        when(memberRepository.saveAndFlush(member))
+                .thenThrow(new DataIntegrityViolationException("uk_nickname"));
 
         assertThatThrownBy(() -> memberService.updateNickname(1L, "justin"))
                 .isInstanceOf(CustomException.class)

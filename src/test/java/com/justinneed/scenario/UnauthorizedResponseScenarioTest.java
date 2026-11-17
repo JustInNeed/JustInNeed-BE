@@ -26,8 +26,8 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 /**
- * 로그인이 풀린 상태로 보호 API 를 부를 때의 401 응답 (MEM-2-2).
- * FE(src/lib/api/client.ts)는 401 이면 재발급을 시도하고, 실패하면 로그인 화면으로 보낸다.
+ * 로그인이 풀린 상태로 보호 API 를 부를 때의 401 응답 (MEM-2-2). FE(src/lib/api/client.ts)는 401 이면 재발급을 시도하고, 실패하면
+ * 로그인 화면으로 보낸다.
  */
 @DisplayName("로그인 만료 401 응답")
 class UnauthorizedResponseScenarioTest extends ScenarioTestSupport {
@@ -37,8 +37,7 @@ class UnauthorizedResponseScenarioTest extends ScenarioTestSupport {
             "{\"success\":false,\"data\":null,\"message\":\"" + LOGIN_EXPIRED + "\"}";
     private static final String ALLOWED_ORIGIN = "http://localhost:3000";
 
-    @Autowired
-    private AuthTokenService authTokenService;
+    @Autowired private AuthTokenService authTokenService;
 
     @Value("${app.jwt.secret}")
     private String jwtSecret;
@@ -46,7 +45,8 @@ class UnauthorizedResponseScenarioTest extends ScenarioTestSupport {
     /** 401 + 공통 에러 형식(본문 그대로) + UTF-8 JSON. 바이트를 UTF-8 로 풀어 한글이 그대로인지도 본다. */
     private void expectLoginExpired(ResultActions result) throws Exception {
         result.andExpect(status().isUnauthorized())
-                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "application/json;charset=UTF-8"))
+                .andExpect(
+                        header().string(HttpHeaders.CONTENT_TYPE, "application/json;charset=UTF-8"))
                 .andExpect(content().json(BODY, JsonCompareMode.STRICT));
         byte[] raw = result.andReturn().getResponse().getContentAsByteArray();
         assertThat(new String(raw, StandardCharsets.UTF_8)).contains(LOGIN_EXPIRED);
@@ -92,7 +92,8 @@ class UnauthorizedResponseScenarioTest extends ScenarioTestSupport {
     void deniedToken() throws Exception {
         Member me = member("sprout");
         TokenResponse login = authTokenService.issue(me.getId());
-        mvc.perform(post("/auth/logout").with(bearerToken(login.accessToken()))).andExpect(okEnvelope());
+        mvc.perform(post("/auth/logout").with(bearerToken(login.accessToken())))
+                .andExpect(okEnvelope());
 
         expectLoginExpired(getMe(bearerToken(login.accessToken())));
     }
@@ -110,10 +111,14 @@ class UnauthorizedResponseScenarioTest extends ScenarioTestSupport {
     void withdrawnMemberToken() throws Exception {
         Member me = member("sprout");
         String phone = jwt.createAccessToken(me.getId());
-        mvc.perform(delete("/settings/account").with(as(me)).with(json(Map.of("confirmText", "WITHDRAW"))))
+        mvc.perform(
+                        delete("/settings/account")
+                                .with(as(me))
+                                .with(json(Map.of("confirmText", "WITHDRAW"))))
                 .andExpect(okEnvelope());
 
-        for (String path : List.of("/members/me", "/sessions", "/tag-groups", "/settings/integrations")) {
+        for (String path :
+                List.of("/members/me", "/sessions", "/tag-groups", "/settings/integrations")) {
             expectLoginExpired(mvc.perform(get(path).with(bearerToken(phone))));
         }
     }
@@ -128,7 +133,8 @@ class UnauthorizedResponseScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("FE 출처(Origin)에서 온 요청의 401 에도 CORS 헤더가 붙어 FE 가 상태 코드를 읽을 수 있다")
     void corsHeadersOnUnauthorized() throws Exception {
-        ResultActions result = mvc.perform(get("/members/me").header(HttpHeaders.ORIGIN, ALLOWED_ORIGIN));
+        ResultActions result =
+                mvc.perform(get("/members/me").header(HttpHeaders.ORIGIN, ALLOWED_ORIGIN));
 
         expectLoginExpired(result);
         result.andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, ALLOWED_ORIGIN))

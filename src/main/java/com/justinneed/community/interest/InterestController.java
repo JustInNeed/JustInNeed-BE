@@ -1,12 +1,13 @@
 package com.justinneed.community.interest;
 
-import com.justinneed.global.common.ApiResponse;
 import com.justinneed.community.edit.ProfileEditService;
-import org.springframework.http.HttpStatus;
+import com.justinneed.global.common.ApiResponse;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import java.util.List;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 @RestController
 @RequestMapping("/community")
@@ -29,12 +29,14 @@ public class InterestController {
     }
 
     @GetMapping("/me/interests")
-    public ApiResponse<List<ProfileEditService.InterestView>> mine(@AuthenticationPrincipal Long userId) {
+    public ApiResponse<List<ProfileEditService.InterestView>> mine(
+            @AuthenticationPrincipal Long userId) {
         return ApiResponse.ok(edit.myInterests(userId));
     }
 
     @GetMapping("/profiles/{userId}/interests")
-    public ApiResponse<List<String>> get(@PathVariable Long userId, @AuthenticationPrincipal Long viewerId) {
+    public ApiResponse<List<String>> get(
+            @PathVariable Long userId, @AuthenticationPrincipal Long viewerId) {
         return ApiResponse.ok(service.get(userId, viewerId));
     }
 
@@ -48,8 +50,8 @@ public class InterestController {
     @Schema(name = "InterestControllerRequest")
     public record Request(
             @NotBlank(message = "해시태그를 입력해 주세요.")
-            @Pattern(regexp = "^[가-힣a-zA-Z0-9]{1,10}$",
-                    message = "해시태그는 한글, 영문, 숫자만 사용할 수 있으며 최대 10자까지 입력 가능합니다.")
-            String hashtag
-    ) { }
+                    @Pattern(
+                            regexp = "^[가-힣a-zA-Z0-9]{1,10}$",
+                            message = "해시태그는 한글, 영문, 숫자만 사용할 수 있으며 최대 10자까지 입력 가능합니다.")
+                    String hashtag) {}
 }
