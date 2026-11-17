@@ -21,8 +21,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 분석 화면 카드별 집계. 대상은 내 완료(COMPLETED) · 미삭제 세션이고, 기간은 오늘 포함 최근 7일(세션 시작 시각 KST)이다.
- * 카드마다 보여줄 데이터가 없으면 null 을 준다 (이번 주 세션 · 추천 행동은 빈 목록).
+ * 분석 화면 카드별 집계. 대상은 내 완료(COMPLETED) · 미삭제 세션이고, 기간은 오늘 포함 최근 7일(세션 시작 시각 KST)이다. 카드마다 보여줄 데이터가 없으면
+ * null 을 준다 (이번 주 세션 · 추천 행동은 빈 목록).
  */
 @Service
 @Transactional(readOnly = true)
@@ -48,9 +48,8 @@ public class AnalyticsService {
     }
 
     public ReadingBehavior getReadingBehavior(Long userId) {
-        List<Map<String, Object>> summaries = sessions(userId).stream()
-                .map(AnalyticsSessionRow::analysisSummary)
-                .toList();
+        List<Map<String, Object>> summaries =
+                sessions(userId).stream().map(AnalyticsSessionRow::analysisSummary).toList();
         ReadingDistribution distribution = ReadingDistribution.ofSummaries(summaries);
         return distribution.hasData() ? AnalyticsNotes.readingBehavior(distribution) : null;
     }

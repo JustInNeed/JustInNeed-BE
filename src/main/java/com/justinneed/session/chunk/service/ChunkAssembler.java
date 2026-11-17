@@ -1,5 +1,6 @@
 package com.justinneed.session.chunk.service;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -10,29 +11,25 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
- * 기록 로그 → bundle. 확장 recorder-core/bg-core.js 의 assemble() 을 그대로 옮긴 순수 함수.
- * 결과는 확장 [내보내기] 파일과 JSON 으로 같아야 한다 — ChunkAssemblerTest 가 확장이 만든 정답 파일과 비교한다.
- * 확장 쪽 assemble() 을 바꾸면 이 파일과 정답 파일(src/test/resources/chunk-assembly/)도 같이 바꾼다.
+ * 기록 로그 → bundle. 확장 recorder-core/bg-core.js 의 assemble() 을 그대로 옮긴 순수 함수. 결과는 확장 [내보내기] 파일과 JSON
+ * 으로 같아야 한다 — ChunkAssemblerTest 가 확장이 만든 정답 파일과 비교한다. 확장 쪽 assemble() 을 바꾸면 이 파일과 정답
+ * 파일(src/test/resources/chunk-assembly/)도 같이 바꾼다.
  *
- * 로그 = 청크들을 n 순서로 이은 payload.records (seq 순). 합치기 전에 ChunkCompleteness 가 COMPLETE 여야 한다.
+ * <p>로그 = 청크들을 n 순서로 이은 payload.records (seq 순). 합치기 전에 ChunkCompleteness 가 COMPLETE 여야 한다.
  *
- * JS 와 맞춘 것
- *   - 기록에 없는 칸은 결과에도 없다 (JS 의 undefined 는 JSON 에서 빠진다). null 인 칸은 null 로 남긴다
- *   - `a || b` 는 a 가 비었을 때(null · 없음 · "" · false · 0) b
- *   - 정렬은 안정 정렬, 비교할 값이 숫자가 아니면 같다고 본다 (JS 의 NaN 비교)
- *   - 시각은 toISOString() 과 같은 꼴 (UTC, 밀리초 3자리, Z)
+ * <p>JS 와 맞춘 것 - 기록에 없는 칸은 결과에도 없다 (JS 의 undefined 는 JSON 에서 빠진다). null 인 칸은 null 로 남긴다 - `a || b`
+ * 는 a 가 비었을 때(null · 없음 · "" · false · 0) b - 정렬은 안정 정렬, 비교할 값이 숫자가 아니면 같다고 본다 (JS 의 NaN 비교) - 시각은
+ * toISOString() 과 같은 꼴 (UTC, 밀리초 3자리, Z)
  */
 public final class ChunkAssembler {
 
-    static final int TICK_MS = 150;   // 확장 0-core CFG.TICK_MS · bg-core TICK_MS 와 같아야 한다
-    private static final DateTimeFormatter ISO = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-            .withZone(ZoneOffset.UTC);
+    static final int TICK_MS = 150; // 확장 0-core CFG.TICK_MS · bg-core TICK_MS 와 같아야 한다
+    private static final DateTimeFormatter ISO =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC);
 
-    private ChunkAssembler() {
-    }
+    private ChunkAssembler() {}
 
     @Schema(name = "ChunkAssemblerPage")
     private static final class Page {
@@ -114,7 +111,9 @@ public final class ChunkAssembler {
                 continue;
             }
             Object segId = key(r.get("segId"));
-            var sc = segFlushes.computeIfAbsent(segId, s -> new SegFlushes(r.get("pageId"), r.containsKey("pageId")));
+            var sc =
+                    segFlushes.computeIfAbsent(
+                            segId, s -> new SegFlushes(r.get("pageId"), r.containsKey("pageId")));
             Object n = r.get("n");
             if (n != null) {
                 double nv = num(n);
@@ -176,7 +175,9 @@ public final class ChunkAssembler {
                         lastHide = i;
                     }
                 }
-                segEnd.put(key(sg.get("segId")), closed ? "closed" : (lastHide > lastTick ? "unloaded" : "open"));
+                segEnd.put(
+                        key(sg.get("segId")),
+                        closed ? "closed" : (lastHide > lastTick ? "unloaded" : "open"));
             }
 
             long ticks = timeline.stream().filter(e -> "tick".equals(e.get("type"))).count();
@@ -337,7 +338,7 @@ public final class ChunkAssembler {
             if (Double.isNaN(x) || Double.isNaN(y)) {
                 return 0;
             }
-            return x < y ? -1 : x > y ? 1 : 0;   // Double.compare 와 달리 -0 과 0 을 같게 (JS 뺄셈과 같다)
+            return x < y ? -1 : x > y ? 1 : 0; // Double.compare 와 달리 -0 과 0 을 같게 (JS 뺄셈과 같다)
         };
     }
 

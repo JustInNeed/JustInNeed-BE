@@ -12,16 +12,16 @@ import com.justinneed.community.card.CommunityCardRepository;
 import com.justinneed.community.card.CommunityCardRow;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
- * 카드(세션) 단위 좋아요 · 나도 탐색중 · 북마크. 세 동작 모두 지금 공개된 카드에만 되고, 취소도 같다 (아니면 404).
- * 응답 숫자는 카드 응답과 같은 CardCounts 로 읽는다. 카드가 공개에서 빠져도 행은 남아 다시 공개하면 숫자가 돌아온다.
+ * 카드(세션) 단위 좋아요 · 나도 탐색중 · 북마크. 세 동작 모두 지금 공개된 카드에만 되고, 취소도 같다 (아니면 404). 응답 숫자는 카드 응답과 같은
+ * CardCounts 로 읽는다. 카드가 공개에서 빠져도 행은 남아 다시 공개하면 숫자가 돌아온다.
  *
  * <pre>
  * 좋아요     = on conflict 로 넣어 잠금이 없다. 내 카드는 400 (프로필 좋아요와 같다)
@@ -43,17 +43,33 @@ public class CardReactionService {
     private final ActivityRecorder activity;
     private final Clock clock;
 
-    public CardReactionService(CommunityCardReader reader, CommunityCardRepository cards, CardCounts counts,
-            MindmapLikeRepository likes, MindmapExplorationRepository explorations, BookmarkCommandService bookmarks,
-            TargetResolver targets, InteractionLocks locks, ActivityRecorder activity, Clock clock) {
-        this.reader = reader; this.cards = cards; this.counts = counts; this.likes = likes;
-        this.explorations = explorations; this.bookmarks = bookmarks; this.targets = targets;
-        this.locks = locks; this.activity = activity; this.clock = clock;
+    public CardReactionService(
+            CommunityCardReader reader,
+            CommunityCardRepository cards,
+            CardCounts counts,
+            MindmapLikeRepository likes,
+            MindmapExplorationRepository explorations,
+            BookmarkCommandService bookmarks,
+            TargetResolver targets,
+            InteractionLocks locks,
+            ActivityRecorder activity,
+            Clock clock) {
+        this.reader = reader;
+        this.cards = cards;
+        this.counts = counts;
+        this.likes = likes;
+        this.explorations = explorations;
+        this.bookmarks = bookmarks;
+        this.targets = targets;
+        this.locks = locks;
+        this.activity = activity;
+        this.clock = clock;
     }
 
     public LikeView like(Long actor, Long sessionId, boolean liked) {
         var card = visible(sessionId, actor);
-        if (actor.equals(card.owner().userId())) throw new CustomException(ErrorCode.SELF_LIKE_NOT_ALLOWED);
+        if (actor.equals(card.owner().userId()))
+            throw new CustomException(ErrorCode.SELF_LIKE_NOT_ALLOWED);
         if (liked) likes.insertIfAbsent(actor, sessionId, LocalDateTime.now(clock));
         else likes.deletePair(actor, sessionId);
         var count = count(sessionId, actor);
@@ -66,15 +82,25 @@ public class CardReactionService {
         if (!exploring) explorations.deletePair(actor, sessionId);
         else if (explorations.insertIfAbsent(actor, sessionId, LocalDateTime.now(clock)) > 0) {
             // 대상을 해시태그로 남겨 target_type 값이 늘지 않는다. 떠오르는 해시태그는 사람 · 태그 · 날짜마다 1 로 센다
-            targets.cardTags(card).forEach(tag ->
-                    activity.record(actor, TargetType.HASHTAG, tag.hashtagId(), ActivityKind.EXPLORE, List.of(tag)));
+            targets.cardTags(card)
+                    .forEach(
+                            tag ->
+                                    activity.record(
+                                            actor,
+                                            TargetType.HASHTAG,
+                                            tag.hashtagId(),
+                                            ActivityKind.EXPLORE,
+                                            List.of(tag)));
         }
         var count = count(sessionId, actor);
         return new ExploringView(count.exploringCount(), count.exploringByMe());
     }
 
     public BookmarkView bookmark(Long actor, Long sessionId, boolean bookmarked) {
-        var owner = cards.findById(sessionId).map(CommunityCardRow::getOwnerId).orElseThrow(CommunityErrors::missing);
+        var owner =
+                cards.findById(sessionId)
+                        .map(CommunityCardRow::getOwnerId)
+                        .orElseThrow(CommunityErrors::missing);
         locks.acquire(actor, List.of(owner));
         var card = visible(sessionId, actor);
         if (bookmarked) bookmarks.saveCard(actor, card);
@@ -88,12 +114,15 @@ public class CardReactionService {
     }
 
     private CardCounts.Count count(Long sessionId, Long viewerId) {
-        return counts.counts(List.of(sessionId), viewerId).getOrDefault(sessionId, CardCounts.Count.ZERO);
+        return counts.counts(List.of(sessionId), viewerId)
+                .getOrDefault(sessionId, CardCounts.Count.ZERO);
     }
 
     @Schema(name = "CardReactionServiceLikeView")
-    public record LikeView(long likeCount, boolean likedByMe) { }
+    public record LikeView(long likeCount, boolean likedByMe) {}
+
     @Schema(name = "CardReactionServiceExploringView")
-    public record ExploringView(long exploringCount, boolean exploringByMe) { }
-    public record BookmarkView(long bookmarkCount, Long bookmarkId) { }
+    public record ExploringView(long exploringCount, boolean exploringByMe) {}
+
+    public record BookmarkView(long bookmarkCount, Long bookmarkId) {}
 }

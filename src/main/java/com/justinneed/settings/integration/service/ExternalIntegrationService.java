@@ -32,23 +32,28 @@ public class ExternalIntegrationService {
     }
 
     public IntegrationStatusResponse getStatuses(Long memberId, String providerName) {
-        Map<IntegrationProvider, ExternalIntegration> connectedByProvider = externalIntegrationRepository
-                .findByMemberId(memberId)
-                .stream()
-                .collect(Collectors.toMap(ExternalIntegration::getProvider, Function.identity()));
+        Map<IntegrationProvider, ExternalIntegration> connectedByProvider =
+                externalIntegrationRepository.findByMemberId(memberId).stream()
+                        .collect(
+                                Collectors.toMap(
+                                        ExternalIntegration::getProvider, Function.identity()));
 
-        List<IntegrationProvider> providers = providerName == null
-                ? Arrays.asList(IntegrationProvider.values())
-                : List.of(IntegrationProvider.fromApiName(providerName));
+        List<IntegrationProvider> providers =
+                providerName == null
+                        ? Arrays.asList(IntegrationProvider.values())
+                        : List.of(IntegrationProvider.fromApiName(providerName));
 
-        List<IntegrationItemResponse> integrations = providers.stream()
-                .map(provider -> {
-                    ExternalIntegration integration = connectedByProvider.get(provider);
-                    return integration == null
-                            ? IntegrationItemResponse.disconnected(provider)
-                            : IntegrationItemResponse.connected(integration);
-                })
-                .toList();
+        List<IntegrationItemResponse> integrations =
+                providers.stream()
+                        .map(
+                                provider -> {
+                                    ExternalIntegration integration =
+                                            connectedByProvider.get(provider);
+                                    return integration == null
+                                            ? IntegrationItemResponse.disconnected(provider)
+                                            : IntegrationItemResponse.connected(integration);
+                                })
+                        .toList();
         return new IntegrationStatusResponse(200, integrations);
     }
 
@@ -57,18 +62,23 @@ public class ExternalIntegrationService {
     }
 
     @Transactional
-    public IntegrationEmailRegisterResponse registerEmail(Long memberId, String providerName, String email) {
+    public IntegrationEmailRegisterResponse registerEmail(
+            Long memberId, String providerName, String email) {
         IntegrationProvider provider = IntegrationProvider.fromApiName(providerName);
         String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
-        ExternalIntegration existing = externalIntegrationRepository
-                .findByMemberIdAndProvider(memberId, provider)
-                .orElse(null);
+        ExternalIntegration existing =
+                externalIntegrationRepository
+                        .findByMemberIdAndProvider(memberId, provider)
+                        .orElse(null);
 
-        boolean duplicate = existing == null
-                ? externalIntegrationRepository.existsByProviderAndEmailIgnoreCase(provider, normalizedEmail)
-                : externalIntegrationRepository.existsByProviderAndEmailIgnoreCaseAndIdNot(
-                        provider, normalizedEmail, existing.getId());
-        if (duplicate || existing != null && existing.getEmail().equalsIgnoreCase(normalizedEmail)) {
+        boolean duplicate =
+                existing == null
+                        ? externalIntegrationRepository.existsByProviderAndEmailIgnoreCase(
+                                provider, normalizedEmail)
+                        : externalIntegrationRepository.existsByProviderAndEmailIgnoreCaseAndIdNot(
+                                provider, normalizedEmail, existing.getId());
+        if (duplicate
+                || existing != null && existing.getEmail().equalsIgnoreCase(normalizedEmail)) {
             throw new CustomException(ErrorCode.DUPLICATE_INTEGRATION_EMAIL);
         }
 
@@ -80,6 +90,7 @@ public class ExternalIntegrationService {
             existing.reconnect(normalizedEmail, connectedAt);
             integration = existing;
         }
-        return IntegrationEmailRegisterResponse.from(externalIntegrationRepository.save(integration));
+        return IntegrationEmailRegisterResponse.from(
+                externalIntegrationRepository.save(integration));
     }
 }

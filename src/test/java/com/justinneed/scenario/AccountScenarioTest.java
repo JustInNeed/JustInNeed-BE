@@ -12,8 +12,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.justinneed.auth.domain.Member;
 import com.justinneed.auth.domain.RefreshToken;
-import com.justinneed.auth.domain.SocialProvider;
 import com.justinneed.auth.domain.RevokedAccessToken;
+import com.justinneed.auth.domain.SocialProvider;
 import com.justinneed.auth.dto.TokenResponse;
 import com.justinneed.auth.jwt.TokenDenylist;
 import com.justinneed.auth.jwt.TokenHashes;
@@ -39,8 +39,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 
 /**
- * 로그인 · 회원가입(닉네임 입력) · 사이드바 프로필 · 토큰 재발급/로그아웃 화면.
- * FE: src/app/onboarding/nickname, src/lib/nickname.ts, src/lib/api/client.ts(401 → refresh 1회 → 로그인 화면).
+ * 로그인 · 회원가입(닉네임 입력) · 사이드바 프로필 · 토큰 재발급/로그아웃 화면. FE: src/app/onboarding/nickname,
+ * src/lib/nickname.ts, src/lib/api/client.ts(401 → refresh 1회 → 로그인 화면).
  */
 @DisplayName("회원가입 · 로그인 · 계정")
 class AccountScenarioTest extends ScenarioTestSupport {
@@ -50,20 +50,15 @@ class AccountScenarioTest extends ScenarioTestSupport {
     private static final String NICKNAME_TAKEN_MESSAGE = "이미 사용 중인 닉네임입니다.";
     private static final String INVALID_REFRESH_MESSAGE = "유효하지 않은 리프레시 토큰입니다.";
 
-    @Autowired
-    private AuthTokenService authTokenService;
+    @Autowired private AuthTokenService authTokenService;
 
-    @Autowired
-    private TokenDenylist tokenDenylist;
+    @Autowired private TokenDenylist tokenDenylist;
 
-    @Autowired
-    private RevokedAccessTokenRepository revokedAccessTokens;
+    @Autowired private RevokedAccessTokenRepository revokedAccessTokens;
 
-    @Autowired
-    private RevokedAccessTokenCleanupScheduler revokedAccessTokenCleanupScheduler;
+    @Autowired private RevokedAccessTokenCleanupScheduler revokedAccessTokenCleanupScheduler;
 
-    @Autowired
-    private RefreshTokenRepository refreshTokens;
+    @Autowired private RefreshTokenRepository refreshTokens;
 
     @Value("${app.jwt.secret}")
     private String jwtSecret;
@@ -81,7 +76,11 @@ class AccountScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.socialProvider").value("NAVER"))
                 .andExpect(jsonPath("$.data.email").value("sprout@example.com"))
                 // FE MemberResponse.joinedAt: 타임존 없는 ISO datetime
-                .andExpect(jsonPath("$.data.joinedAt").value(matchesPattern("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*")));
+                .andExpect(
+                        jsonPath("$.data.joinedAt")
+                                .value(
+                                        matchesPattern(
+                                                "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*")));
     }
 
     @Test
@@ -89,7 +88,10 @@ class AccountScenarioTest extends ScenarioTestSupport {
     void savedNicknameShowsUpInMe() throws Exception {
         Member signedUp = member(null);
 
-        mvc.perform(patch("/members/me/nickname").with(as(signedUp)).with(json(Map.of("nickname", "sprout1"))))
+        mvc.perform(
+                        patch("/members/me/nickname")
+                                .with(as(signedUp))
+                                .with(json(Map.of("nickname", "sprout1"))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.id").value(signedUp.getId()))
                 .andExpect(jsonPath("$.data.nickname").value("sprout1"));
@@ -104,7 +106,10 @@ class AccountScenarioTest extends ScenarioTestSupport {
     void invalidNicknameIsRejected(String nickname) throws Exception {
         Member signedUp = member(null);
 
-        mvc.perform(patch("/members/me/nickname").with(as(signedUp)).with(json(Map.of("nickname", nickname))))
+        mvc.perform(
+                        patch("/members/me/nickname")
+                                .with(as(signedUp))
+                                .with(json(Map.of("nickname", nickname))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, NICKNAME_FORMAT_MESSAGE));
 
         mvc.perform(get("/members/me").with(as(signedUp)))
@@ -117,7 +122,10 @@ class AccountScenarioTest extends ScenarioTestSupport {
     void boundaryNicknamesAreAccepted(String nickname) throws Exception {
         Member signedUp = member(null);
 
-        mvc.perform(patch("/members/me/nickname").with(as(signedUp)).with(json(Map.of("nickname", nickname))))
+        mvc.perform(
+                        patch("/members/me/nickname")
+                                .with(as(signedUp))
+                                .with(json(Map.of("nickname", nickname))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.nickname").value(nickname));
     }
@@ -129,7 +137,10 @@ class AccountScenarioTest extends ScenarioTestSupport {
     void blankNicknameIsRejected(String nickname) throws Exception {
         Member signedUp = member(null);
 
-        mvc.perform(patch("/members/me/nickname").with(as(signedUp)).with(json(Map.of("nickname", nickname))))
+        mvc.perform(
+                        patch("/members/me/nickname")
+                                .with(as(signedUp))
+                                .with(json(Map.of("nickname", nickname))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message").value("닉네임을 입력해 주세요."));
@@ -141,7 +152,10 @@ class AccountScenarioTest extends ScenarioTestSupport {
         member("wanderer");
         Member me = member(null);
 
-        mvc.perform(patch("/members/me/nickname").with(as(me)).with(json(Map.of("nickname", "WANDERER"))))
+        mvc.perform(
+                        patch("/members/me/nickname")
+                                .with(as(me))
+                                .with(json(Map.of("nickname", "WANDERER"))))
                 .andExpect(errorEnvelope(HttpStatus.CONFLICT, NICKNAME_TAKEN_MESSAGE));
     }
 
@@ -150,7 +164,10 @@ class AccountScenarioTest extends ScenarioTestSupport {
     void ownNicknameCanBeResaved() throws Exception {
         Member me = member("sprout");
 
-        mvc.perform(patch("/members/me/nickname").with(as(me)).with(json(Map.of("nickname", "Sprout"))))
+        mvc.perform(
+                        patch("/members/me/nickname")
+                                .with(as(me))
+                                .with(json(Map.of("nickname", "Sprout"))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.nickname").value("Sprout"));
     }
@@ -161,7 +178,8 @@ class AccountScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
 
         mvc.perform(get("/members/me")).andExpect(status().isUnauthorized());
-        mvc.perform(get("/members/me").with(bearerToken("not-a-jwt"))).andExpect(status().isUnauthorized());
+        mvc.perform(get("/members/me").with(bearerToken("not-a-jwt")))
+                .andExpect(status().isUnauthorized());
         mvc.perform(get("/members/me").with(bearerToken(jwt.createRefreshToken(me.getId()))))
                 .andExpect(status().isUnauthorized());
     }
@@ -172,10 +190,14 @@ class AccountScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         TokenResponse login = authTokenService.issue(me.getId()); // 소셜 로그인 성공 시 발급되는 토큰
 
-        var refreshed = mvc.perform(post("/auth/refresh").with(json(Map.of("refreshToken", login.refreshToken()))))
-                .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.accessToken").isString())
-                .andExpect(jsonPath("$.data.refreshToken").value(not(login.refreshToken())));
+        var refreshed =
+                mvc.perform(
+                                post("/auth/refresh")
+                                        .with(json(Map.of("refreshToken", login.refreshToken()))))
+                        .andExpect(okEnvelope())
+                        .andExpect(jsonPath("$.data.accessToken").isString())
+                        .andExpect(
+                                jsonPath("$.data.refreshToken").value(not(login.refreshToken())));
         String newAccessToken = read(refreshed, "$.data.accessToken");
 
         mvc.perform(get("/members/me").with(bearerToken(newAccessToken)))
@@ -191,10 +213,18 @@ class AccountScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         String first = authTokenService.issue(me.getId()).refreshToken();
 
-        String second = read(mvc.perform(post("/auth/refresh").with(json(Map.of("refreshToken", first))))
-                .andExpect(okEnvelope()), "$.data.refreshToken");
-        String third = read(mvc.perform(post("/auth/refresh").with(json(Map.of("refreshToken", second))))
-                .andExpect(okEnvelope()), "$.data.refreshToken");
+        String second =
+                read(
+                        mvc.perform(post("/auth/refresh").with(json(Map.of("refreshToken", first))))
+                                .andExpect(okEnvelope()),
+                        "$.data.refreshToken");
+        String third =
+                read(
+                        mvc.perform(
+                                        post("/auth/refresh")
+                                                .with(json(Map.of("refreshToken", second))))
+                                .andExpect(okEnvelope()),
+                        "$.data.refreshToken");
 
         assertThat(List.of(first, second, third)).doesNotHaveDuplicates();
     }
@@ -217,8 +247,11 @@ class AccountScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         String accessToken = tokenWithoutJti(me.getId(), "access");
         String refreshToken = tokenWithoutJti(me.getId(), "refresh");
-        refreshTokens.save(new RefreshToken(me.getId(), TokenHashes.sha256(refreshToken),
-                LocalDateTime.now().plusDays(1)));
+        refreshTokens.save(
+                new RefreshToken(
+                        me.getId(),
+                        TokenHashes.sha256(refreshToken),
+                        LocalDateTime.now().plusDays(1)));
 
         mvc.perform(get("/members/me").with(bearerToken(accessToken)))
                 .andExpect(okEnvelope())
@@ -248,7 +281,13 @@ class AccountScenarioTest extends ScenarioTestSupport {
                 .andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_REFRESH_MESSAGE));
         mvc.perform(post("/auth/refresh").with(json(Map.of("refreshToken", "not-a-jwt"))))
                 .andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_REFRESH_MESSAGE));
-        mvc.perform(post("/auth/refresh").with(json(Map.of("refreshToken", jwt.createAccessToken(me.getId())))))
+        mvc.perform(
+                        post("/auth/refresh")
+                                .with(
+                                        json(
+                                                Map.of(
+                                                        "refreshToken",
+                                                        jwt.createAccessToken(me.getId())))))
                 .andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_REFRESH_MESSAGE));
     }
 
@@ -258,28 +297,38 @@ class AccountScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         TokenResponse login = authTokenService.issue(me.getId());
 
-        mvc.perform(post("/auth/logout").with(bearerToken(login.accessToken()))
-                        .with(json(Map.of("refreshToken", login.refreshToken()))))
+        mvc.perform(
+                        post("/auth/logout")
+                                .with(bearerToken(login.accessToken()))
+                                .with(json(Map.of("refreshToken", login.refreshToken()))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data").value(nullValue()));
 
-        mvc.perform(get("/members/me").with(bearerToken(login.accessToken()))).andExpect(status().isUnauthorized());
+        mvc.perform(get("/members/me").with(bearerToken(login.accessToken())))
+                .andExpect(status().isUnauthorized());
         mvc.perform(post("/auth/refresh").with(json(Map.of("refreshToken", login.refreshToken()))))
                 .andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_REFRESH_MESSAGE));
     }
 
     @Test
-    @DisplayName("로그아웃한 access 토큰은 DB(revoked_access_tokens)에 해시로 남아, 서버를 다시 띄워도(새 TokenDenylist) 계속 거부된다")
+    @DisplayName(
+            "로그아웃한 access 토큰은 DB(revoked_access_tokens)에 해시로 남아, 서버를 다시 띄워도(새 TokenDenylist) 계속 거부된다")
     void revokedAccessTokenSurvivesRestart() throws Exception {
         Member me = member("sprout");
         TokenResponse login = authTokenService.issue(me.getId());
 
-        mvc.perform(post("/auth/logout").with(bearerToken(login.accessToken()))).andExpect(okEnvelope());
+        mvc.perform(post("/auth/logout").with(bearerToken(login.accessToken())))
+                .andExpect(okEnvelope());
 
-        mvc.perform(get("/members/me").with(bearerToken(login.accessToken()))).andExpect(status().isUnauthorized());
-        RevokedAccessToken row = revokedAccessTokens.findById(TokenHashes.sha256(login.accessToken())).orElseThrow();
-        assertThat(row.getExpiresAt()).isEqualTo(Instant.ofEpochSecond(jwt.getExpiryEpochSecond(login.accessToken()))
-                .atZone(ZoneId.systemDefault()).toLocalDateTime());
+        mvc.perform(get("/members/me").with(bearerToken(login.accessToken())))
+                .andExpect(status().isUnauthorized());
+        RevokedAccessToken row =
+                revokedAccessTokens.findById(TokenHashes.sha256(login.accessToken())).orElseThrow();
+        assertThat(row.getExpiresAt())
+                .isEqualTo(
+                        Instant.ofEpochSecond(jwt.getExpiryEpochSecond(login.accessToken()))
+                                .atZone(ZoneId.systemDefault())
+                                .toLocalDateTime());
         assertThat(revokedAccessTokens.existsById(login.accessToken())).isFalse(); // 원문은 저장하지 않는다
         // 메모리 상태 없이 DB 만 보는 새 인스턴스 = 재시작 후의 서버
         TokenDenylist afterRestart = new TokenDenylist(revokedAccessTokens);
@@ -293,11 +342,14 @@ class AccountScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         TokenResponse login = authTokenService.issue(me.getId());
 
-        mvc.perform(post("/auth/logout").with(bearerToken(login.accessToken()))).andExpect(okEnvelope());
-        mvc.perform(post("/auth/logout").with(bearerToken(login.accessToken()))).andExpect(okEnvelope());
+        mvc.perform(post("/auth/logout").with(bearerToken(login.accessToken())))
+                .andExpect(okEnvelope());
+        mvc.perform(post("/auth/logout").with(bearerToken(login.accessToken())))
+                .andExpect(okEnvelope());
 
         assertThat(revokedAccessTokens.findAll())
-                .filteredOn(row -> row.getTokenHash().equals(TokenHashes.sha256(login.accessToken())))
+                .filteredOn(
+                        row -> row.getTokenHash().equals(TokenHashes.sha256(login.accessToken())))
                 .hasSize(1);
     }
 
@@ -314,9 +366,15 @@ class AccountScenarioTest extends ScenarioTestSupport {
 
         revokedAccessTokenCleanupScheduler.purgeExpiredTokens();
 
-        assertThat(revokedAccessTokens.existsById(TokenHashes.sha256("expired-access-token"))).isFalse();
-        assertThat(revokedAccessTokens.existsById(TokenHashes.sha256("live-access-token"))).isTrue();
-        assertThat(revokedAccessTokens.findById(TokenHashes.sha256("live-access-token")).orElseThrow().getExpiresAt())
+        assertThat(revokedAccessTokens.existsById(TokenHashes.sha256("expired-access-token")))
+                .isFalse();
+        assertThat(revokedAccessTokens.existsById(TokenHashes.sha256("live-access-token")))
+                .isTrue();
+        assertThat(
+                        revokedAccessTokens
+                                .findById(TokenHashes.sha256("live-access-token"))
+                                .orElseThrow()
+                                .getExpiresAt())
                 .isAfter(LocalDateTime.now());
     }
 
@@ -338,7 +396,10 @@ class AccountScenarioTest extends ScenarioTestSupport {
         mvc.perform(post("/auth/logout")).andExpect(okEnvelope());
         // FE logout(undefined) → body {} 로 나간다
         mvc.perform(post("/auth/logout").with(json("{}"))).andExpect(okEnvelope());
-        mvc.perform(post("/auth/logout").with(bearerToken("expired-or-garbage")).with(json(Map.of("refreshToken", "x"))))
+        mvc.perform(
+                        post("/auth/logout")
+                                .with(bearerToken("expired-or-garbage"))
+                                .with(json(Map.of("refreshToken", "x"))))
                 .andExpect(okEnvelope());
     }
 

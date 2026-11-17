@@ -20,8 +20,7 @@ public record SessionDetailResponse(
         boolean isPublic,
         List<String> tags,
         SummaryResponse summary,
-        List<Source> sources
-) {
+        List<Source> sources) {
 
     public static SessionDetailResponse from(BrowsingSession session) {
         return new SessionDetailResponse(
@@ -36,15 +35,18 @@ public record SessionDetailResponse(
                 session.isPublicSession(),
                 session.getTags(),
                 SummaryResponse.from(session.getSummary()),
-                session.getSources()
-        );
+                session.getSources());
     }
 
     // 다른 사용자가 보는 공개 세션. 즐겨찾기는 소유자만의 값이라 보내지 않는다.
     // 노드 공개 범위가 URL 만이면 커뮤니티 API(SharedSessionView)와 같게 제목 · 본문 · 출처 내용을 빼고 링크만 준다
-    public static SessionDetailResponse forViewer(BrowsingSession session, List<String> tags, boolean includeContent) {
+    public static SessionDetailResponse forViewer(
+            BrowsingSession session, List<String> tags, boolean includeContent) {
         // 화면이 출처 링크를 href 로 그대로 쓰므로 다른 사용자에게는 커뮤니티 카드처럼 http(s) 만 준다
-        List<Source> links = session.getSources().stream().filter(source -> HttpUrl.isValid(source.url())).toList();
+        List<Source> links =
+                session.getSources().stream()
+                        .filter(source -> HttpUrl.isValid(source.url()))
+                        .toList();
         return new SessionDetailResponse(
                 session.getId(),
                 includeContent ? session.getTitle() : "",
@@ -57,17 +59,14 @@ public record SessionDetailResponse(
                 session.isPublicSession(),
                 tags,
                 includeContent ? SummaryResponse.from(session.getSummary()) : null,
-                includeContent ? links : linksOnly(links)
-        );
+                includeContent ? links : linksOnly(links));
     }
 
     private static List<Source> linksOnly(List<Source> sources) {
         return sources.stream().map(source -> new Source(null, source.url(), null)).toList();
     }
 
-    public record SummaryResponse(
-            String markdown
-    ) {
+    public record SummaryResponse(String markdown) {
         private static SummaryResponse from(Summary summary) {
             if (summary == null) {
                 return null;

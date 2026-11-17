@@ -41,7 +41,8 @@ class AnalysisResultServiceTest {
     private static final Long USER_ID = 1L;
 
     // 원본(stepC) 중 링크 판단에 쓰는 부분만. cat.example.com 은 page 가 두 개로 나뉘어 있고, dog 는 컷오프 유닛이 없는 링크
-    static final String RAW_JSON = """
+    static final String RAW_JSON =
+            """
             {"kind": "rbc-session",
              "session": {"startedAt": "2026-10-30T00:59:00.000Z"},
              "pages": [
@@ -57,7 +58,8 @@ class AnalysisResultServiceTest {
             """;
 
     // AI 출력(pipeline/output.py build_output)과 같은 모양
-    static final String RESULT_JSON = """
+    static final String RESULT_JSON =
+            """
             {"sessionId": "s-1", "userId": "t-1", "modelSource": "global", "scoreMethod": "C",
              "state": {"unitFeatures": [{"unit_key": "https://blog.naver.com/cat/1#u1", "cursor_speed_mean": 1.2}],
                        "userModel": {"k": 4, "centroids": [[0.1], [0.2], [0.3], [0.4]]}},
@@ -88,42 +90,36 @@ class AnalysisResultServiceTest {
                              "dwellMs": 5000, "visitCount": 1}]}
             """;
 
-    @Autowired
-    private AnalysisResultService service;
+    @Autowired private AnalysisResultService service;
 
-    @Autowired
-    private BrowsingSessionRepository sessionRepository;
+    @Autowired private BrowsingSessionRepository sessionRepository;
 
-    @Autowired
-    private SessionRawPayloadRepository rawRepository;
+    @Autowired private SessionRawPayloadRepository rawRepository;
 
-    @Autowired
-    private SessionResultRepository resultRepository;
+    @Autowired private SessionResultRepository resultRepository;
 
-    @Autowired
-    private AiClusterModelRepository modelRepository;
+    @Autowired private AiClusterModelRepository modelRepository;
 
-    @Autowired
-    private MemberRepository memberRepository;
+    @Autowired private MemberRepository memberRepository;
 
-    @Autowired
-    private EntityManager entityManager;
+    @Autowired private EntityManager entityManager;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @Autowired private ObjectMapper objectMapper;
 
     private Long sessionId;
 
     @BeforeEach
     void setUp() {
-        BrowsingSession session = new BrowsingSession(USER_ID, "분석 전 제목", LocalDateTime.of(2026, 10, 30, 9, 59));
+        BrowsingSession session =
+                new BrowsingSession(USER_ID, "분석 전 제목", LocalDateTime.of(2026, 10, 30, 9, 59));
         session.markReady();
         session.startAnalysis(LocalDateTime.of(2026, 10, 30, 10, 30));
         sessionRepository.save(session);
         sessionId = session.getId();
-        Map<String, Object> raw = objectMapper.readValue(RAW_JSON, new TypeReference<>() {
-        });
-        rawRepository.save(new SessionRawPayload(sessionId, USER_ID, raw, LocalDateTime.of(2026, 10, 30, 10, 30)));
+        Map<String, Object> raw = objectMapper.readValue(RAW_JSON, new TypeReference<>() {});
+        rawRepository.save(
+                new SessionRawPayload(
+                        sessionId, USER_ID, raw, LocalDateTime.of(2026, 10, 30, 10, 30)));
     }
 
     @Test
@@ -136,26 +132,48 @@ class AnalysisResultServiceTest {
         assertThat(session.getStatus()).isEqualTo(SessionStatus.COMPLETED);
         assertThat(session.getTitle()).isEqualTo("고양이와 JPA");
         assertThat(session.getSummary().getMarkdown()).isEqualTo("## 음수량\n\n하루 50ml");
-        assertThat(session.getSummary().getEssay()).containsEntry("title", "고양이와 JPA").containsKey("sections");
+        assertThat(session.getSummary().getEssay())
+                .containsEntry("title", "고양이와 JPA")
+                .containsKey("sections");
         assertThat(session.getTags()).containsExactly("고양이", "JPA");
         // 원본의 방문 링크 수 (AI pages 는 1개뿐이지만 원본 링크는 cat · spring · dog 3개)
         assertThat(session.getPageCount()).isEqualTo(3);
 
         // 출처는 링크당 1개, 방문 시각(KST) 순. 발췌는 점수가 가장 높은 유닛
-        assertThat(session.getSources()).containsExactly(
-                new Source("JPA 문서", "https://docs.spring.io/jpa", "쿼리 메서드", LocalDateTime.of(2026, 10, 30, 10, 0)),
-                new Source("고양이 물", "https://blog.naver.com/cat/1", "높은 점수 발췌", LocalDateTime.of(2026, 10, 30, 10, 2)),
-                new Source("원본에 없는 글", "https://unknown.example.com/x", "원본 없음", LocalDateTime.of(2026, 10, 30, 10, 20)));
+        assertThat(session.getSources())
+                .containsExactly(
+                        new Source(
+                                "JPA 문서",
+                                "https://docs.spring.io/jpa",
+                                "쿼리 메서드",
+                                LocalDateTime.of(2026, 10, 30, 10, 0)),
+                        new Source(
+                                "고양이 물",
+                                "https://blog.naver.com/cat/1",
+                                "높은 점수 발췌",
+                                LocalDateTime.of(2026, 10, 30, 10, 2)),
+                        new Source(
+                                "원본에 없는 글",
+                                "https://unknown.example.com/x",
+                                "원본 없음",
+                                LocalDateTime.of(2026, 10, 30, 10, 20)));
 
         SessionResult saved = resultRepository.findById(sessionId).orElseThrow();
         assertThat(saved.getUnitFeatures()).hasSize(1);
         assertThat(saved.getSelectedUnits()).hasSize(4);
         assertThat(saved.getAnalysisUnits()).hasSize(1);
         assertThat(saved.getAnalysisSummary()).containsKey("Reading");
-        assertThat(saved.getPages()).singleElement()
+        assertThat(saved.getPages())
+                .singleElement()
                 .satisfies(page -> assertThat(page).containsEntry("category", "OFFICIAL_DOCS"));
-        assertThat(saved.getPageVisits()).hasSize(2)
-                .first().satisfies(page -> assertThat(page).containsEntry("visitCount", 2).containsEntry("dwellMs", 200000));
+        assertThat(saved.getPageVisits())
+                .hasSize(2)
+                .first()
+                .satisfies(
+                        page ->
+                                assertThat(page)
+                                        .containsEntry("visitCount", 2)
+                                        .containsEntry("dwellMs", 200000));
         assertThat(saved.getModelSource()).isEqualTo("global");
         assertThat(saved.getScoreMethod()).isEqualTo("C");
 
@@ -168,8 +186,12 @@ class AnalysisResultServiceTest {
 
     @Test
     void 재학습하지_않았으면_개인_군집_모델을_건드리지_않는다() {
-        service.save(sessionId, result(RESULT_JSON.replace(
-                "\"userModel\": {\"k\": 4, \"centroids\": [[0.1], [0.2], [0.3], [0.4]]}", "\"userModel\": null")));
+        service.save(
+                sessionId,
+                result(
+                        RESULT_JSON.replace(
+                                "\"userModel\": {\"k\": 4, \"centroids\": [[0.1], [0.2], [0.3], [0.4]]}",
+                                "\"userModel\": null")));
 
         assertThat(modelRepository.findByScopeAndUserId(ClusterModelScope.USER, USER_ID)).isEmpty();
     }
@@ -181,12 +203,15 @@ class AnalysisResultServiceTest {
 
     @Test
     void 마인드맵이_대체_구조면_저장하지_않고_FAILED_로_바꾼다() {
-        assertLlmFailed(RESULT_JSON.replace("\"structureSource\": \"llm\"", "\"structureSource\": \"fallback\""));
+        assertLlmFailed(
+                RESULT_JSON.replace(
+                        "\"structureSource\": \"llm\"", "\"structureSource\": \"fallback\""));
     }
 
     @Test
     void AI_가_방문_글_전체를_주지_않으면_null_로_둔다() {
-        service.save(sessionId, result(RESULT_JSON.replaceFirst("(?s),\\s*\"pageVisits\".*$", "}")));
+        service.save(
+                sessionId, result(RESULT_JSON.replaceFirst("(?s),\\s*\"pageVisits\".*$", "}")));
         entityManager.flush();
         entityManager.clear();
 
@@ -196,8 +221,17 @@ class AnalysisResultServiceTest {
     @Test
     void LLM_을_호출하지_않아_마인드맵_줄글이_없으면_FAILED_로_바꾼다() {
         AiAnalysisResult full = result(RESULT_JSON);
-        AiAnalysisResult withoutLlm = new AiAnalysisResult(full.modelSource(), full.scoreMethod(), full.state(),
-                null, null, full.selected(), full.analysis(), full.pages(), full.pageVisits());
+        AiAnalysisResult withoutLlm =
+                new AiAnalysisResult(
+                        full.modelSource(),
+                        full.scoreMethod(),
+                        full.state(),
+                        null,
+                        null,
+                        full.selected(),
+                        full.analysis(),
+                        full.pages(),
+                        full.pageVisits());
 
         assertThatThrownBy(() -> service.save(sessionId, withoutLlm))
                 .isInstanceOf(CustomException.class)
@@ -208,9 +242,13 @@ class AnalysisResultServiceTest {
 
     @Test
     void 분석_도중_탈퇴했으면_결과를_저장하지_않고_FAILED_로_둔다() {
-        Member withdrawn = memberRepository.save(new Member(SocialProvider.KAKAO, "withdrawn-result", null, null));
+        Member withdrawn =
+                memberRepository.save(
+                        new Member(SocialProvider.KAKAO, "withdrawn-result", null, null));
         withdrawn.withdraw(null, LocalDateTime.now());
-        BrowsingSession session = new BrowsingSession(withdrawn.getId(), "분석 전 제목", LocalDateTime.of(2026, 10, 30, 9, 59));
+        BrowsingSession session =
+                new BrowsingSession(
+                        withdrawn.getId(), "분석 전 제목", LocalDateTime.of(2026, 10, 30, 9, 59));
         session.markReady();
         session.startAnalysis(LocalDateTime.of(2026, 10, 30, 10, 30));
         Long withdrawnSessionId = sessionRepository.save(session).getId();
@@ -220,9 +258,11 @@ class AnalysisResultServiceTest {
                 .isInstanceOf(CustomException.class)
                 .extracting(e -> ((CustomException) e).getErrorCode())
                 .isEqualTo(ErrorCode.ANALYSIS_MEMBER_WITHDRAWN);
-        assertThat(sessionRepository.findById(withdrawnSessionId).orElseThrow().getStatus()).isEqualTo(SessionStatus.FAILED);
+        assertThat(sessionRepository.findById(withdrawnSessionId).orElseThrow().getStatus())
+                .isEqualTo(SessionStatus.FAILED);
         assertThat(resultRepository.findById(withdrawnSessionId)).isEmpty();
-        assertThat(modelRepository.findByScopeAndUserId(ClusterModelScope.USER, withdrawn.getId())).isEmpty();
+        assertThat(modelRepository.findByScopeAndUserId(ClusterModelScope.USER, withdrawn.getId()))
+                .isEmpty();
     }
 
     @Test
@@ -235,7 +275,8 @@ class AnalysisResultServiceTest {
                 .isInstanceOf(CustomException.class)
                 .extracting(e -> ((CustomException) e).getErrorCode())
                 .isEqualTo(ErrorCode.ANALYSIS_NOT_IN_PROGRESS);
-        assertThat(sessionRepository.findById(sessionId).orElseThrow().getStatus()).isEqualTo(SessionStatus.COMPLETED);
+        assertThat(sessionRepository.findById(sessionId).orElseThrow().getStatus())
+                .isEqualTo(SessionStatus.COMPLETED);
         assertThat(resultRepository.findById(sessionId)).isEmpty();
     }
 
@@ -243,7 +284,8 @@ class AnalysisResultServiceTest {
     void AI_가_분석_오류를_알리면_FAILED_로_바꾼다() {
         service.fail(sessionId, "RuntimeError: boom");
 
-        assertThat(sessionRepository.findById(sessionId).orElseThrow().getStatus()).isEqualTo(SessionStatus.FAILED);
+        assertThat(sessionRepository.findById(sessionId).orElseThrow().getStatus())
+                .isEqualTo(SessionStatus.FAILED);
     }
 
     @Test
@@ -254,7 +296,8 @@ class AnalysisResultServiceTest {
                 .isInstanceOf(CustomException.class)
                 .extracting(e -> ((CustomException) e).getErrorCode())
                 .isEqualTo(ErrorCode.RAW_PAYLOAD_NOT_FOUND);
-        assertThat(sessionRepository.findById(sessionId).orElseThrow().getStatus()).isEqualTo(SessionStatus.FAILED);
+        assertThat(sessionRepository.findById(sessionId).orElseThrow().getStatus())
+                .isEqualTo(SessionStatus.FAILED);
         assertThat(resultRepository.findById(sessionId)).isEmpty();
     }
 

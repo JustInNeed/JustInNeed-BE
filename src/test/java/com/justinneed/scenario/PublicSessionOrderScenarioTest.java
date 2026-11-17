@@ -19,8 +19,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /**
- * 다른 사람에게 보이는 프로필의 공개 세션 순서. 세션 탭과 마인드맵 탭이 같은 순서를 쓴다:
- * 고정(살아 있는 것만) 고정 순서 → 나머지는 마지막 활동(종료, 없으면 시작) 최신순 → 같으면 id 역순.
+ * 다른 사람에게 보이는 프로필의 공개 세션 순서. 세션 탭과 마인드맵 탭이 같은 순서를 쓴다: 고정(살아 있는 것만) 고정 순서 → 나머지는 마지막 활동(종료, 없으면 시작)
+ * 최신순 → 같으면 id 역순.
  */
 @DisplayName("프로필 공개 세션 순서")
 class PublicSessionOrderScenarioTest extends ScenarioTestSupport {
@@ -44,13 +44,32 @@ class PublicSessionOrderScenarioTest extends ScenarioTestSupport {
         middle = publicSession("중간", "2026-04-10T09:00:00");
         newest = publicSession("최신", "2026-04-20T09:00:00");
         tie = publicSession("같은 시각", "2026-04-10T09:00:00");
-        hidden = session(owner, "비공개", "2026-04-25T09:00:00", "2026-04-25T10:00:00", 1, false, false,
-                List.of("로마"), sources(), "본문");
+        hidden =
+                session(
+                        owner,
+                        "비공개",
+                        "2026-04-25T09:00:00",
+                        "2026-04-25T10:00:00",
+                        1,
+                        false,
+                        false,
+                        List.of("로마"),
+                        sources(),
+                        "본문");
     }
 
     private BrowsingSession publicSession(String title, String startedAt) {
-        return session(owner, title, startedAt, startedAt.replace("T09", "T10"), 1, false, true,
-                List.of("로마"), sources(), "본문");
+        return session(
+                owner,
+                title,
+                startedAt,
+                startedAt.replace("T09", "T10"),
+                1,
+                false,
+                true,
+                List.of("로마"),
+                sources(),
+                "본문");
     }
 
     private static List<Source> sources() {
@@ -58,7 +77,10 @@ class PublicSessionOrderScenarioTest extends ScenarioTestSupport {
     }
 
     private void pin(BrowsingSession session) throws Exception {
-        mvc.perform(post("/community/me/pinned-sessions").with(as(owner)).with(json(Map.of("sessionId", session.getId()))))
+        mvc.perform(
+                        post("/community/me/pinned-sessions")
+                                .with(as(owner))
+                                .with(json(Map.of("sessionId", session.getId()))))
                 .andExpect(status().isCreated());
     }
 
@@ -67,21 +89,37 @@ class PublicSessionOrderScenarioTest extends ScenarioTestSupport {
     void newestFirstWithoutPins() throws Exception {
         mvc.perform(get(SESSIONS, owner.getId()).with(as(viewer)))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(newest, tie, middle, older))))
-                .andExpect(jsonPath("$.data.sessions[*].isPinned").value(contains(false, false, false, false)))
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(contains(ids(newest, tie, middle, older))))
+                .andExpect(
+                        jsonPath("$.data.sessions[*].isPinned")
+                                .value(contains(false, false, false, false)))
                 .andExpect(jsonPath("$.data.hasNext").value(false));
     }
 
     @Test
     @DisplayName("종료 시각이 없는 공개 세션은 시작 시각으로 줄을 선다")
     void lastActivityFallsBackToStart() throws Exception {
-        BrowsingSession open = session(owner, "종료 없음", "2026-04-15T09:00:00", "2026-04-15T10:00:00", 1, false, true,
-                List.of("로마"), sources(), "본문");
+        BrowsingSession open =
+                session(
+                        owner,
+                        "종료 없음",
+                        "2026-04-15T09:00:00",
+                        "2026-04-15T10:00:00",
+                        1,
+                        false,
+                        true,
+                        List.of("로마"),
+                        sources(),
+                        "본문");
         ReflectionTestUtils.setField(open, "endedAt", null);
         sessions.saveAndFlush(open);
 
         mvc.perform(get(SESSIONS, owner.getId()).with(as(viewer)))
-                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(newest, open, tie, middle, older))));
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(contains(ids(newest, open, tie, middle, older))));
     }
 
     @Test
@@ -91,8 +129,12 @@ class PublicSessionOrderScenarioTest extends ScenarioTestSupport {
         pin(middle);
 
         mvc.perform(get(SESSIONS, owner.getId()).with(as(viewer)))
-                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(older, middle, newest, tie))))
-                .andExpect(jsonPath("$.data.sessions[*].isPinned").value(contains(true, true, false, false)));
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(contains(ids(older, middle, newest, tie))))
+                .andExpect(
+                        jsonPath("$.data.sessions[*].isPinned")
+                                .value(contains(true, true, false, false)));
     }
 
     @Test
@@ -101,19 +143,39 @@ class PublicSessionOrderScenarioTest extends ScenarioTestSupport {
         pin(tie);
         pin(older);
 
-        mvc.perform(get(SESSIONS, owner.getId()).param("page", "0").param("size", "1").with(as(viewer)))
+        mvc.perform(
+                        get(SESSIONS, owner.getId())
+                                .param("page", "0")
+                                .param("size", "1")
+                                .with(as(viewer)))
                 .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(tie))))
                 .andExpect(jsonPath("$.data.hasNext").value(true));
-        mvc.perform(get(SESSIONS, owner.getId()).param("page", "1").param("size", "1").with(as(viewer)))
+        mvc.perform(
+                        get(SESSIONS, owner.getId())
+                                .param("page", "1")
+                                .param("size", "1")
+                                .with(as(viewer)))
                 .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(older))))
                 .andExpect(jsonPath("$.data.hasNext").value(true));
-        mvc.perform(get(SESSIONS, owner.getId()).param("page", "0").param("size", "2").with(as(viewer)))
+        mvc.perform(
+                        get(SESSIONS, owner.getId())
+                                .param("page", "0")
+                                .param("size", "2")
+                                .with(as(viewer)))
                 .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(tie, older))))
                 .andExpect(jsonPath("$.data.hasNext").value(true));
-        mvc.perform(get(SESSIONS, owner.getId()).param("page", "1").param("size", "2").with(as(viewer)))
+        mvc.perform(
+                        get(SESSIONS, owner.getId())
+                                .param("page", "1")
+                                .param("size", "2")
+                                .with(as(viewer)))
                 .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(newest, middle))))
                 .andExpect(jsonPath("$.data.hasNext").value(false));
-        mvc.perform(get(SESSIONS, owner.getId()).param("page", "2").param("size", "2").with(as(viewer)))
+        mvc.perform(
+                        get(SESSIONS, owner.getId())
+                                .param("page", "2")
+                                .param("size", "2")
+                                .with(as(viewer)))
                 .andExpect(jsonPath("$.data.sessions").isEmpty())
                 .andExpect(jsonPath("$.data.hasNext").value(false));
     }
@@ -131,8 +193,10 @@ class PublicSessionOrderScenarioTest extends ScenarioTestSupport {
         mvc.perform(get(SESSIONS, owner.getId()).param("page", "1").with(as(viewer)))
                 .andExpect(jsonPath("$.data.sessions.length()").value(1))
                 .andExpect(jsonPath("$.data.hasNext").value(false));
-        mvc.perform(get(SESSIONS, owner.getId()).param("page", "-1").with(as(viewer))).andExpect(status().isBadRequest());
-        mvc.perform(get(SESSIONS, owner.getId()).param("size", "101").with(as(viewer))).andExpect(status().isBadRequest());
+        mvc.perform(get(SESSIONS, owner.getId()).param("page", "-1").with(as(viewer)))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get(SESSIONS, owner.getId()).param("size", "101").with(as(viewer)))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -142,11 +206,19 @@ class PublicSessionOrderScenarioTest extends ScenarioTestSupport {
         pin(middle);
 
         mvc.perform(get(MINDMAPS, owner.getId()).with(as(viewer)))
-                .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(older, middle, newest, tie))))
-                .andExpect(jsonPath("$.data.mindmaps[*].isPinned").value(contains(true, true, false, false)))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[*].mindmapId")
+                                .value(contains(ids(older, middle, newest, tie))))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[*].isPinned")
+                                .value(contains(true, true, false, false)))
                 .andExpect(jsonPath("$.data.mindmaps[0].card").doesNotExist())
                 .andExpect(jsonPath("$.data.mindmaps[0].owner.nickname").value("sprout"));
-        mvc.perform(get(MINDMAPS, owner.getId()).param("page", "1").param("size", "3").with(as(viewer)))
+        mvc.perform(
+                        get(MINDMAPS, owner.getId())
+                                .param("page", "1")
+                                .param("size", "3")
+                                .with(as(viewer)))
                 .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(tie))))
                 .andExpect(jsonPath("$.data.hasNext").value(false));
         mvc.perform(get("/community/search/mindmaps").param("q", "로마").with(as(viewer)))
@@ -159,16 +231,24 @@ class PublicSessionOrderScenarioTest extends ScenarioTestSupport {
     void deletedPinAndCount() throws Exception {
         pin(older);
         pin(middle);
-        mvc.perform(delete("/sessions/{id}", older.getId()).with(as(owner))).andExpect(okEnvelope());
+        mvc.perform(delete("/sessions/{id}", older.getId()).with(as(owner)))
+                .andExpect(okEnvelope());
 
         mvc.perform(get(SESSIONS, owner.getId()).with(as(viewer)))
-                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(middle, newest, tie))));
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(contains(ids(middle, newest, tie))));
         mvc.perform(get(MINDMAPS, owner.getId()).with(as(viewer)))
-                .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(middle, newest, tie))));
+                .andExpect(
+                        jsonPath("$.data.mindmaps[*].mindmapId")
+                                .value(contains(ids(middle, newest, tie))));
         mvc.perform(get("/community/profiles/{id}", owner.getId()).with(as(viewer)))
                 .andExpect(jsonPath("$.data.sharedSessionCount").value(3));
 
-        mvc.perform(patch("/sessions/{id}", hidden.getId()).with(as(owner)).with(json(Map.of("isPublic", true))))
+        mvc.perform(
+                        patch("/sessions/{id}", hidden.getId())
+                                .with(as(owner))
+                                .with(json(Map.of("isPublic", true))))
                 .andExpect(okEnvelope());
         mvc.perform(get("/community/profiles/{id}", owner.getId()).with(as(viewer)))
                 .andExpect(jsonPath("$.data.sharedSessionCount").value(4));

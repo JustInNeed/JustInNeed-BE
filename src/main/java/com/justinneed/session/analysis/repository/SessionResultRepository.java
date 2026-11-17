@@ -13,7 +13,8 @@ import org.springframework.data.repository.query.Param;
 public interface SessionResultRepository extends JpaRepository<SessionResult, Long> {
 
     // AI 가 재학습할 때 이 사용자의 이전 세션 유닛 피처를 모두 읽는다 (GET /history). 지운 세션은 개인화에 쓰지 않는다
-    @Query("""
+    @Query(
+            """
             select result
             from SessionResult result
             where result.userId = :userId
@@ -23,7 +24,8 @@ public interface SessionResultRepository extends JpaRepository<SessionResult, Lo
     List<SessionResult> findActiveByUserId(@Param("userId") Long userId);
 
     // 현재 세션을 뺀 이전 세션 수 (AI 의 개인 모델 사용 · 재학습 판단)
-    @Query("""
+    @Query(
+            """
             select count(result)
             from SessionResult result
             where result.userId = :userId
@@ -36,7 +38,8 @@ public interface SessionResultRepository extends JpaRepository<SessionResult, Lo
     long countByUserId(Long userId);
 
     // 세션 마인드맵 화면용. 유닛 피처 · 분석 유닛 등 큰 컬럼은 읽지 않는다
-    @Query("""
+    @Query(
+            """
             select new com.justinneed.session.analysis.dto.SessionMindmapSource(
                 cast(result.mindmap as String), cast(result.selectedUnits as String))
             from SessionResult result
@@ -45,7 +48,8 @@ public interface SessionResultRepository extends JpaRepository<SessionResult, Lo
     Optional<SessionMindmapSource> findMindmapSource(@Param("sessionId") Long sessionId);
 
     // 커뮤니티 카드 · 공개 그래프용. findMindmapSource 를 여러 세션에 한 번에
-    @Query("""
+    @Query(
+            """
             select new com.justinneed.session.analysis.dto.SessionMindmapRow(
                 result.sessionId, cast(result.mindmap as String), cast(result.selectedUnits as String))
             from SessionResult result

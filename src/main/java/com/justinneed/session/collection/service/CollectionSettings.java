@@ -20,6 +20,4 @@ public record CollectionSettings(
         // GET /input 뒤 콜백을 기다리는 시간
         @Value("${app.collection.callback-timeout:30m}") Duration callbackTimeout,
         // 합치지 못할 때(원본 형식 오류 등) 시도하는 횟수. 다 차면 FAILED
-        @Value("${app.collection.merge-max-attempts:3}") int mergeMaxAttempts
-) {
-}
+        @Value("${app.collection.merge-max-attempts:3}") int mergeMaxAttempts) {}

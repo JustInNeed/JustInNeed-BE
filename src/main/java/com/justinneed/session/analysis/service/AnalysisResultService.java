@@ -1,6 +1,5 @@
 package com.justinneed.session.analysis.service;
 
-import tools.jackson.databind.ObjectMapper;
 import com.justinneed.auth.domain.Member;
 import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.community.card.CommunityCardSync;
@@ -40,6 +39,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * AI 분석 결과(/analyze 응답)를 저장한다.
@@ -54,10 +54,9 @@ import org.springframework.transaction.annotation.Transactional;
  * 청크     → 바로 지우지 않는다. 마지막 청크 뒤 3일까지 다시 온 청크의 내용 비교에 쓰고 ChunkSessionTimeoutScheduler 가 지운다
  * </pre>
  *
- * AI 콜백(/internal/ai/sessions/{id}/result)으로 받으며, 세션이 ANALYZING 일 때만 저장한다. 지운 세션은 저장하지 않는다.
- * LLM 이 실패해 마인드맵 · 줄글이 없거나 대체 구조면 아무것도 저장하지 않고 세션을 FAILED 로 바꾼 뒤 예외를 던진다.
- * (실패 상태를 남겨야 하므로 CustomException 은 롤백하지 않는다. 검사는 모두 저장 전에 한다.)
- * FAILED 로 바꿀 때는 실패 시각 · 보관 기한이 남도록 AnalysisFailures 를 거친다.
+ * AI 콜백(/internal/ai/sessions/{id}/result)으로 받으며, 세션이 ANALYZING 일 때만 저장한다. 지운 세션은 저장하지 않는다. LLM 이
+ * 실패해 마인드맵 · 줄글이 없거나 대체 구조면 아무것도 저장하지 않고 세션을 FAILED 로 바꾼 뒤 예외를 던진다. (실패 상태를 남겨야 하므로 CustomException
+ * 은 롤백하지 않는다. 검사는 모두 저장 전에 한다.) FAILED 로 바꿀 때는 실패 시각 · 보관 기한이 남도록 AnalysisFailures 를 거친다.
  */
 @Service
 public class AnalysisResultService {
@@ -74,7 +73,8 @@ public class AnalysisResultService {
     private final AnalysisFailures failures;
     private final ObjectMapper objectMapper;
 
-    public AnalysisResultService(BrowsingSessionRepository sessionRepository,
+    public AnalysisResultService(
+            BrowsingSessionRepository sessionRepository,
             SessionResultRepository resultRepository,
             SessionRawPayloadRepository rawPayloadRepository,
             AiClusterModelRepository clusterModelRepository,
@@ -94,8 +94,10 @@ public class AnalysisResultService {
 
     @Transactional(noRollbackFor = CustomException.class)
     public void save(Long sessionId, AiAnalysisResult result) {
-        BrowsingSession session = sessionRepository.lockById(sessionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        BrowsingSession session =
+                sessionRepository
+                        .lockById(sessionId)
+                        .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         requireInProgress(session);
         // 분석 도중 탈퇴했으면 결과를 저장하지 않는다. 4xx 라 AI 도 재시도하지 않는다
         if (memberRepository.findById(session.getUserId()).map(Member::isWithdrawn).orElse(false)) {
@@ -104,7 +106,10 @@ public class AnalysisResultService {
         }
 
         if (isLlmFailed(result)) {
-            log.warn("[ai analysis] session {} 마인드맵 · 줄글이 LLM 결과가 아니라 FAILED: {}", sessionId, llmFailureDetail(result));
+            log.warn(
+                    "[ai analysis] session {} 마인드맵 · 줄글이 LLM 결과가 아니라 FAILED: {}",
+                    sessionId,
+                    llmFailureDetail(result));
             failures.fail(session);
             throw new CustomException(ErrorCode.ANALYSIS_LLM_FAILED);
         }
@@ -133,8 +138,10 @@ public class AnalysisResultService {
     // AI 가 분석 중 오류를 알려 오면 FAILED 로 둔다 (원본은 21일 동안 남아 있어 다시 요청할 수 있다)
     @Transactional
     public void fail(Long sessionId, String reason) {
-        BrowsingSession session = sessionRepository.lockById(sessionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        BrowsingSession session =
+                sessionRepository
+                        .lockById(sessionId)
+                        .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         requireInProgress(session);
         failures.fail(session);
         log.warn("[ai analysis] session {} 분석 실패: {}", sessionId, reason);
@@ -156,8 +163,10 @@ public class AnalysisResultService {
 
     // 실패로 본 까닭 (로그용). source 가 null 이면 분석할 유닛이 없어 LLM 을 부르지 않은 것, fallback 이면 LLM 호출 · 응답 실패
     private static String llmFailureDetail(AiAnalysisResult result) {
-        return "mindmap " + sourceDetail(result.mindmap(), "structureSource")
-                + ", essay " + sourceDetail(result.essay(), "source");
+        return "mindmap "
+                + sourceDetail(result.mindmap(), "structureSource")
+                + ", essay "
+                + sourceDetail(result.essay(), "source");
     }
 
     private static String sourceDetail(Map<String, Object> part, String sourceKey) {
@@ -168,9 +177,12 @@ public class AnalysisResultService {
         return sourceKey + "=" + part.get(sourceKey) + (reason != null ? " (" + reason + ")" : "");
     }
 
-    private void saveResult(BrowsingSession session, AiAnalysisResult result, RawLinkVisits linkVisits) {
-        SessionResult sessionResult = resultRepository.findById(session.getId())
-                .orElseGet(() -> new SessionResult(session.getId(), session.getUserId()));
+    private void saveResult(
+            BrowsingSession session, AiAnalysisResult result, RawLinkVisits linkVisits) {
+        SessionResult sessionResult =
+                resultRepository
+                        .findById(session.getId())
+                        .orElseGet(() -> new SessionResult(session.getId(), session.getUserId()));
         Map<String, Object> analysis = mapOrEmpty(result.analysis());
         sessionResult.replace(
                 result.mindmap(),
@@ -193,15 +205,23 @@ public class AnalysisResultService {
         }
         int sessionCount = (int) resultRepository.countByUserId(userId);
         LocalDateTime now = LocalDateTime.now();
-        clusterModelRepository.findByScopeAndUserId(ClusterModelScope.USER, userId)
+        clusterModelRepository
+                .findByScopeAndUserId(ClusterModelScope.USER, userId)
                 .ifPresentOrElse(
                         model -> model.replace(userModel, sessionCount, now),
-                        () -> clusterModelRepository.save(
-                                new AiClusterModel(ClusterModelScope.USER, userId, userModel, sessionCount, now)));
+                        () ->
+                                clusterModelRepository.save(
+                                        new AiClusterModel(
+                                                ClusterModelScope.USER,
+                                                userId,
+                                                userModel,
+                                                sessionCount,
+                                                now)));
     }
 
     // 요약 행이 없으면 만들고, 줄글 원본(essay)과 변환한 마크다운을 함께 넣는다
-    private static void saveEssay(BrowsingSession session, Map<String, Object> essay, String markdown) {
+    private static void saveEssay(
+            BrowsingSession session, Map<String, Object> essay, String markdown) {
         Summary summary = session.getSummary();
         if (summary == null) {
             summary = new Summary(session, "");
@@ -210,13 +230,16 @@ public class AnalysisResultService {
     }
 
     // AI pages 에 링크별 사이트 카테고리를 붙인다 (홈 · 분석 화면 집계용)
-    private static List<Map<String, Object>> withCategory(List<Map<String, Object>> pages, RawLinkVisits linkVisits) {
+    private static List<Map<String, Object>> withCategory(
+            List<Map<String, Object>> pages, RawLinkVisits linkVisits) {
         List<Map<String, Object>> categorized = new ArrayList<>();
         for (Map<String, Object> page : pages) {
             String url = page.get("url") instanceof String text ? text : null;
-            SiteCategory category = linkVisits.find(url)
-                    .map(LinkVisit::category)
-                    .orElseGet(() -> SiteCategory.classify(url));
+            SiteCategory category =
+                    linkVisits
+                            .find(url)
+                            .map(LinkVisit::category)
+                            .orElseGet(() -> SiteCategory.classify(url));
             Map<String, Object> copy = new LinkedHashMap<>(page);
             copy.put("category", category.name());
             categorized.add(copy);
@@ -225,7 +248,8 @@ public class AnalysisResultService {
     }
 
     // 컷오프 유닛을 링크별로 묶어 출처 1개로. 발췌는 점수가 가장 높은 유닛, 방문 시각은 원본의 링크 방문 시각
-    private static List<Source> toSources(List<Map<String, Object>> selected, RawLinkVisits linkVisits) {
+    private static List<Source> toSources(
+            List<Map<String, Object>> selected, RawLinkVisits linkVisits) {
         Map<String, List<Map<String, Object>>> unitsByLink = new LinkedHashMap<>();
         for (Map<String, Object> unit : selected) {
             if (unit.get("pageUrl") instanceof String url && !url.isBlank()) {
@@ -234,42 +258,61 @@ public class AnalysisResultService {
         }
 
         List<Source> sources = new ArrayList<>();
-        unitsByLink.forEach((url, units) -> {
-            Map<String, Object> best = units.stream()
-                    .max(Comparator.comparingDouble(AnalysisResultService::score))
-                    .orElseThrow();
-            LocalDateTime visitedAt = linkVisits.find(url)
-                    .map(LinkVisit::firstVisitedAt)
-                    .orElseGet(() -> earliestSeenAt(units));
-            sources.add(new Source(text(units.get(0).get("pageTitle")), url, text(best.get("text")), visitedAt));
-        });
+        unitsByLink.forEach(
+                (url, units) -> {
+                    Map<String, Object> best =
+                            units.stream()
+                                    .max(Comparator.comparingDouble(AnalysisResultService::score))
+                                    .orElseThrow();
+                    LocalDateTime visitedAt =
+                            linkVisits
+                                    .find(url)
+                                    .map(LinkVisit::firstVisitedAt)
+                                    .orElseGet(() -> earliestSeenAt(units));
+                    sources.add(
+                            new Source(
+                                    text(units.get(0).get("pageTitle")),
+                                    url,
+                                    text(best.get("text")),
+                                    visitedAt));
+                });
         addMergedLinks(selected, linkVisits, sources);
-        sources.sort(Comparator.comparing(Source::visitedAt, Comparator.nullsLast(Comparator.naturalOrder())));
+        sources.sort(
+                Comparator.comparing(
+                        Source::visitedAt, Comparator.nullsLast(Comparator.naturalOrder())));
         return sources;
     }
 
     // 내용이 같아 대표 유닛에 합쳐진 유닛은 selected 에 없고 대표의 mergedFrom("pageId#pid")에만 남는다.
     // 그 링크가 아직 출처에 없으면 출처로 더한다. 글이 같은 내용이므로 발췌는 점수가 높은 대표의 문단을 쓴다
-    private static void addMergedLinks(List<Map<String, Object>> selected, RawLinkVisits linkVisits,
-            List<Source> sources) {
+    private static void addMergedLinks(
+            List<Map<String, Object>> selected, RawLinkVisits linkVisits, List<Source> sources) {
         Set<String> links = new HashSet<>(sources.stream().map(Source::url).toList());
         selected.stream()
                 .sorted(Comparator.comparingDouble(AnalysisResultService::score).reversed())
-                .forEach(unit -> {
-                    for (Object merged : listOf(unit.get("mergedFrom"))) {
-                        if (merged instanceof String unitKey) {
-                            String pageId = pageIdOf(unitKey);
-                            Optional<LinkVisit> visit = linkVisits.findByPageId(pageId);
-                            String url = visit.map(LinkVisit::url).orElse(pageId);
-                            if (!url.isBlank() && links.add(url)) {
-                                sources.add(new Source(visit.map(LinkVisit::title).orElse(""), url,
-                                        text(unit.get("text")),
-                                        visit.map(LinkVisit::firstVisitedAt)
-                                                .orElseGet(() -> earliestSeenAt(List.of(unit)))));
+                .forEach(
+                        unit -> {
+                            for (Object merged : listOf(unit.get("mergedFrom"))) {
+                                if (merged instanceof String unitKey) {
+                                    String pageId = pageIdOf(unitKey);
+                                    Optional<LinkVisit> visit = linkVisits.findByPageId(pageId);
+                                    String url = visit.map(LinkVisit::url).orElse(pageId);
+                                    if (!url.isBlank() && links.add(url)) {
+                                        sources.add(
+                                                new Source(
+                                                        visit.map(LinkVisit::title).orElse(""),
+                                                        url,
+                                                        text(unit.get("text")),
+                                                        visit.map(LinkVisit::firstVisitedAt)
+                                                                .orElseGet(
+                                                                        () ->
+                                                                                earliestSeenAt(
+                                                                                        List.of(
+                                                                                                unit)))));
+                                    }
+                                }
                             }
-                        }
-                    }
-                });
+                        });
     }
 
     private static String pageIdOf(String unitKey) {
@@ -287,7 +330,9 @@ public class AnalysisResultService {
     }
 
     private static double score(Map<String, Object> unit) {
-        return unit.get("score") instanceof Number number ? number.doubleValue() : Double.NEGATIVE_INFINITY;
+        return unit.get("score") instanceof Number number
+                ? number.doubleValue()
+                : Double.NEGATIVE_INFINITY;
     }
 
     private static String text(Object value) {

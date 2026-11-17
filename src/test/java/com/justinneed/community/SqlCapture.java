@@ -30,9 +30,15 @@ public class SqlCapture implements StatementInspector {
     /** INSERT · UPDATE · DELETE 와 행 잠금(FOR UPDATE 류). */
     public static List<String> writesAndLocks() {
         return STATEMENTS.stream()
-                .filter(sql -> sql.startsWith("insert") || sql.startsWith("update") || sql.startsWith("delete")
-                        || sql.startsWith("merge") || sql.contains(" for update") || sql.contains(" for no key update")
-                        || sql.contains(" for share"))
+                .filter(
+                        sql ->
+                                sql.startsWith("insert")
+                                        || sql.startsWith("update")
+                                        || sql.startsWith("delete")
+                                        || sql.startsWith("merge")
+                                        || sql.contains(" for update")
+                                        || sql.contains(" for no key update")
+                                        || sql.contains(" for share"))
                 .toList();
     }
 }

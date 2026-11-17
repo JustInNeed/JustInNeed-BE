@@ -26,9 +26,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
 /**
- * 세션 목록 화면 (/sessions). FE: src/features/sessions/SessionsView.tsx, SessionCard.tsx.
- * 시드: FE 목 MOCK_SESSIONS 7개 (로마 3박 4일 동선 짜기 ~ 프라하 1박 일정 짜기).
- * 응답: data = { sessions: [카드...], hasNext, totalCount, favoriteCount }.
+ * 세션 목록 화면 (/sessions). FE: src/features/sessions/SessionsView.tsx, SessionCard.tsx. 시드: FE 목
+ * MOCK_SESSIONS 7개 (로마 3박 4일 동선 짜기 ~ 프라하 1박 일정 짜기). 응답: data = { sessions: [카드...], hasNext,
+ * totalCount, favoriteCount }.
  */
 @DisplayName("세션 목록 화면")
 class SessionListScenarioTest extends ScenarioTestSupport {
@@ -45,15 +45,24 @@ class SessionListScenarioTest extends ScenarioTestSupport {
         mvc.perform(get("/sessions").with(as(me)))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.sessions", hasSize(7)))
-                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(mock.newestFirst().toArray(BrowsingSession[]::new)))))
-                .andExpect(jsonPath("$.data.sessions[*].title").value(contains(
-                        "로마 3박 4일 동선 짜기",
-                        "유럽 항공권 비교 (인천→로마 IN, 프라하→인천 OUT)",
-                        "파리 미술관 4곳 비교 (루브르/오르세/오랑주리/퐁피두)",
-                        "유레일패스 vs 개별 구매",
-                        "바르셀로나 가우디 투어",
-                        "쉥겐 비자 & 입국 서류",
-                        "프라하 1박 일정 짜기")))
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(
+                                        contains(
+                                                ids(
+                                                        mock.newestFirst()
+                                                                .toArray(BrowsingSession[]::new)))))
+                .andExpect(
+                        jsonPath("$.data.sessions[*].title")
+                                .value(
+                                        contains(
+                                                "로마 3박 4일 동선 짜기",
+                                                "유럽 항공권 비교 (인천→로마 IN, 프라하→인천 OUT)",
+                                                "파리 미술관 4곳 비교 (루브르/오르세/오랑주리/퐁피두)",
+                                                "유레일패스 vs 개별 구매",
+                                                "바르셀로나 가우디 투어",
+                                                "쉥겐 비자 & 입국 서류",
+                                                "프라하 1박 일정 짜기")))
                 // 7개라 한 페이지(기본 10개)에 다 들어온다
                 .andExpect(jsonPath("$.data.hasNext").value(false))
                 .andExpect(jsonPath("$.data.totalCount").value(7))
@@ -61,7 +70,8 @@ class SessionListScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("세션 카드에는 제목 · 시작/종료 시각(타임존 없는 ISO) · 페이지 수 · 상태 · 즐겨찾기 · 공개 · 태그가 오고 본문 · 출처는 안 온다")
+    @DisplayName(
+            "세션 카드에는 제목 · 시작/종료 시각(타임존 없는 ISO) · 페이지 수 · 상태 · 즐겨찾기 · 공개 · 태그가 오고 본문 · 출처는 안 온다")
     void cardFields() throws Exception {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
@@ -76,7 +86,9 @@ class SessionListScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.sessions[0].isFavorite").value(true))
                 .andExpect(jsonPath("$.data.sessions[0].isPublic").value(false))
                 // '#' 없는 raw 태그, 저장 순서 그대로
-                .andExpect(jsonPath("$.data.sessions[0].tags").value(contains("로마", "콜로세움", "바티칸", "먹거리")))
+                .andExpect(
+                        jsonPath("$.data.sessions[0].tags")
+                                .value(contains("로마", "콜로세움", "바티칸", "먹거리")))
                 .andExpect(jsonPath("$.data.sessions[0].summary").doesNotExist())
                 .andExpect(jsonPath("$.data.sessions[0].sources").doesNotExist());
     }
@@ -89,7 +101,9 @@ class SessionListScenarioTest extends ScenarioTestSupport {
 
         mvc.perform(get("/sessions").param("favorite", "true").with(as(me)))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(mock.rome(), mock.paris()))))
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(contains(ids(mock.rome(), mock.paris()))))
                 .andExpect(jsonPath("$.data.sessions[*].isFavorite").value(everyItem(is(true))))
                 .andExpect(jsonPath("$.data.hasNext").value(false))
                 // 상단 개수는 필터와 상관없이 전체 기준
@@ -103,7 +117,10 @@ class SessionListScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
 
-        mvc.perform(patch("/sessions/{id}", mock.flight().getId()).with(as(me)).with(json(Map.of("isFavorite", true))))
+        mvc.perform(
+                        patch("/sessions/{id}", mock.flight().getId())
+                                .with(as(me))
+                                .with(json(Map.of("isFavorite", true))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.isFavorite").value(true))
                 .andExpect(jsonPath("$.data.title").value("유럽 항공권 비교 (인천→로마 IN, 프라하→인천 OUT)"))
@@ -115,7 +132,9 @@ class SessionListScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.sessions[1].id").value(mock.flight().getId()))
                 .andExpect(jsonPath("$.data.favoriteCount").value(3));
         mvc.perform(get("/sessions").param("favorite", "true").with(as(me)))
-                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(mock.rome(), mock.flight(), mock.paris()))));
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(contains(ids(mock.rome(), mock.flight(), mock.paris()))));
     }
 
     @Test
@@ -124,15 +143,27 @@ class SessionListScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
         Member other = member("wanderer");
-        session(other, "동유럽 3주 살이 전체 동선", "2026-04-27T09:00:00", "2026-04-27T10:00:00", 30, false, true,
-                List.of("프라하", "동유럽"), List.of(), null);
+        session(
+                other,
+                "동유럽 3주 살이 전체 동선",
+                "2026-04-27T09:00:00",
+                "2026-04-27T10:00:00",
+                30,
+                false,
+                true,
+                List.of("프라하", "동유럽"),
+                List.of(),
+                null);
 
-        mvc.perform(delete("/sessions/{id}", mock.rail().getId()).with(as(me))).andExpect(okEnvelope());
+        mvc.perform(delete("/sessions/{id}", mock.rail().getId()).with(as(me)))
+                .andExpect(okEnvelope());
 
         mvc.perform(get("/sessions").with(as(me)))
                 .andExpect(jsonPath("$.data.sessions", hasSize(6)))
-                .andExpect(jsonPath("$.data.sessions[*].title").value(not(hasItem("유레일패스 vs 개별 구매"))))
-                .andExpect(jsonPath("$.data.sessions[*].title").value(not(hasItem("동유럽 3주 살이 전체 동선"))))
+                .andExpect(
+                        jsonPath("$.data.sessions[*].title").value(not(hasItem("유레일패스 vs 개별 구매"))))
+                .andExpect(
+                        jsonPath("$.data.sessions[*].title").value(not(hasItem("동유럽 3주 살이 전체 동선"))))
                 .andExpect(jsonPath("$.data.totalCount").value(6));
     }
 
@@ -154,8 +185,30 @@ class SessionListScenarioTest extends ScenarioTestSupport {
     void sameEndedAtSortsByStartedAt() throws Exception {
         Member me = member("sprout");
         LocalDateTime end = LocalDateTime.parse("2026-04-26T22:00:00");
-        BrowsingSession longer = session(me, "긴 세션", end.minusHours(2), end, 3, false, false, List.of(), List.of(), null);
-        BrowsingSession shorter = session(me, "짧은 세션", end.minusMinutes(10), end, 1, false, false, List.of(), List.of(), null);
+        BrowsingSession longer =
+                session(
+                        me,
+                        "긴 세션",
+                        end.minusHours(2),
+                        end,
+                        3,
+                        false,
+                        false,
+                        List.of(),
+                        List.of(),
+                        null);
+        BrowsingSession shorter =
+                session(
+                        me,
+                        "짧은 세션",
+                        end.minusMinutes(10),
+                        end,
+                        1,
+                        false,
+                        false,
+                        List.of(),
+                        List.of(),
+                        null);
 
         mvc.perform(get("/sessions").with(as(me)))
                 .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(shorter, longer))));
@@ -167,26 +220,48 @@ class SessionListScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
         // 시작 시각이 완료 세션들보다 오래돼도 맨 위
-        BrowsingSession oldest = sessionWithStatus(me, "분석 중 (가장 먼저 시작)", "2026-04-10T09:00:00", null,
-                SessionStatus.ANALYZING, List.of());
-        BrowsingSession newest = sessionWithStatus(me, "분석 중 (가장 최근 시작)", "2026-04-20T09:00:00", null,
-                SessionStatus.ANALYZING, List.of());
+        BrowsingSession oldest =
+                sessionWithStatus(
+                        me,
+                        "분석 중 (가장 먼저 시작)",
+                        "2026-04-10T09:00:00",
+                        null,
+                        SessionStatus.ANALYZING,
+                        List.of());
+        BrowsingSession newest =
+                sessionWithStatus(
+                        me,
+                        "분석 중 (가장 최근 시작)",
+                        "2026-04-20T09:00:00",
+                        null,
+                        SessionStatus.ANALYZING,
+                        List.of());
         // 진행 중이면 종료 시각이 있어도 보지 않고 시작 시각으로 줄 세운다
-        BrowsingSession ended = sessionWithStatus(me, "분석 중 (종료 시각 있음)", "2026-04-15T09:00:00",
-                "2026-04-30T09:00:00", SessionStatus.ANALYZING, List.of());
+        BrowsingSession ended =
+                sessionWithStatus(
+                        me,
+                        "분석 중 (종료 시각 있음)",
+                        "2026-04-15T09:00:00",
+                        "2026-04-30T09:00:00",
+                        SessionStatus.ANALYZING,
+                        List.of());
 
         List<BrowsingSession> expected = new ArrayList<>(List.of(newest, ended, oldest));
         expected.addAll(mock.newestFirst());
         mvc.perform(get("/sessions").with(as(me)))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(expected.toArray(BrowsingSession[]::new)))))
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(contains(ids(expected.toArray(BrowsingSession[]::new)))))
                 .andExpect(jsonPath("$.data.sessions[0].status").value("ANALYZING"))
                 .andExpect(jsonPath("$.data.sessions[0].endedAt").value(nullValue()))
                 .andExpect(jsonPath("$.data.sessions[3].status").value("COMPLETED"))
                 .andExpect(jsonPath("$.data.totalCount").value(10));
         // 페이지가 나뉘어도 같은 순서로 이어진다
         mvc.perform(get("/sessions").param("page", "1").param("size", "2").with(as(me)))
-                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(oldest, mock.rome()))));
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(contains(ids(oldest, mock.rome()))));
     }
 
     @Test
@@ -195,16 +270,40 @@ class SessionListScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
         // 로마(04-26 22:48 종료)와 항공권(04-25 15:21 종료) 사이
-        BrowsingSession failed = sessionWithStatus(me, "분석 실패", "2026-04-25T20:00:00", "2026-04-25T21:00:00",
-                SessionStatus.FAILED, List.of());
-        // 가장 최근에 시작했지만 종료 시각이 없다 → endedAt desc 에서 Postgres 는 NULL 을 맨 앞에 두므로 nulls last 를 명시해야 뒤로 간다
-        BrowsingSession noEndedAt = sessionWithStatus(me, "종료 시각 없는 실패", "2026-04-27T09:00:00", null,
-                SessionStatus.FAILED, List.of());
+        BrowsingSession failed =
+                sessionWithStatus(
+                        me,
+                        "분석 실패",
+                        "2026-04-25T20:00:00",
+                        "2026-04-25T21:00:00",
+                        SessionStatus.FAILED,
+                        List.of());
+        // 가장 최근에 시작했지만 종료 시각이 없다 → endedAt desc 에서 Postgres 는 NULL 을 맨 앞에 두므로 nulls last 를 명시해야 뒤로
+        // 간다
+        BrowsingSession noEndedAt =
+                sessionWithStatus(
+                        me,
+                        "종료 시각 없는 실패",
+                        "2026-04-27T09:00:00",
+                        null,
+                        SessionStatus.FAILED,
+                        List.of());
 
         mvc.perform(get("/sessions").with(as(me)))
-                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(
-                        mock.rome(), failed, mock.flight(), mock.paris(), mock.rail(), mock.barca(), mock.visa(),
-                        mock.prague(), noEndedAt))))
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(
+                                        contains(
+                                                ids(
+                                                        mock.rome(),
+                                                        failed,
+                                                        mock.flight(),
+                                                        mock.paris(),
+                                                        mock.rail(),
+                                                        mock.barca(),
+                                                        mock.visa(),
+                                                        mock.prague(),
+                                                        noEndedAt))))
                 .andExpect(jsonPath("$.data.sessions[1].status").value("FAILED"));
     }
 
@@ -215,18 +314,41 @@ class SessionListScenarioTest extends ScenarioTestSupport {
         LocalDateTime start = LocalDateTime.parse("2026-04-01T10:00:00");
         List<Long> savedIds = new ArrayList<>();
         for (int i = 0; i < 15; i++) {
-            savedIds.add(session(me, "같은 시각 " + i, start, start.plusMinutes(30), 1, false, false,
-                    List.of(), List.of(), null).getId());
+            savedIds.add(
+                    session(
+                                    me,
+                                    "같은 시각 " + i,
+                                    start,
+                                    start.plusMinutes(30),
+                                    1,
+                                    false,
+                                    false,
+                                    List.of(),
+                                    List.of(),
+                                    null)
+                            .getId());
         }
         List<Long> newestIdFirst = savedIds.stream().sorted(Comparator.reverseOrder()).toList();
 
         mvc.perform(get("/sessions").param("page", "0").param("size", "10").with(as(me)))
-                .andExpect(jsonPath("$.data.sessions[*].id")
-                        .value(contains(ids(newestIdFirst.subList(0, 10).toArray(Long[]::new)))))
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(
+                                        contains(
+                                                ids(
+                                                        newestIdFirst
+                                                                .subList(0, 10)
+                                                                .toArray(Long[]::new)))))
                 .andExpect(jsonPath("$.data.hasNext").value(true));
         mvc.perform(get("/sessions").param("page", "1").param("size", "10").with(as(me)))
-                .andExpect(jsonPath("$.data.sessions[*].id")
-                        .value(contains(ids(newestIdFirst.subList(10, 15).toArray(Long[]::new)))))
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(
+                                        contains(
+                                                ids(
+                                                        newestIdFirst
+                                                                .subList(10, 15)
+                                                                .toArray(Long[]::new)))))
                 .andExpect(jsonPath("$.data.hasNext").value(false));
     }
 
@@ -281,14 +403,16 @@ class SessionListScenarioTest extends ScenarioTestSupport {
         List<BrowsingSession> daily = seedDailySessions(me, 12);
         favorite(me, daily.get(0), daily.get(3), daily.get(7), daily.get(11));
         // 삭제한 세션은 개수에서도 빠진다
-        mvc.perform(delete("/sessions/{id}", daily.get(5).getId()).with(as(me))).andExpect(okEnvelope());
+        mvc.perform(delete("/sessions/{id}", daily.get(5).getId()).with(as(me)))
+                .andExpect(okEnvelope());
 
-        List<Map<String, String>> requests = List.of(
-                Map.of(),
-                Map.of("page", "1", "size", "5"),
-                Map.of("favorite", "true"),
-                Map.of("favorite", "true", "page", "1", "size", "3"),
-                Map.of("favorite", "true", "page", "9"));
+        List<Map<String, String>> requests =
+                List.of(
+                        Map.of(),
+                        Map.of("page", "1", "size", "5"),
+                        Map.of("favorite", "true"),
+                        Map.of("favorite", "true", "page", "1", "size", "3"),
+                        Map.of("favorite", "true", "page", "9"));
         for (Map<String, String> params : requests) {
             var request = get("/sessions").with(as(me));
             params.forEach(request::param);
@@ -308,10 +432,17 @@ class SessionListScenarioTest extends ScenarioTestSupport {
 
         mvc.perform(get("/sessions").param("favorite", "true").param("size", "3").with(as(me)))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.sessions[*].title").value(contains("세션 11", "세션 7", "세션 3")))
+                .andExpect(
+                        jsonPath("$.data.sessions[*].title")
+                                .value(contains("세션 11", "세션 7", "세션 3")))
                 .andExpect(jsonPath("$.data.sessions[*].isFavorite").value(everyItem(is(true))))
                 .andExpect(jsonPath("$.data.hasNext").value(true));
-        mvc.perform(get("/sessions").param("favorite", "true").param("page", "1").param("size", "3").with(as(me)))
+        mvc.perform(
+                        get("/sessions")
+                                .param("favorite", "true")
+                                .param("page", "1")
+                                .param("size", "3")
+                                .with(as(me)))
                 .andExpect(jsonPath("$.data.sessions[*].title").value(contains("세션 0")))
                 .andExpect(jsonPath("$.data.hasNext").value(false));
         // favorite=false 는 전체
@@ -320,30 +451,33 @@ class SessionListScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("page 가 음수 · size 가 1~50 밖이면 400 '페이지 값이 올바르지 않습니다.', 숫자가 아니면 400 '요청 형식이 올바르지 않습니다.'")
+    @DisplayName(
+            "page 가 음수 · size 가 1~50 밖이면 400 '페이지 값이 올바르지 않습니다.', 숫자가 아니면 400 '요청 형식이 올바르지 않습니다.'")
     void invalidPageParams() throws Exception {
         Member me = member("sprout");
         seedDailySessions(me, 2);
 
-        List<Map<String, String>> outOfRange = List.of(
-                Map.of("page", "-1"),
-                Map.of("size", "0"),
-                Map.of("size", "-5"),
-                Map.of("size", "51"),
-                // 건너뛸 개수(page * size)가 int 를 넘는 경우
-                Map.of("page", String.valueOf(Integer.MAX_VALUE), "size", "50"));
+        List<Map<String, String>> outOfRange =
+                List.of(
+                        Map.of("page", "-1"),
+                        Map.of("size", "0"),
+                        Map.of("size", "-5"),
+                        Map.of("size", "51"),
+                        // 건너뛸 개수(page * size)가 int 를 넘는 경우
+                        Map.of("page", String.valueOf(Integer.MAX_VALUE), "size", "50"));
         for (Map<String, String> params : outOfRange) {
             var request = get("/sessions").with(as(me));
             params.forEach(request::param);
             mvc.perform(request).andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, INVALID_PAGE));
         }
 
-        List<Map<String, String>> notNumbers = List.of(
-                Map.of("page", "abc"),
-                Map.of("size", "ten"),
-                Map.of("page", "1.5"),
-                Map.of("page", "99999999999"),
-                Map.of("favorite", "maybe"));
+        List<Map<String, String>> notNumbers =
+                List.of(
+                        Map.of("page", "abc"),
+                        Map.of("size", "ten"),
+                        Map.of("page", "1.5"),
+                        Map.of("page", "99999999999"),
+                        Map.of("favorite", "maybe"));
         for (Map<String, String> params : notNumbers) {
             var request = get("/sessions").with(as(me));
             params.forEach(request::param);
@@ -365,8 +499,18 @@ class SessionListScenarioTest extends ScenarioTestSupport {
         LocalDateTime base = LocalDateTime.parse("2026-04-01T10:00:00");
         List<BrowsingSession> seeded = new ArrayList<>();
         for (int day = 0; day < count; day++) {
-            seeded.add(session(owner, "세션 " + day, base.plusDays(day), base.plusDays(day).plusMinutes(30), 2,
-                    false, false, List.of(), List.of(), null));
+            seeded.add(
+                    session(
+                            owner,
+                            "세션 " + day,
+                            base.plusDays(day),
+                            base.plusDays(day).plusMinutes(30),
+                            2,
+                            false,
+                            false,
+                            List.of(),
+                            List.of(),
+                            null));
         }
         return seeded;
     }
@@ -374,7 +518,10 @@ class SessionListScenarioTest extends ScenarioTestSupport {
     /** 카드에서 즐겨찾기를 켠다 (PATCH /sessions/{id}). */
     private void favorite(Member owner, BrowsingSession... targets) throws Exception {
         for (BrowsingSession target : targets) {
-            mvc.perform(patch("/sessions/{id}", target.getId()).with(as(owner)).with(json(Map.of("isFavorite", true))))
+            mvc.perform(
+                            patch("/sessions/{id}", target.getId())
+                                    .with(as(owner))
+                                    .with(json(Map.of("isFavorite", true))))
                     .andExpect(okEnvelope());
         }
     }

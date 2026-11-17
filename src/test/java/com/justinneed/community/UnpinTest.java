@@ -1,8 +1,11 @@
 package com.justinneed.community;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.justinneed.community.card.CommunityCardRepository;
 import com.justinneed.community.domain.CommunityProfile;
 import java.util.List;
@@ -20,8 +23,9 @@ class UnpinTest extends CommunityTestSupport {
         var profile = new CommunityProfile(ownerId);
         profile.replacePinnedSessionIds(List.of(first.getId(), removed.getId(), last.getId()));
         profiles.saveAndFlush(profile);
-        mvc.perform(delete("/community/me/pinned-sessions/{id}", removed.getId())
-                        .header("Authorization", auth(ownerId)))
+        mvc.perform(
+                        delete("/community/me/pinned-sessions/{id}", removed.getId())
+                                .header("Authorization", auth(ownerId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.isPublic").value(true))
                 .andExpect(jsonPath("$.data.isPinned").value(false));
@@ -29,7 +33,9 @@ class UnpinTest extends CommunityTestSupport {
         assertThat(cards.findById(removed.getId())).isPresent();
         assertThat(profiles.findById(ownerId).orElseThrow().getPinnedSessionIds())
                 .containsExactly(first.getId(), last.getId());
-        mvc.perform(get("/community/profiles/{id}/nodes", ownerId).header("Authorization", auth(viewerId)))
+        mvc.perform(
+                        get("/community/profiles/{id}/nodes", ownerId)
+                                .header("Authorization", auth(viewerId)))
                 .andExpect(jsonPath("$.data.length()").value(3));
     }
 
@@ -43,8 +49,11 @@ class UnpinTest extends CommunityTestSupport {
         profile.replacePinnedSessionIds(List.of(deleted.getId(), hidden.getId()));
         profiles.saveAndFlush(profile);
         for (Long id : List.of(deleted.getId(), hidden.getId())) {
-            mvc.perform(delete("/community/me/pinned-sessions/{id}", id).header("Authorization", auth(ownerId)))
-                    .andExpect(status().isOk()).andExpect(jsonPath("$.data.isPublic").value(false));
+            mvc.perform(
+                            delete("/community/me/pinned-sessions/{id}", id)
+                                    .header("Authorization", auth(ownerId)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.isPublic").value(false));
         }
         assertThat(profiles.findById(ownerId).orElseThrow().getPinnedSessionIds()).isEmpty();
     }
@@ -55,12 +64,18 @@ class UnpinTest extends CommunityTestSupport {
         var profile = new CommunityProfile(ownerId);
         profile.replacePinnedSessionIds(List.of(session.getId()));
         profiles.saveAndFlush(profile);
-        mvc.perform(delete("/community/me/pinned-sessions/{id}", session.getId())
-                        .header("Authorization", auth(viewerId))).andExpect(status().isNotFound());
-        mvc.perform(delete("/community/me/pinned-sessions/{id}", Long.MAX_VALUE)
-                        .header("Authorization", auth(ownerId))).andExpect(status().isNotFound());
+        mvc.perform(
+                        delete("/community/me/pinned-sessions/{id}", session.getId())
+                                .header("Authorization", auth(viewerId)))
+                .andExpect(status().isNotFound());
+        mvc.perform(
+                        delete("/community/me/pinned-sessions/{id}", Long.MAX_VALUE)
+                                .header("Authorization", auth(ownerId)))
+                .andExpect(status().isNotFound());
         assertThat(session.isPublicSession()).isTrue();
-        assertThat(profiles.findById(ownerId).orElseThrow().getPinnedSessionIds()).containsExactly(session.getId());
-        mvc.perform(delete("/community/me/pinned-sessions/{id}", session.getId())).andExpect(status().isUnauthorized());
+        assertThat(profiles.findById(ownerId).orElseThrow().getPinnedSessionIds())
+                .containsExactly(session.getId());
+        mvc.perform(delete("/community/me/pinned-sessions/{id}", session.getId()))
+                .andExpect(status().isUnauthorized());
     }
 }

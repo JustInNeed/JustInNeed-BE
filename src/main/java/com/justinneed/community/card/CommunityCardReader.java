@@ -22,8 +22,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * community_cards → 카드 응답. 몇 장을 읽든 카드 · 회원 · 프로필을 한 번씩만 조회한다.
- * 작성자 본인이 봐도 방문자 규칙을 쓴다 (PublicGraphService 와 같다). 탈퇴한 작성자의 카드는 나오지 않는다.
+ * community_cards → 카드 응답. 몇 장을 읽든 카드 · 회원 · 프로필을 한 번씩만 조회한다. 작성자 본인이 봐도 방문자 규칙을 쓴다
+ * (PublicGraphService 와 같다). 탈퇴한 작성자의 카드는 나오지 않는다.
  */
 @Service
 @Transactional(readOnly = true)
@@ -34,8 +34,12 @@ public class CommunityCardReader {
     private final CommunitySharing sharing;
     private final CardCounts counts;
 
-    public CommunityCardReader(CommunityCardRepository cards, CommunityMemberRepository members,
-            CommunityProfileRepository profiles, CommunitySharing sharing, CardCounts counts) {
+    public CommunityCardReader(
+            CommunityCardRepository cards,
+            CommunityMemberRepository members,
+            CommunityProfileRepository profiles,
+            CommunitySharing sharing,
+            CardCounts counts) {
         this.cards = cards;
         this.members = members;
         this.profiles = profiles;
@@ -49,15 +53,23 @@ public class CommunityCardReader {
             return List.of();
         }
         Set<Long> ids = new LinkedHashSet<>(sessionIds);
-        Map<Long, CommunityCardRow> rows = cards.findAllById(ids).stream()
-                .collect(Collectors.toMap(CommunityCardRow::getSessionId, Function.identity()));
-        Set<Long> ownerIds = rows.values().stream().map(CommunityCardRow::getOwnerId).collect(Collectors.toSet());
+        Map<Long, CommunityCardRow> rows =
+                cards.findAllById(ids).stream()
+                        .collect(
+                                Collectors.toMap(
+                                        CommunityCardRow::getSessionId, Function.identity()));
+        Set<Long> ownerIds =
+                rows.values().stream()
+                        .map(CommunityCardRow::getOwnerId)
+                        .collect(Collectors.toSet());
         Map<Long, String> nicknames = new HashMap<>();
         for (Member member : members.findActiveByIdIn(ownerIds)) {
             nicknames.put(member.getId(), member.getNickname());
         }
-        Map<Long, CommunityProfile> owners = profiles.findAllById(nicknames.keySet()).stream()
-                .collect(Collectors.toMap(CommunityProfile::getUserId, Function.identity()));
+        Map<Long, CommunityProfile> owners =
+                profiles.findAllById(nicknames.keySet()).stream()
+                        .collect(
+                                Collectors.toMap(CommunityProfile::getUserId, Function.identity()));
 
         List<CommunityCardRow> visible = new ArrayList<>();
         for (Long id : ids) {
@@ -67,10 +79,20 @@ public class CommunityCardReader {
             }
         }
         Map<Long, CardCounts.Count> numbers =
-                counts.counts(visible.stream().map(CommunityCardRow::getSessionId).toList(), viewerId);
-        return visible.stream().map(row -> card(row, nicknames.get(row.getOwnerId()),
-                owners.getOrDefault(row.getOwnerId(), new CommunityProfile(row.getOwnerId())),
-                numbers.getOrDefault(row.getSessionId(), CardCounts.Count.ZERO))).toList();
+                counts.counts(
+                        visible.stream().map(CommunityCardRow::getSessionId).toList(), viewerId);
+        return visible.stream()
+                .map(
+                        row ->
+                                card(
+                                        row,
+                                        nicknames.get(row.getOwnerId()),
+                                        owners.getOrDefault(
+                                                row.getOwnerId(),
+                                                new CommunityProfile(row.getOwnerId())),
+                                        numbers.getOrDefault(
+                                                row.getSessionId(), CardCounts.Count.ZERO)))
+                .toList();
     }
 
     public Optional<CommunityCard> card(Long sessionId, Long viewerId) {
@@ -79,24 +101,39 @@ public class CommunityCardReader {
 
     /** 작성자 카드 전체의 나도 탐색중 합. 프로필의 노드 수는 세션이 겹치면 카드 합과 달라 PublicGraphService 가 센다. */
     public long exploringCount(CommunityProfile owner, Long viewerId) {
-        List<CommunityCardRow> rows = cards.findByOwnerIdInOrderBySessionIdDesc(List.of(owner.getUserId()));
-        return counts.counts(rows.stream().map(CommunityCardRow::getSessionId).toList(), viewerId)
-                .values().stream().mapToLong(CardCounts.Count::exploringCount).sum();
+        List<CommunityCardRow> rows =
+                cards.findByOwnerIdInOrderBySessionIdDesc(List.of(owner.getUserId()));
+        return counts
+                .counts(rows.stream().map(CommunityCardRow::getSessionId).toList(), viewerId)
+                .values()
+                .stream()
+                .mapToLong(CardCounts.Count::exploringCount)
+                .sum();
     }
 
     private static long nodeCount(CommunityCardRow row, boolean content) {
         return content ? row.getAiNodeCount() : row.getUrlCount();
     }
 
-    private CommunityCard card(CommunityCardRow row, String nickname, CommunityProfile owner, CardCounts.Count count) {
+    private CommunityCard card(
+            CommunityCardRow row, String nickname, CommunityProfile owner, CardCounts.Count count) {
         boolean content = owner.getVisibility() == NodeVisibility.CONTENT;
-        return new CommunityCard(row.getSessionId(), new Owner(row.getOwnerId(), nickname),
+        return new CommunityCard(
+                row.getSessionId(),
+                new Owner(row.getOwnerId(), nickname),
                 content ? row.getTitle() : null,
                 content ? row.getSnippet() : null,
                 sharing.visibleTags(owner, row.getHashtags()),
                 nodeCount(row, content),
-                count.likeCount(), count.likedByMe(), count.bookmarkCount(), count.bookmarkId(),
-                count.exploringCount(), count.exploringByMe(), row.getLastActivityAt(),
-                row.getUrls().stream().map(url -> new RelatedUrl(content ? url.title() : null, url.url())).toList());
+                count.likeCount(),
+                count.likedByMe(),
+                count.bookmarkCount(),
+                count.bookmarkId(),
+                count.exploringCount(),
+                count.exploringByMe(),
+                row.getLastActivityAt(),
+                row.getUrls().stream()
+                        .map(url -> new RelatedUrl(content ? url.title() : null, url.url()))
+                        .toList());
     }
 }

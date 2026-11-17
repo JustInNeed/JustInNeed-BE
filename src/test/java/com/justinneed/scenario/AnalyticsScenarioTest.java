@@ -38,23 +38,24 @@ import org.springframework.test.web.servlet.ResultActions;
 /**
  * 분석 / 추천 화면 (/analytics).
  *
- * <p>시각은 Clock 을 고정해 쓴다: KST 2026-10-31(토) 10:30. 최근 7일 = 10.25 ~ 10.31.
- * 분석 결과 JSON 은 AI 출력(pipeline/output.py) 모양 그대로 넣는다.
+ * <p>시각은 Clock 을 고정해 쓴다: KST 2026-10-31(토) 10:30. 최근 7일 = 10.25 ~ 10.31. 분석 결과 JSON 은 AI
+ * 출력(pipeline/output.py) 모양 그대로 넣는다.
  */
-@TestPropertySource(properties = "spring.datasource.url=jdbc:h2:mem:analytics-scenario;MODE=PostgreSQL;"
-        + "DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1")
+@TestPropertySource(
+        properties =
+                "spring.datasource.url=jdbc:h2:mem:analytics-scenario;MODE=PostgreSQL;"
+                        + "DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1")
 @DisplayName("분석 / 추천 화면 (/analytics)")
 class AnalyticsScenarioTest extends ScenarioTestSupport {
 
     private static final Instant NOW = Instant.parse("2026-10-31T01:30:00Z");
     private static final String OFFICIAL_DOCS_TITLE = "공식 문서도 한 번 정독해보세요.";
-    private static final String OFFICIAL_DOCS_BODY = "지금 공부하는 주제의 공식 문서나 원문을 한 번쯤 읽으며 핵심 개념을 정리해보는 건 어떨까요?";
+    private static final String OFFICIAL_DOCS_BODY =
+            "지금 공부하는 주제의 공식 문서나 원문을 한 번쯤 읽으며 핵심 개념을 정리해보는 건 어떨까요?";
 
-    @MockitoBean
-    private Clock clock;
+    @MockitoBean private Clock clock;
 
-    @Autowired
-    private SessionResultRepository results;
+    @Autowired private SessionResultRepository results;
 
     private Member me;
 
@@ -87,8 +88,15 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @ParameterizedTest(name = "{0}")
-        @ValueSource(strings = {"week-sessions", "exploration", "reading-behavior", "categories", "time-patterns",
-                "recommendations"})
+        @ValueSource(
+                strings = {
+                    "week-sessions",
+                    "exploration",
+                    "reading-behavior",
+                    "categories",
+                    "time-patterns",
+                    "recommendations"
+                })
         @DisplayName("로그인하지 않으면 401 이다")
         void requiresLogin(String path) throws Exception {
             mvc.perform(get("/analytics/" + path)).andExpect(status().isUnauthorized());
@@ -97,30 +105,56 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         @Test
         @DisplayName("다른 회원 · 삭제 · 진행 중 · 실패 세션은 어떤 카드에도 들어가지 않는다")
         void onlyMyCompletedSessions() throws Exception {
-            analyzed(completed("2026-10-31T09:00:00", "2026-10-31T09:30:00", 3),
-                    summary(0, 0, 0, 1), List.of(visit("https://velog.io/a", 40_000, 1)),
+            analyzed(
+                    completed("2026-10-31T09:00:00", "2026-10-31T09:30:00", 3),
+                    summary(0, 0, 0, 1),
+                    List.of(visit("https://velog.io/a", 40_000, 1)),
                     List.of(unit("Deep Reading", 60_000, "2026-10-31T00:10:00+00:00")));
 
             Member other = member("wanderer");
-            BrowsingSession others = session(other, "남의 세션", at("2026-10-31T09:00:00"), at("2026-10-31T09:30:00"), 1,
-                    false, false, List.of(), List.of(), null);
+            BrowsingSession others =
+                    session(
+                            other,
+                            "남의 세션",
+                            at("2026-10-31T09:00:00"),
+                            at("2026-10-31T09:30:00"),
+                            1,
+                            false,
+                            false,
+                            List.of(),
+                            List.of(),
+                            null);
             noise(others);
             BrowsingSession deleted = completed("2026-10-31T08:00:00", "2026-10-31T08:30:00", 1);
             noise(deleted);
             deleted.delete();
             sessions.saveAndFlush(deleted);
-            for (SessionStatus status : List.of(SessionStatus.COLLECTING, SessionStatus.READY, SessionStatus.ANALYZING,
-                    SessionStatus.FAILED)) {
-                noise(sessionWithStatus(me, status.name(), "2026-10-31T07:00:00", "2026-10-31T07:30:00", status, List.of()));
+            for (SessionStatus status :
+                    List.of(
+                            SessionStatus.COLLECTING,
+                            SessionStatus.READY,
+                            SessionStatus.ANALYZING,
+                            SessionStatus.FAILED)) {
+                noise(
+                        sessionWithStatus(
+                                me,
+                                status.name(),
+                                "2026-10-31T07:00:00",
+                                "2026-10-31T07:30:00",
+                                status,
+                                List.of()));
             }
 
             card("week-sessions").andExpect(jsonPath("$.data.sessions", hasSize(1)));
-            card("exploration").andExpect(jsonPath("$.data.avgUrlsPerSession").value(3))
+            card("exploration")
+                    .andExpect(jsonPath("$.data.avgUrlsPerSession").value(3))
                     .andExpect(jsonPath("$.data.avgSessionMinutes").value(30));
             card("reading-behavior").andExpect(jsonPath("$.data.shares.DEEP_READING").value(100));
-            card("categories").andExpect(jsonPath("$.data.categories[0].name").value("블로그"))
+            card("categories")
+                    .andExpect(jsonPath("$.data.categories[0].name").value("블로그"))
                     .andExpect(jsonPath("$.data.categories[0].count").value(1));
-            card("time-patterns").andExpect(jsonPath("$.data.focus[5][3]").value(1.0))
+            card("time-patterns")
+                    .andExpect(jsonPath("$.data.focus[5][3]").value(1.0))
                     .andExpect(jsonPath("$.data.surfing[5][2]").value(0.0));
         }
 
@@ -153,8 +187,12 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
             noTime.put("clusterLabel", "Idle");
             noTime.put("dwellMs", 1000);
             noTime.put("firstSeenAt", null);
-            analyzed(completed("2026-10-31T09:00:00", null, 1), summary, List.of(noUrl, negative),
-                    Arrays.asList(badTime, noTime, unit("Scanning", "길게", "2026-10-31T00:10:00+00:00")));
+            analyzed(
+                    completed("2026-10-31T09:00:00", null, 1),
+                    summary,
+                    List.of(noUrl, negative),
+                    Arrays.asList(
+                            badTime, noTime, unit("Scanning", "길게", "2026-10-31T00:10:00+00:00")));
 
             card("exploration").andExpect(okEnvelope());
             card("reading-behavior").andExpect(jsonPath("$.data.shares.DEEP_READING").value(100));
@@ -172,13 +210,26 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         @Test
         @DisplayName("FE SessionListItem 모양으로 최신순으로 온다")
         void listItemShape() throws Exception {
-            BrowsingSession older = session(me, "JPA 정리", at("2026-10-30T20:00:00"), at("2026-10-30T20:30:00"), 4,
-                    true, true, List.of("자바", "JPA"), List.of(), null);
+            BrowsingSession older =
+                    session(
+                            me,
+                            "JPA 정리",
+                            at("2026-10-30T20:00:00"),
+                            at("2026-10-30T20:30:00"),
+                            4,
+                            true,
+                            true,
+                            List.of("자바", "JPA"),
+                            List.of(),
+                            null);
             BrowsingSession newer = completed("2026-10-31T09:00:00", null, 1);
 
             card("week-sessions")
                     .andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(newer, older))))
-                    .andExpect(content().json("""
+                    .andExpect(
+                            content()
+                                    .json(
+                                            """
                             {"data": {"sessions": [{}, {
                               "title": "JPA 정리", "startedAt": "2026-10-30T20:00:00", "endedAt": "2026-10-30T20:30:00",
                               "pageCount": 4, "status": "COMPLETED", "isFavorite": true, "isPublic": true,
@@ -196,14 +247,28 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         @DisplayName("세션 평균 URL · 평균 페이지 체류 · 평균 세션 길이를 세션별로 계산해 평균한다")
         void stats() throws Exception {
             // 페이지 3개 체류 180초 → 페이지 평균 60초
-            analyzed(completed("2026-10-31T09:00:00", "2026-10-31T09:40:00", 3), dwell(0, 10_000, 20_000, 70_000),
-                    List.of(visit("https://a.example/", 120_000, 2), visit("https://b.example/", 30_000, 1),
-                            visit("https://c.example/", 30_000, 1)), List.of());
+            analyzed(
+                    completed("2026-10-31T09:00:00", "2026-10-31T09:40:00", 3),
+                    dwell(0, 10_000, 20_000, 70_000),
+                    List.of(
+                            visit("https://a.example/", 120_000, 2),
+                            visit("https://b.example/", 30_000, 1),
+                            visit("https://c.example/", 30_000, 1)),
+                    List.of());
             // 페이지 2개 체류 40초 → 페이지 평균 20초
-            analyzed(completed("2026-10-30T20:00:00", "2026-10-30T20:20:00", 12), dwell(0, 100, 0, 0),
-                    List.of(visit("https://d.example/", 20_000, 1), visit("https://e.example/", 20_000, 1)), List.of());
+            analyzed(
+                    completed("2026-10-30T20:00:00", "2026-10-30T20:20:00", 12),
+                    dwell(0, 100, 0, 0),
+                    List.of(
+                            visit("https://d.example/", 20_000, 1),
+                            visit("https://e.example/", 20_000, 1)),
+                    List.of());
             // pageVisits 없음 · 종료 시각 없음: URL 평균에만 들어간다
-            analyzed(completed("2026-10-29T09:00:00", null, 2), summary(0, 0, 0, 2), null, List.of());
+            analyzed(
+                    completed("2026-10-29T09:00:00", null, 2),
+                    summary(0, 0, 0, 2),
+                    null,
+                    List.of());
 
             card("exploration")
                     .andExpect(jsonPath("$.data.avgUrlsPerSession").value(6))
@@ -213,17 +278,20 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
 
         @ParameterizedTest(name = "URL {0}개 · 페이지 평균 {1}초 · 정독 {2}% → {3}")
         @CsvSource({
-                "10, 29, 90, DISTRACTED",
-                "10, 30, 90, FOCUSED",
-                "10, 30, 59, BROAD",
-                "9,  29, 60, FOCUSED",
-                "9,  29, 59, QUICK_CHECK",
-                "1,  60, 0,  QUICK_CHECK",
+            "10, 29, 90, DISTRACTED",
+            "10, 30, 90, FOCUSED",
+            "10, 30, 59, BROAD",
+            "9,  29, 60, FOCUSED",
+            "9,  29, 59, QUICK_CHECK",
+            "1,  60, 0,  QUICK_CHECK",
         })
         @DisplayName("성향 판정 기준의 경계 (정독 % 는 Idle 포함 유닛 수 기준)")
         void judge(int urls, int dwellSec, int focusedPct, String expected) throws Exception {
-            analyzed(completed("2026-10-31T09:00:00", null, urls), summary(100 - focusedPct, 0, 0, focusedPct),
-                    List.of(visit("https://a.example/", dwellSec * 1000, 1)), List.of());
+            analyzed(
+                    completed("2026-10-31T09:00:00", null, urls),
+                    summary(100 - focusedPct, 0, 0, focusedPct),
+                    List.of(visit("https://a.example/", dwellSec * 1000, 1)),
+                    List.of());
 
             card("exploration").andExpect(jsonPath("$.data.type").value(expected));
         }
@@ -231,36 +299,54 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         @Test
         @DisplayName("7일 중 가장 많이 나온 성향의 엑셀 문구가 오고, 같은 수면 앞선 성향이다")
         void mostCommonType() throws Exception {
-            analyzed(completed("2026-10-31T09:00:00", null, 1), summary(0, 0, 0, 100),
-                    List.of(visit("https://a.example/", 60_000, 1)), List.of());
-            analyzed(completed("2026-10-30T09:00:00", null, 12), summary(100, 0, 0, 0),
-                    List.of(visit("https://a.example/", 1_000, 1)), List.of());
+            analyzed(
+                    completed("2026-10-31T09:00:00", null, 1),
+                    summary(0, 0, 0, 100),
+                    List.of(visit("https://a.example/", 60_000, 1)),
+                    List.of());
+            analyzed(
+                    completed("2026-10-30T09:00:00", null, 12),
+                    summary(100, 0, 0, 0),
+                    List.of(visit("https://a.example/", 1_000, 1)),
+                    List.of());
 
             card("exploration")
                     .andExpect(jsonPath("$.data.type").value("DISTRACTED"))
-                    .andExpect(jsonPath("$.data.note.analysis").value("여러 페이지를 빠르게 오가며 탐색하는 경향이 있습니다."))
-                    .andExpect(jsonPath("$.data.note.recommendation").value(
-                            "지금 가장 중요한 문서 딱 하나만 남기고 나머지 탭은 잠시 닫아두세요. 15분만 타이머를 맞추고 하나의 글에만 온전히 몰입해 보는 걸 추천합니다."));
+                    .andExpect(
+                            jsonPath("$.data.note.analysis")
+                                    .value("여러 페이지를 빠르게 오가며 탐색하는 경향이 있습니다."))
+                    .andExpect(
+                            jsonPath("$.data.note.recommendation")
+                                    .value(
+                                            "지금 가장 중요한 문서 딱 하나만 남기고 나머지 탭은 잠시 닫아두세요. 15분만 타이머를 맞추고 하나의 글에만 온전히 몰입해 보는 걸 추천합니다."));
 
-            analyzed(completed("2026-10-29T09:00:00", null, 1), summary(0, 0, 0, 100),
-                    List.of(visit("https://a.example/", 60_000, 1)), List.of());
+            analyzed(
+                    completed("2026-10-29T09:00:00", null, 1),
+                    summary(0, 0, 0, 100),
+                    List.of(visit("https://a.example/", 60_000, 1)),
+                    List.of());
 
             card("exploration")
                     .andExpect(jsonPath("$.data.type").value("FOCUSED"))
-                    .andExpect(jsonPath("$.data.note.analysis").value("하나의 주제에 대해 깊이 있게 탐색하는 방식입니다."))
+                    .andExpect(
+                            jsonPath("$.data.note.analysis").value("하나의 주제에 대해 깊이 있게 탐색하는 방식입니다."))
                     .andExpect(jsonPath("$.data.note.recommendation").value(nullValue()));
         }
 
         @Test
         @DisplayName("집중 판정은 체류시간이 아니라 유닛 수로 본다 (Idle 이 많으면 체류가 정독에 몰려도 집중이 아니다)")
         void focusedByUnits() throws Exception {
-            Map<String, Object> summary = Map.of(
-                    "Idle", Map.of("units", 7, "dwellMs", 0),
-                    "Scanning", Map.of("units", 1, "dwellMs", 1_000),
-                    "Reading", Map.of("units", 1, "dwellMs", 50_000),
-                    "Deep Reading", Map.of("units", 1, "dwellMs", 50_000));
-            analyzed(completed("2026-10-31T09:00:00", null, 5), summary,
-                    List.of(visit("https://a.example/", 60_000, 1)), List.of());
+            Map<String, Object> summary =
+                    Map.of(
+                            "Idle", Map.of("units", 7, "dwellMs", 0),
+                            "Scanning", Map.of("units", 1, "dwellMs", 1_000),
+                            "Reading", Map.of("units", 1, "dwellMs", 50_000),
+                            "Deep Reading", Map.of("units", 1, "dwellMs", 50_000));
+            analyzed(
+                    completed("2026-10-31T09:00:00", null, 5),
+                    summary,
+                    List.of(visit("https://a.example/", 60_000, 1)),
+                    List.of());
 
             card("exploration").andExpect(jsonPath("$.data.type").value("QUICK_CHECK"));
         }
@@ -268,7 +354,11 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         @Test
         @DisplayName("pageVisits 가 빈 목록인 세션도 없는 세션처럼 평균 · 판정에서 뺀다")
         void emptyPageVisits() throws Exception {
-            analyzed(completed("2026-10-31T09:00:00", null, 4), summary(0, 0, 0, 2), List.of(), List.of());
+            analyzed(
+                    completed("2026-10-31T09:00:00", null, 4),
+                    summary(0, 0, 0, 2),
+                    List.of(),
+                    List.of());
 
             card("exploration")
                     .andExpect(jsonPath("$.data.avgDwellSec").value(0))
@@ -278,7 +368,11 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         @Test
         @DisplayName("pageVisits 가 없는 세션뿐이면 통계만 오고 판정은 비어 있다")
         void cannotJudge() throws Exception {
-            analyzed(completed("2026-10-31T09:00:00", "2026-10-31T09:30:00", 4), summary(0, 0, 0, 2), null, List.of());
+            analyzed(
+                    completed("2026-10-31T09:00:00", "2026-10-31T09:30:00", 4),
+                    summary(0, 0, 0, 2),
+                    null,
+                    List.of());
 
             card("exploration")
                     .andExpect(jsonPath("$.data.avgUrlsPerSession").value(4))
@@ -296,7 +390,11 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         @Test
         @DisplayName("유닛 수 기준이고 Idle 도 분모에 들어가며 비율 합은 100 이다")
         void unitBasedShares() throws Exception {
-            analyzed(completed("2026-10-31T09:00:00", null, 1), summary(2, 5, 8, 7), null, List.of());
+            analyzed(
+                    completed("2026-10-31T09:00:00", null, 1),
+                    summary(2, 5, 8, 7),
+                    null,
+                    List.of());
 
             card("reading-behavior")
                     .andExpect(jsonPath("$.data.shares.DEEP_READING").value(32))
@@ -308,9 +406,10 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         @Test
         @DisplayName("체류시간이 아무리 길어도 비율은 유닛 수로만 정해진다")
         void ignoresDwell() throws Exception {
-            Map<String, Object> summary = Map.of(
-                    "Idle", Map.of("units", 9, "dwellMs", 0),
-                    "Deep Reading", Map.of("units", 1, "dwellMs", 3_600_000));
+            Map<String, Object> summary =
+                    Map.of(
+                            "Idle", Map.of("units", 9, "dwellMs", 0),
+                            "Deep Reading", Map.of("units", 1, "dwellMs", 3_600_000));
             analyzed(completed("2026-10-31T09:00:00", null, 1), summary, null, List.of());
 
             card("reading-behavior")
@@ -321,23 +420,38 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         @Test
         @DisplayName("여러 세션의 유닛 수를 합쳐서 계산한다 (세션 비율의 평균이 아님)")
         void sumsSessions() throws Exception {
-            analyzed(completed("2026-10-31T09:00:00", null, 1), summary(0, 0, 0, 9), null, List.of());
-            analyzed(completed("2026-10-30T09:00:00", null, 1), summary(1, 0, 0, 0), null, List.of());
+            analyzed(
+                    completed("2026-10-31T09:00:00", null, 1),
+                    summary(0, 0, 0, 9),
+                    null,
+                    List.of());
+            analyzed(
+                    completed("2026-10-30T09:00:00", null, 1),
+                    summary(1, 0, 0, 0),
+                    null,
+                    List.of());
 
             card("reading-behavior").andExpect(jsonPath("$.data.shares.DEEP_READING").value(90));
         }
 
         @ParameterizedTest(name = "{0}")
-        @CsvSource(delimiter = '|', value = {
-                "Deep Reading | 0 | 0 | 0 | 5 | 한 번 읽기 시작하면 깊이 있게 이해하는 편입니다. **Deep Reading 비중 100%**로 가장 높아요.",
-                "Reading      | 0 | 0 | 5 | 0 | 글의 핵심을 차근차근 읽어 나가는 편입니다. **Reading 비중 100%**로 가장 높아요.",
-                "Scanning     | 0 | 5 | 0 | 0 | 전체를 빠르게 훑으며 핵심을 찾는 경향이 있습니다. **Scanning 비중 100%**로 가장 높아요.",
-                "Idle         | 5 | 0 | 0 | 0 | 정보를 찾기 위해 페이지 간 이동이 많은 탐색형 패턴입니다. **Idle 비중 100%**로 가장 높아요.",
-                "동률이면 앞선 분류 | 5 | 5 | 5 | 5 | 한 번 읽기 시작하면 깊이 있게 이해하는 편입니다. **Deep Reading 비중 25%**로 가장 높아요.",
-        })
+        @CsvSource(
+                delimiter = '|',
+                value = {
+                    "Deep Reading | 0 | 0 | 0 | 5 | 한 번 읽기 시작하면 깊이 있게 이해하는 편입니다. **Deep Reading 비중 100%**로 가장 높아요.",
+                    "Reading      | 0 | 0 | 5 | 0 | 글의 핵심을 차근차근 읽어 나가는 편입니다. **Reading 비중 100%**로 가장 높아요.",
+                    "Scanning     | 0 | 5 | 0 | 0 | 전체를 빠르게 훑으며 핵심을 찾는 경향이 있습니다. **Scanning 비중 100%**로 가장 높아요.",
+                    "Idle         | 5 | 0 | 0 | 0 | 정보를 찾기 위해 페이지 간 이동이 많은 탐색형 패턴입니다. **Idle 비중 100%**로 가장 높아요.",
+                    "동률이면 앞선 분류 | 5 | 5 | 5 | 5 | 한 번 읽기 시작하면 깊이 있게 이해하는 편입니다. **Deep Reading 비중 25%**로 가장 높아요.",
+                })
         @DisplayName("가장 높은 분류의 문구가 온다")
-        void note(String name, int idle, int scanning, int reading, int deep, String expected) throws Exception {
-            analyzed(completed("2026-10-31T09:00:00", null, 1), summary(idle, scanning, reading, deep), null, List.of());
+        void note(String name, int idle, int scanning, int reading, int deep, String expected)
+                throws Exception {
+            analyzed(
+                    completed("2026-10-31T09:00:00", null, 1),
+                    summary(idle, scanning, reading, deep),
+                    null,
+                    List.of());
 
             card("reading-behavior")
                     .andExpect(jsonPath("$.data.note.analysis").value(expected))
@@ -347,7 +461,11 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         @Test
         @DisplayName("유닛이 하나도 없으면 null 이다")
         void noUnits() throws Exception {
-            analyzed(completed("2026-10-31T09:00:00", null, 1), summary(0, 0, 0, 0), null, List.of());
+            analyzed(
+                    completed("2026-10-31T09:00:00", null, 1),
+                    summary(0, 0, 0, 0),
+                    null,
+                    List.of());
 
             card("reading-behavior").andExpect(jsonPath("$.data").value(nullValue()));
         }
@@ -356,7 +474,11 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         @DisplayName("같은 데이터면 홈 Deep Reading 비율과 같은 숫자다")
         void sameAsHome() throws Exception {
             // 33.5% 처럼 반올림과 합 100 맞추기가 어긋날 수 있는 값
-            analyzed(completed("2026-10-31T09:00:00", null, 1), summary(67, 166, 66, 201), null, List.of());
+            analyzed(
+                    completed("2026-10-31T09:00:00", null, 1),
+                    summary(67, 166, 66, 201),
+                    null,
+                    List.of());
 
             Integer analytics = read(card("reading-behavior"), "$.data.shares.DEEP_READING");
             mvc.perform(get("/home").with(as(me)))
@@ -371,14 +493,25 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         @Test
         @DisplayName("재방문을 포함해 세고, 많은 순으로 오며 비율 합은 100 이다")
         void countsRevisits() throws Exception {
-            analyzed(completed("2026-10-31T09:00:00", null, 3), null, List.of(
-                    visit("https://docs.spring.io/a", 1_000, 2),
-                    visit("https://blog.naver.com/b", 1_000, 1),
-                    visit("https://stackoverflow.com/c", 1_000, 1)), List.of());
-            analyzed(completed("2026-10-30T09:00:00", null, 1), null, List.of(
-                    visit("https://velog.io/d", 1_000, 2)), List.of());
+            analyzed(
+                    completed("2026-10-31T09:00:00", null, 3),
+                    null,
+                    List.of(
+                            visit("https://docs.spring.io/a", 1_000, 2),
+                            visit("https://blog.naver.com/b", 1_000, 1),
+                            visit("https://stackoverflow.com/c", 1_000, 1)),
+                    List.of());
+            analyzed(
+                    completed("2026-10-30T09:00:00", null, 1),
+                    null,
+                    List.of(visit("https://velog.io/d", 1_000, 2)),
+                    List.of());
 
-            card("categories").andExpect(content().json("""
+            card("categories")
+                    .andExpect(
+                            content()
+                                    .json(
+                                            """
                     {"data": {"categories": [
                       {"name": "블로그", "pct": 50, "count": 3},
                       {"name": "공식문서", "pct": 33, "count": 2},
@@ -392,8 +525,11 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         @Test
         @DisplayName("짧은 방문도 들어가고, 쿼리에 특수문자가 있어도 카테고리를 찾는다")
         void shortVisitAndOddQuery() throws Exception {
-            analyzed(completed("2026-10-31T09:00:00", null, 1), null,
-                    List.of(visit("https://blog.naver.com/x?a=1|2", 150, 1)), List.of());
+            analyzed(
+                    completed("2026-10-31T09:00:00", null, 1),
+                    null,
+                    List.of(visit("https://blog.naver.com/x?a=1|2", 150, 1)),
+                    List.of());
 
             card("categories")
                     .andExpect(jsonPath("$.data.categories[0].name").value("블로그"))
@@ -403,36 +539,61 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         @Test
         @DisplayName("1위가 70% 이상이면 '중심' 문구, 아니면 '균형' 문구에 상위 3개가 나온다")
         void note() throws Exception {
-            analyzed(completed("2026-10-31T09:00:00", null, 1), null, List.of(
-                    visit("https://velog.io/a", 1_000, 7),
-                    visit("https://docs.spring.io/b", 1_000, 3)), List.of());
+            analyzed(
+                    completed("2026-10-31T09:00:00", null, 1),
+                    null,
+                    List.of(
+                            visit("https://velog.io/a", 1_000, 7),
+                            visit("https://docs.spring.io/b", 1_000, 3)),
+                    List.of());
 
-            card("categories").andExpect(jsonPath("$.data.note.analysis")
-                    .value("현재 탐색은 **블로그** 중심으로 이루어지고 있습니다. (전체 탐색의 70%)"));
+            card("categories")
+                    .andExpect(
+                            jsonPath("$.data.note.analysis")
+                                    .value("현재 탐색은 **블로그** 중심으로 이루어지고 있습니다. (전체 탐색의 70%)"));
 
-            analyzed(completed("2026-10-30T09:00:00", null, 1), null, List.of(
-                    visit("https://stackoverflow.com/c", 1_000, 5),
-                    visit("https://news.naver.com/d", 1_000, 1)), List.of());
+            analyzed(
+                    completed("2026-10-30T09:00:00", null, 1),
+                    null,
+                    List.of(
+                            visit("https://stackoverflow.com/c", 1_000, 5),
+                            visit("https://news.naver.com/d", 1_000, 1)),
+                    List.of());
 
-            card("categories").andExpect(jsonPath("$.data.note.analysis")
-                    .value("다양한 유형의 출처를 균형 있게 활용하고 있습니다. (블로그 44% / 커뮤니티 31% / 공식문서 19%)"));
+            card("categories")
+                    .andExpect(
+                            jsonPath("$.data.note.analysis")
+                                    .value(
+                                            "다양한 유형의 출처를 균형 있게 활용하고 있습니다. (블로그 44% / 커뮤니티 31% / 공식문서 19%)"));
         }
 
         @Test
         @DisplayName("추천 행동이 있으면 첫 번째 추천을 추천 문구로 함께 준다")
         void recommendationInNote() throws Exception {
-            analyzed(completed("2026-10-31T09:00:00", null, 1), null, List.of(
-                    visit("https://velog.io/a", 1_000, 3), visit("https://tistory.com/b", 1_000, 3),
-                    visit("https://docs.spring.io/c", 1_000, 2), visit("https://reuters.com/d", 1_000, 2)), List.of());
+            analyzed(
+                    completed("2026-10-31T09:00:00", null, 1),
+                    null,
+                    List.of(
+                            visit("https://velog.io/a", 1_000, 3),
+                                    visit("https://tistory.com/b", 1_000, 3),
+                            visit("https://docs.spring.io/c", 1_000, 2),
+                                    visit("https://reuters.com/d", 1_000, 2)),
+                    List.of());
 
-            card("categories").andExpect(jsonPath("$.data.note.recommendation")
-                    .value(OFFICIAL_DOCS_TITLE + " " + OFFICIAL_DOCS_BODY));
+            card("categories")
+                    .andExpect(
+                            jsonPath("$.data.note.recommendation")
+                                    .value(OFFICIAL_DOCS_TITLE + " " + OFFICIAL_DOCS_BODY));
         }
 
         @Test
         @DisplayName("pageVisits 가 없는 세션만 있으면 null 이다")
         void noPageVisits() throws Exception {
-            analyzed(completed("2026-10-31T09:00:00", null, 1), summary(0, 0, 0, 1), null, List.of());
+            analyzed(
+                    completed("2026-10-31T09:00:00", null, 1),
+                    summary(0, 0, 0, 1),
+                    null,
+                    List.of());
 
             card("categories").andExpect(jsonPath("$.data").value(nullValue()));
         }
@@ -452,40 +613,87 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         @Test
         @DisplayName("블로그 + 커뮤니티가 60% 이상이면 공식 문서를 권한다")
         void blogAndCommunity() throws Exception {
-            titles(Map.of("https://velog.io/a", 2, "https://tistory.com/b", 2, "https://stackoverflow.com/c", 2,
-                    "https://docs.spring.io/d", 2, "https://reuters.com/e", 2))
-                    .andExpect(jsonPath("$.data.recommendations[*].title").value(contains(OFFICIAL_DOCS_TITLE)))
-                    .andExpect(jsonPath("$.data.recommendations[0].body").value(OFFICIAL_DOCS_BODY));
+            titles(
+                            Map.of(
+                                    "https://velog.io/a",
+                                    2,
+                                    "https://tistory.com/b",
+                                    2,
+                                    "https://stackoverflow.com/c",
+                                    2,
+                                    "https://docs.spring.io/d",
+                                    2,
+                                    "https://reuters.com/e",
+                                    2))
+                    .andExpect(
+                            jsonPath("$.data.recommendations[*].title")
+                                    .value(contains(OFFICIAL_DOCS_TITLE)))
+                    .andExpect(
+                            jsonPath("$.data.recommendations[0].body").value(OFFICIAL_DOCS_BODY));
         }
 
         @Test
         @DisplayName("블로그 + 커뮤니티가 59% 면 나오지 않는다")
         void blogAndCommunityBelow() throws Exception {
-            titles(Map.of("https://velog.io/a", 20, "https://tistory.com/b", 20, "https://stackoverflow.com/c", 19,
-                    "https://docs.spring.io/d", 21, "https://reuters.com/e", 20))
+            titles(
+                            Map.of(
+                                    "https://velog.io/a",
+                                    20,
+                                    "https://tistory.com/b",
+                                    20,
+                                    "https://stackoverflow.com/c",
+                                    19,
+                                    "https://docs.spring.io/d",
+                                    21,
+                                    "https://reuters.com/e",
+                                    20))
                     .andExpect(jsonPath("$.data.recommendations", empty()));
         }
 
         @Test
         @DisplayName("커뮤니티가 50% 이상이면 비율이 든 문구가 나오고, 49% 면 나오지 않는다")
         void community() throws Exception {
-            titles(Map.of("https://stackoverflow.com/a", 25, "https://reddit.com/b", 25, "https://docs.spring.io/c", 50))
-                    .andExpect(jsonPath("$.data.recommendations[*].title")
-                            .value(contains("커뮤니티 탐색 비중이 50%로 가장 높아요.")));
+            titles(
+                            Map.of(
+                                    "https://stackoverflow.com/a",
+                                    25,
+                                    "https://reddit.com/b",
+                                    25,
+                                    "https://docs.spring.io/c",
+                                    50))
+                    .andExpect(
+                            jsonPath("$.data.recommendations[*].title")
+                                    .value(contains("커뮤니티 탐색 비중이 50%로 가장 높아요.")));
         }
 
         @Test
         @DisplayName("커뮤니티 49% 면 커뮤니티 문구는 나오지 않는다")
         void communityBelow() throws Exception {
-            titles(Map.of("https://stackoverflow.com/a", 24, "https://reddit.com/b", 25, "https://docs.spring.io/c", 51))
+            titles(
+                            Map.of(
+                                    "https://stackoverflow.com/a",
+                                    24,
+                                    "https://reddit.com/b",
+                                    25,
+                                    "https://docs.spring.io/c",
+                                    51))
                     .andExpect(jsonPath("$.data.recommendations", empty()));
         }
 
         @Test
         @DisplayName("한 사이트가 60% 이상이면 그 사이트 이름이 든 문구가 나오고, www. 유무는 같은 사이트다")
         void oneSite() throws Exception {
-            titles(Map.of("https://www.reuters.com/a", 30, "https://reuters.com/b", 30, "https://docs.spring.io/c", 40))
-                    .andExpect(jsonPath("$.data.recommendations[*].title").value(contains("reuters.com에 정보 탐색이 몰려 있어요.")));
+            titles(
+                            Map.of(
+                                    "https://www.reuters.com/a",
+                                    30,
+                                    "https://reuters.com/b",
+                                    30,
+                                    "https://docs.spring.io/c",
+                                    40))
+                    .andExpect(
+                            jsonPath("$.data.recommendations[*].title")
+                                    .value(contains("reuters.com에 정보 탐색이 몰려 있어요.")));
         }
 
         @Test
@@ -507,7 +715,8 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         @Test
         @DisplayName("요일 7 × 3시간 구간 8 칸이고, 활동은 유닛이 가장 많은 칸 대비, 정독은 칸 안의 정독 유닛 비율이다")
         void grids() throws Exception {
-            units(unit("Deep Reading", 60_000, "2026-10-31T00:30:00+00:00"), // 토 09:30 KST
+            units(
+                    unit("Deep Reading", 60_000, "2026-10-31T00:30:00+00:00"), // 토 09:30 KST
                     unit("Scanning", 30_000, "2026-10-30T11:10:00+00:00"), // 금 20:10 KST
                     unit("Reading", 15_000, "2026-10-30T15:10:00+00:00"), // 토 00:10 KST
                     unit("Scanning", 15_000, "2026-10-30T15:20:00+00:00")); // 토 00:20 KST
@@ -529,7 +738,8 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         @Test
         @DisplayName("구간 경계는 KST 3시간 단위이고 월요일이 첫 줄, 일요일이 마지막 줄이다")
         void boundaries() throws Exception {
-            units(unit("Reading", 1_000, "2026-10-25T17:59:59+00:00"), // 월 02:59 KST
+            units(
+                    unit("Reading", 1_000, "2026-10-25T17:59:59+00:00"), // 월 02:59 KST
                     unit("Reading", 1_000, "2026-10-25T18:00:00+00:00"), // 월 03:00 KST
                     unit("Reading", 1_000, "2026-10-25T14:59:59+00:00")); // 일 23:59 KST
 
@@ -568,31 +778,40 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         @Test
         @DisplayName("유닛이 가장 많은 구간이 30% 이상이면 '주로' 문구다 (체류시간이 아니라 유닛 수로 본다)")
         void peakNote() throws Exception {
-            units(unit("Scanning", 90_000, "2026-10-31T00:30:00+00:00"), // 09시 구간, 체류는 가장 길다
+            units(
+                    unit("Scanning", 90_000, "2026-10-31T00:30:00+00:00"), // 09시 구간, 체류는 가장 길다
                     unit("Scanning", 10_000, "2026-10-30T15:10:00+00:00"), // 00시 구간 유닛 2개
                     unit("Scanning", 10_000, "2026-10-30T15:20:00+00:00"),
                     unit("Scanning", 30_000, "2026-10-30T11:10:00+00:00")); // 18시 구간
 
-            card("time-patterns").andExpect(jsonPath("$.data.note.analysis").value(
-                    "웹 탐색은 주로 **오전 0시 ~ 오전 3시**에 진행됩니다. 이 시간대에 가장 많은 정보 탐색과 읽기가 이루어지고 있어요."));
+            card("time-patterns")
+                    .andExpect(
+                            jsonPath("$.data.note.analysis")
+                                    .value(
+                                            "웹 탐색은 주로 **오전 0시 ~ 오전 3시**에 진행됩니다. 이 시간대에 가장 많은 정보 탐색과 읽기가 이루어지고 있어요."));
         }
 
         @Test
         @DisplayName("요일이 달라도 같은 시간대면 합쳐서 판단한다")
         void peakAcrossDays() throws Exception {
-            units(unit("Scanning", 20_000, "2026-10-30T06:30:00+00:00"), // 금 15:30 KST
+            units(
+                    unit("Scanning", 20_000, "2026-10-30T06:30:00+00:00"), // 금 15:30 KST
                     unit("Scanning", 20_000, "2026-10-29T06:30:00+00:00"), // 목 15:30 KST
                     unit("Scanning", 25_000, "2026-10-30T15:10:00+00:00"), // 토 00:10 KST
                     unit("Scanning", 35_000, "2026-10-30T12:10:00+00:00")); // 금 21:10 KST
 
-            card("time-patterns").andExpect(jsonPath("$.data.note.analysis").value(
-                    "웹 탐색은 주로 **오후 3시 ~ 오후 6시**에 진행됩니다. 이 시간대에 가장 많은 정보 탐색과 읽기가 이루어지고 있어요."));
+            card("time-patterns")
+                    .andExpect(
+                            jsonPath("$.data.note.analysis")
+                                    .value(
+                                            "웹 탐색은 주로 **오후 3시 ~ 오후 6시**에 진행됩니다. 이 시간대에 가장 많은 정보 탐색과 읽기가 이루어지고 있어요."));
         }
 
         @Test
         @DisplayName("유닛이 가장 많은 구간이 정확히 30% 여도 '주로' 문구다")
         void peakAtThreshold() throws Exception {
-            units(unit("Scanning", 1_000, "2026-10-30T15:10:00+00:00"), // 00시 구간 3개 (10개 중 30%)
+            units(
+                    unit("Scanning", 1_000, "2026-10-30T15:10:00+00:00"), // 00시 구간 3개 (10개 중 30%)
                     unit("Scanning", 1_000, "2026-10-30T15:20:00+00:00"),
                     unit("Scanning", 1_000, "2026-10-30T15:30:00+00:00"),
                     unit("Scanning", 1_000, "2026-10-31T00:10:00+00:00"), // 09시 구간 2개
@@ -603,36 +822,52 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
                     unit("Scanning", 1_000, "2026-10-30T11:20:00+00:00"),
                     unit("Scanning", 1_000, "2026-10-30T06:30:00+00:00")); // 15시 구간 1개
 
-            card("time-patterns").andExpect(jsonPath("$.data.note.analysis").value(
-                    "웹 탐색은 주로 **오전 0시 ~ 오전 3시**에 진행됩니다. 이 시간대에 가장 많은 정보 탐색과 읽기가 이루어지고 있어요."));
+            card("time-patterns")
+                    .andExpect(
+                            jsonPath("$.data.note.analysis")
+                                    .value(
+                                            "웹 탐색은 주로 **오전 0시 ~ 오전 3시**에 진행됩니다. 이 시간대에 가장 많은 정보 탐색과 읽기가 이루어지고 있어요."));
         }
 
         @Test
         @DisplayName("어느 구간도 유닛 30% 가 안 되면 '하루 전반' 문구다")
         void noPeak() throws Exception {
-            units(unit("Scanning", 29_000, "2026-10-30T15:10:00+00:00"),
+            units(
+                    unit("Scanning", 29_000, "2026-10-30T15:10:00+00:00"),
                     unit("Scanning", 29_000, "2026-10-31T00:10:00+00:00"),
                     unit("Scanning", 21_000, "2026-10-30T03:10:00+00:00"),
                     unit("Scanning", 21_000, "2026-10-30T11:10:00+00:00"));
 
             card("time-patterns")
-                    .andExpect(jsonPath("$.data.note.analysis").value(
-                            "특정 시간대에 집중되기보다, 하루 전반에 걸쳐 웹 탐색이 이루어지고 있어요. 집중이 잘 되는 시간대를 활용해 중요한 웹 탐색을 배치해보세요."))
+                    .andExpect(
+                            jsonPath("$.data.note.analysis")
+                                    .value(
+                                            "특정 시간대에 집중되기보다, 하루 전반에 걸쳐 웹 탐색이 이루어지고 있어요. 집중이 잘 되는 시간대를 활용해 중요한 웹 탐색을 배치해보세요."))
                     .andExpect(jsonPath("$.data.note.recommendation").value(nullValue()));
         }
 
         @Test
         @DisplayName("체류 10분 이상 구간 중 정독 유닛 비율이 가장 높은 구간을 추천한다")
         void focusNote() throws Exception {
-            units(unit("Deep Reading", 599_000, "2026-10-30T15:10:00+00:00"), // 00시 구간 100% 지만 10분 미만
-                    unit("Reading", 400_000, "2026-10-31T00:30:00+00:00"), // 09시 구간 유닛 3개 중 정독 2개 = 67%
+            units(
+                    unit(
+                            "Deep Reading",
+                            599_000,
+                            "2026-10-30T15:10:00+00:00"), // 00시 구간 100% 지만 10분 미만
+                    unit(
+                            "Reading",
+                            400_000,
+                            "2026-10-31T00:30:00+00:00"), // 09시 구간 유닛 3개 중 정독 2개 = 67%
                     unit("Reading", 280_000, "2026-10-31T00:35:00+00:00"),
                     unit("Scanning", 320_000, "2026-10-31T00:40:00+00:00"),
                     unit("Reading", 300_000, "2026-10-30T07:10:00+00:00"), // 15시 구간 50%
                     unit("Scanning", 300_000, "2026-10-30T07:20:00+00:00"));
 
-            card("time-patterns").andExpect(jsonPath("$.data.note.recommendation").value(
-                    "**오전 9시 ~ 오후 12시**에 집중도가 가장 높아요. (정독 비율 67%로 가장 높은 시간대) 중요한 학습은 이 시간대를 활용해보세요."));
+            card("time-patterns")
+                    .andExpect(
+                            jsonPath("$.data.note.recommendation")
+                                    .value(
+                                            "**오전 9시 ~ 오후 12시**에 집중도가 가장 높아요. (정독 비율 67%로 가장 높은 시간대) 중요한 학습은 이 시간대를 활용해보세요."));
         }
 
         @Test
@@ -640,8 +875,11 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         void lastSlotLabel() throws Exception {
             units(unit("Deep Reading", 60_000, "2026-10-30T12:10:00+00:00"));
 
-            card("time-patterns").andExpect(jsonPath("$.data.note.analysis").value(
-                    "웹 탐색은 주로 **오후 9시 ~ 오전 0시**에 진행됩니다. 이 시간대에 가장 많은 정보 탐색과 읽기가 이루어지고 있어요."));
+            card("time-patterns")
+                    .andExpect(
+                            jsonPath("$.data.note.analysis")
+                                    .value(
+                                            "웹 탐색은 주로 **오후 9시 ~ 오전 0시**에 진행됩니다. 이 시간대에 가장 많은 정보 탐색과 읽기가 이루어지고 있어요."));
         }
 
         @Test
@@ -649,7 +887,8 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         void noFocus() throws Exception {
             units(unit("Scanning", 120_000, "2026-10-30T12:10:00+00:00"));
 
-            card("time-patterns").andExpect(jsonPath("$.data.note.recommendation").value(nullValue()));
+            card("time-patterns")
+                    .andExpect(jsonPath("$.data.note.recommendation").value(nullValue()));
         }
     }
 
@@ -660,27 +899,51 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
     }
 
     private BrowsingSession completed(String startedAt, String endedAt, int pageCount) {
-        return session(me, "세션 " + startedAt, at(startedAt), endedAt == null ? null : at(endedAt), pageCount,
-                false, false, List.of(), List.of(), null);
+        return session(
+                me,
+                "세션 " + startedAt,
+                at(startedAt),
+                endedAt == null ? null : at(endedAt),
+                pageCount,
+                false,
+                false,
+                List.of(),
+                List.of(),
+                null);
     }
 
     /** AI 결과 저장과 같이 채운다. 분석 화면이 읽지 않는 항목은 비워 둔다 */
-    private void analyzed(BrowsingSession session, Map<String, Object> summary, List<Map<String, Object>> pageVisits,
+    private void analyzed(
+            BrowsingSession session,
+            Map<String, Object> summary,
+            List<Map<String, Object>> pageVisits,
             List<Map<String, Object>> units) {
         SessionResult result = new SessionResult(session.getId(), session.getUserId());
-        result.replace(null, List.of(), units, summary == null ? Map.of() : summary, List.of(), List.of(), "user", "A");
+        result.replace(
+                null,
+                List.of(),
+                units,
+                summary == null ? Map.of() : summary,
+                List.of(),
+                List.of(),
+                "user",
+                "A");
         result.replacePageVisits(pageVisits);
         results.saveAndFlush(result);
     }
 
     /** 집계에 들어가면 바로 드러나는 분석 결과 */
     private void noise(BrowsingSession session) {
-        analyzed(session, summary(100, 0, 0, 0), List.of(visit("https://reuters.com/noise", 1_000, 100)),
+        analyzed(
+                session,
+                summary(100, 0, 0, 0),
+                List.of(visit("https://reuters.com/noise", 1_000, 100)),
                 List.of(unit("Scanning", 900_000, "2026-10-31T00:10:00+00:00")));
     }
 
     /** output.py _summary: 라벨별 유닛 수 · 체류시간 합. 체류시간은 일부러 유닛 수와 다른 비율로 둔다 */
-    private static Map<String, Object> summary(int idle, int scanning, int reading, int deepReading) {
+    private static Map<String, Object> summary(
+            int idle, int scanning, int reading, int deepReading) {
         return Map.of(
                 "Idle", Map.of("units", idle, "dwellMs", 4_000),
                 "Scanning", Map.of("units", scanning, "dwellMs", 3_000),

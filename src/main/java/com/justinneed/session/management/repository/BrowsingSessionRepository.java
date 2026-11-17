@@ -29,7 +29,8 @@ public interface BrowsingSessionRepository extends JpaRepository<BrowsingSession
     //    NULL 정렬은 DB 마다 다르다 (Postgres 는 desc 에서 NULL 이 앞, H2 는 설정에 따라 다름).
     //    nulls last 는 Hibernate 가 방언 기본값과 같다고 보면 SQL 에서 빼 버리므로, 종료 시각 유무를 따로 먼저 비교한다
     // 3. 시작 시각 최신순, 마지막으로 id 역순이라 같은 시각이어도 페이지 경계가 흔들리지 않는다
-    String LIST_ORDER = """
+    String LIST_ORDER =
+            """
             order by case when session.status in :finished then 1 else 0 end,
                      case when session.status in :finished and session.endedAt is null then 1 else 0 end,
                      case when session.status in :finished then session.endedAt end desc,
@@ -37,93 +38,104 @@ public interface BrowsingSessionRepository extends JpaRepository<BrowsingSession
                      session.id desc
             """;
 
-    List<BrowsingSession> findByUserIdAndDeletedAtIsNullOrderByEndedAtDescStartedAtDesc(Long userId);
+    List<BrowsingSession> findByUserIdAndDeletedAtIsNullOrderByEndedAtDescStartedAtDesc(
+            Long userId);
 
     // 잠그기 전에는 id 만 읽는다 — 엔티티를 먼저 읽으면 lockById 가 행만 잠그고 낡은 상태를 돌려준다
-    @Query("select session.id from BrowsingSession session"
-            + " where session.userId = :userId and session.collectorSessionId = :collectorSessionId")
-    Optional<Long> findIdByCollector(@Param("userId") Long userId, @Param("collectorSessionId") String collectorSessionId);
+    @Query(
+            "select session.id from BrowsingSession session"
+                    + " where session.userId = :userId and session.collectorSessionId = :collectorSessionId")
+    Optional<Long> findIdByCollector(
+            @Param("userId") Long userId, @Param("collectorSessionId") String collectorSessionId);
 
     // 확장 청크로 만든 세션 중 이 상태인 것 (안 끝난 세션 정리)
     List<BrowsingSession> findByStatusAndCollectorSessionIdIsNotNull(SessionStatus status);
 
     // 세션 목록 한 페이지. favoriteOnly 면 즐겨찾기만 (REC-10-3)
-    default Slice<BrowsingSession> findListPage(Long userId, boolean favoriteOnly, Pageable pageable) {
+    default Slice<BrowsingSession> findListPage(
+            Long userId, boolean favoriteOnly, Pageable pageable) {
         return findListPage(userId, favoriteOnly, FINISHED_STATUSES, pageable);
     }
 
-    @Query("""
+    @Query(
+            """
             select session
             from BrowsingSession session
             left join fetch session.summary
             where session.userId = :userId
               and session.deletedAt is null
               and (:favoriteOnly = false or session.favorite = true)
-            """ + LIST_ORDER)
+            """
+                    + LIST_ORDER)
     Slice<BrowsingSession> findListPage(
             @Param("userId") Long userId,
             @Param("favoriteOnly") boolean favoriteOnly,
             @Param("finished") List<SessionStatus> finished,
-            Pageable pageable
-    );
+            Pageable pageable);
 
     // 태그 그룹에 묶을 내 세션 전체. 목록과 같은 순서
     default List<BrowsingSession> findListByUserId(Long userId) {
         return findListByUserId(userId, FINISHED_STATUSES);
     }
 
-    @Query("""
+    @Query(
+            """
             select session
             from BrowsingSession session
             left join fetch session.summary
             where session.userId = :userId
               and session.deletedAt is null
-            """ + LIST_ORDER)
+            """
+                    + LIST_ORDER)
     List<BrowsingSession> findListByUserId(
-            @Param("userId") Long userId,
-            @Param("finished") List<SessionStatus> finished
-    );
+            @Param("userId") Long userId, @Param("finished") List<SessionStatus> finished);
 
     // 내 세션들의 태그 목록(세션당 한 줄), 목록과 같은 순서. 태그 컬럼만 읽어 summary 는 조회하지 않는다
     default List<List<String>> findTagsByUserId(Long userId) {
         return findTagsByUserId(userId, FINISHED_STATUSES);
     }
 
-    @Query("""
+    @Query(
+            """
             select session.tags
             from BrowsingSession session
             where session.userId = :userId
               and session.deletedAt is null
-            """ + LIST_ORDER)
+            """
+                    + LIST_ORDER)
     List<List<String>> findTagsByUserId(
-            @Param("userId") Long userId,
-            @Param("finished") List<SessionStatus> finished
-    );
+            @Param("userId") Long userId, @Param("finished") List<SessionStatus> finished);
 
     long countByUserIdAndDeletedAtIsNull(Long userId);
 
     // 수집기 세션 id 로 세션 찾기. 지운 세션도 찾아서 늦게 온 청크가 세션을 다시 만들지 않게 한다
-    Optional<BrowsingSession> findByUserIdAndCollectorSessionId(Long userId, String collectorSessionId);
+    Optional<BrowsingSession> findByUserIdAndCollectorSessionId(
+            Long userId, String collectorSessionId);
 
     // 임시 제목의 번호. 지운 세션도 세어 번호가 겹치지 않게 한다
-    @Query("""
+    @Query(
+            """
             select count(session)
             from BrowsingSession session
             where session.userId = :userId
               and session.createdAt >= :from
               and session.createdAt < :to
             """)
-    long countCreatedBetween(@Param("userId") Long userId, @Param("from") LocalDateTime from,
+    long countCreatedBetween(
+            @Param("userId") Long userId,
+            @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to);
 
     // 분석 요청이 안 나갔을 수 있는 세션 (복구 스케줄러)
-    @Query("select session.id from BrowsingSession session where session.status = :status and session.deletedAt is null")
+    @Query(
+            "select session.id from BrowsingSession session where session.status = :status and session.deletedAt is null")
     List<Long> findIdsByStatus(@Param("status") SessionStatus status);
 
     long countByUserIdAndFavoriteTrueAndDeletedAtIsNull(Long userId);
 
     @EntityGraph(attributePaths = "summary")
-    @Query("""
+    @Query(
+            """
             select session
             from BrowsingSession session
             where session.id = :id
@@ -141,6 +153,7 @@ public interface BrowsingSessionRepository extends JpaRepository<BrowsingSession
 
     // 소유자 · 삭제 여부는 잠금을 잡은 뒤의 행으로 판단한다 (기다리는 동안 삭제될 수 있다)
     default Optional<BrowsingSession> lockOwned(Long id, Long userId) {
-        return lockById(id).filter(session -> session.getUserId().equals(userId) && !session.isDeleted());
+        return lockById(id)
+                .filter(session -> session.getUserId().equals(userId) && !session.isDeleted());
     }
 }

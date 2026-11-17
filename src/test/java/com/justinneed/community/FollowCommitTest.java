@@ -29,7 +29,9 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 // 트랜잭션을 실제로 커밋해야 재현되는 동시 요청 · 행 잠금 규칙
-@SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:community_follow_committed;MODE=PostgreSQL;LOCK_TIMEOUT=10000")
+@SpringBootTest(
+        properties =
+                "spring.datasource.url=jdbc:h2:mem:community_follow_committed;MODE=PostgreSQL;LOCK_TIMEOUT=10000")
 @AutoConfigureMockMvc
 class FollowCommitTest {
     @Autowired MockMvc mvc;
@@ -41,26 +43,41 @@ class FollowCommitTest {
     @Autowired PlatformTransactionManager manager;
 
     private Long member() {
-        return members.saveAndFlush(new Member(SocialProvider.KAKAO, "follow-" + UUID.randomUUID(), null, null)).getId();
+        return members.saveAndFlush(
+                        new Member(SocialProvider.KAKAO, "follow-" + UUID.randomUUID(), null, null))
+                .getId();
     }
+
     private int rows(Long actor, Long target) {
-        return jdbc.queryForObject("select count(*) from community_follows where actor_id = ? and target_id = ?",
-                Integer.class, actor, target);
+        return jdbc.queryForObject(
+                "select count(*) from community_follows where actor_id = ? and target_id = ?",
+                Integer.class,
+                actor,
+                target);
     }
-    private List<Integer> clickTogether(Long actor, Long target, boolean following, int clicks) throws Exception {
+
+    private List<Integer> clickTogether(Long actor, Long target, boolean following, int clicks)
+            throws Exception {
         var pool = Executors.newFixedThreadPool(clicks);
         var ready = new CountDownLatch(clicks);
         var start = new CountDownLatch(1);
         try {
             var calls = new ArrayList<java.util.concurrent.Future<Integer>>();
-            Callable<Integer> click = () -> {
-                ready.countDown();
-                start.await(5, TimeUnit.SECONDS);
-                return mvc.perform(patch("/community/profiles/{userId}/follow", target)
-                                .header("Authorization", "Bearer " + tokens.createAccessToken(actor))
-                                .contentType(MediaType.APPLICATION_JSON).content("{\"following\":" + following + "}"))
-                        .andReturn().getResponse().getStatus();
-            };
+            Callable<Integer> click =
+                    () -> {
+                        ready.countDown();
+                        start.await(5, TimeUnit.SECONDS);
+                        return mvc.perform(
+                                        patch("/community/profiles/{userId}/follow", target)
+                                                .header(
+                                                        "Authorization",
+                                                        "Bearer " + tokens.createAccessToken(actor))
+                                                .contentType(MediaType.APPLICATION_JSON)
+                                                .content("{\"following\":" + following + "}"))
+                                .andReturn()
+                                .getResponse()
+                                .getStatus();
+                    };
             for (int i = 0; i < clicks; i++) calls.add(pool.submit(click));
             assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
             start.countDown();
@@ -96,18 +113,31 @@ class FollowCommitTest {
         }
         var pool = Executors.newSingleThreadExecutor();
         try {
-            new TransactionTemplate(manager).executeWithoutResult(status -> {
-                memberLocks.lockById(viewer).orElseThrow();
-                memberLocks.lockById(other).orElseThrow();
-                var answer = pool.submit(() -> mvc.perform(get("/community/recommendations/profiles/similar")
-                                .header("Authorization", "Bearer " + tokens.createAccessToken(viewer)))
-                        .andReturn().getResponse().getStatus());
-                try {
-                    assertThat(answer.get(5, TimeUnit.SECONDS)).isEqualTo(200);
-                } catch (Exception error) {
-                    throw new AssertionError("GET waited for a row lock", error);
-                }
-            });
+            new TransactionTemplate(manager)
+                    .executeWithoutResult(
+                            status -> {
+                                memberLocks.lockById(viewer).orElseThrow();
+                                memberLocks.lockById(other).orElseThrow();
+                                var answer =
+                                        pool.submit(
+                                                () ->
+                                                        mvc.perform(
+                                                                        get("/community/recommendations/profiles/similar")
+                                                                                .header(
+                                                                                        "Authorization",
+                                                                                        "Bearer "
+                                                                                                + tokens
+                                                                                                        .createAccessToken(
+                                                                                                                viewer)))
+                                                                .andReturn()
+                                                                .getResponse()
+                                                                .getStatus());
+                                try {
+                                    assertThat(answer.get(5, TimeUnit.SECONDS)).isEqualTo(200);
+                                } catch (Exception error) {
+                                    throw new AssertionError("GET waited for a row lock", error);
+                                }
+                            });
         } finally {
             pool.shutdownNow();
         }

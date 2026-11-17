@@ -16,8 +16,13 @@ public interface CardCounts {
         long getTotal();
     }
 
-    record Count(long likeCount, boolean likedByMe, long bookmarkCount, Long bookmarkId,
-            long exploringCount, boolean exploringByMe) {
+    record Count(
+            long likeCount,
+            boolean likedByMe,
+            long bookmarkCount,
+            Long bookmarkId,
+            long exploringCount,
+            boolean exploringByMe) {
         public static final Count ZERO = new Count(0, false, 0, null, 0, false);
     }
 }

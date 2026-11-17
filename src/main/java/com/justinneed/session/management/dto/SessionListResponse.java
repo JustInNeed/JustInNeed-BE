@@ -14,8 +14,7 @@ public record SessionListResponse(
         SessionStatus status,
         boolean isFavorite,
         boolean isPublic,
-        List<String> tags
-) {
+        List<String> tags) {
 
     public static SessionListResponse from(BrowsingSession session) {
         return new SessionListResponse(
@@ -27,12 +26,12 @@ public record SessionListResponse(
                 session.getStatus(),
                 session.isFavorite(),
                 session.isPublicSession(),
-                session.getTags()
-        );
+                session.getTags());
     }
 
     // 다른 사용자가 보는 공개 세션. 규칙은 SessionDetailResponse.forViewer 와 같다
-    public static SessionListResponse forViewer(BrowsingSession session, List<String> tags, boolean includeContent) {
+    public static SessionListResponse forViewer(
+            BrowsingSession session, List<String> tags, boolean includeContent) {
         return new SessionListResponse(
                 session.getId(),
                 includeContent ? session.getTitle() : "",
@@ -42,7 +41,6 @@ public record SessionListResponse(
                 session.getStatus(),
                 false,
                 session.isPublicSession(),
-                tags
-        );
+                tags);
     }
 }

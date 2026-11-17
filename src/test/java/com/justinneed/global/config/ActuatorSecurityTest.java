@@ -16,8 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @ActiveProfiles("test")
 class ActuatorSecurityTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
 
     @Test
     void healthIsPublic() throws Exception {
@@ -28,7 +27,6 @@ class ActuatorSecurityTest {
 
     @Test
     void otherActuatorEndpointsRequireAuth() throws Exception {
-        mockMvc.perform(get("/actuator/info"))
-                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/actuator/info")).andExpect(status().isUnauthorized());
     }
 }

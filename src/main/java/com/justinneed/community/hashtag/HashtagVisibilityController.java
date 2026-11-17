@@ -1,14 +1,18 @@
 package com.justinneed.community.hashtag;
 
-import com.justinneed.global.common.ApiResponse;
 import com.justinneed.community.edit.ProfileEditService;
+import com.justinneed.global.common.ApiResponse;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
-import io.swagger.v3.oas.annotations.media.Schema;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/community/me/hashtags")
@@ -33,6 +37,7 @@ public class HashtagVisibilityController {
     }
 
     @Schema(name = "HashtagVisibilityControllerRequest")
-    public record Request(@NotBlank(message = "해시태그를 입력해 주세요.") String hashtag,
-            @NotNull(message = "공개 여부를 입력해 주세요.") Boolean isPublic) { }
+    public record Request(
+            @NotBlank(message = "해시태그를 입력해 주세요.") String hashtag,
+            @NotNull(message = "공개 여부를 입력해 주세요.") Boolean isPublic) {}
 }

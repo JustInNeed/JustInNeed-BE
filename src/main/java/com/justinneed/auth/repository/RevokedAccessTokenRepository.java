@@ -11,9 +11,13 @@ public interface RevokedAccessTokenRepository extends JpaRepository<RevokedAcces
 
     // 이미 무효화한 토큰이면 아무것도 하지 않는다 (같은 토큰으로 동시에 로그아웃 · 탈퇴해도 PK 충돌 없음)
     @Modifying
-    @Query(value = "insert into revoked_access_tokens (token_hash, expires_at) values (:tokenHash, :expiresAt)"
-            + " on conflict do nothing", nativeQuery = true)
-    int insertIfAbsent(@Param("tokenHash") String tokenHash, @Param("expiresAt") LocalDateTime expiresAt);
+    @Query(
+            value =
+                    "insert into revoked_access_tokens (token_hash, expires_at) values (:tokenHash, :expiresAt)"
+                            + " on conflict do nothing",
+            nativeQuery = true)
+    int insertIfAbsent(
+            @Param("tokenHash") String tokenHash, @Param("expiresAt") LocalDateTime expiresAt);
 
     boolean existsByTokenHashAndExpiresAtAfter(String tokenHash, LocalDateTime now);
 

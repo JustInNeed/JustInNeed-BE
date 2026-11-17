@@ -23,11 +23,10 @@ import org.hibernate.type.SqlTypes;
 @Entity
 @Table(
         name = "sessions",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_sessions_user_collector",
-                columnNames = {"user_id", "collector_session_id"}
-        )
-)
+        uniqueConstraints =
+                @UniqueConstraint(
+                        name = "uk_sessions_user_collector",
+                        columnNames = {"user_id", "collector_session_id"}))
 public class BrowsingSession extends BaseEntity {
 
     @Id
@@ -74,11 +73,14 @@ public class BrowsingSession extends BaseEntity {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
-    @OneToOne(mappedBy = "session", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(
+            mappedBy = "session",
+            fetch = FetchType.LAZY,
+            cascade = CascadeType.ALL,
+            orphanRemoval = true)
     private Summary summary;
 
-    protected BrowsingSession() {
-    }
+    protected BrowsingSession() {}
 
     public BrowsingSession(Long userId, String title, LocalDateTime startedAt) {
         this.userId = userId;
@@ -86,7 +88,8 @@ public class BrowsingSession extends BaseEntity {
         this.startedAt = startedAt;
     }
 
-    public BrowsingSession(Long userId, String title, LocalDateTime startedAt, String collectorSessionId) {
+    public BrowsingSession(
+            Long userId, String title, LocalDateTime startedAt, String collectorSessionId) {
         this(userId, title, startedAt);
         this.collectorSessionId = collectorSessionId;
     }
@@ -118,7 +121,8 @@ public class BrowsingSession extends BaseEntity {
     }
 
     // AI 분석 결과 반영. pageCount 는 AI pages(짧은 방문 제외)가 아니라 원본 기준 방문 링크 수
-    public void completeAnalysis(String title, List<String> tags, List<Source> sources, int pageCount) {
+    public void completeAnalysis(
+            String title, List<String> tags, List<Source> sources, int pageCount) {
         if (title != null && !title.isBlank()) {
             this.title = title;
         }
@@ -137,7 +141,11 @@ public class BrowsingSession extends BaseEntity {
         this.summary = summary;
     }
 
-    public void update(String title, String editedMarkdown, Boolean publicSession, Boolean favorite,
+    public void update(
+            String title,
+            String editedMarkdown,
+            Boolean publicSession,
+            Boolean favorite,
             List<String> tags) {
         if (title != null) {
             this.title = title;
@@ -165,12 +173,8 @@ public class BrowsingSession extends BaseEntity {
     }
 
     public boolean hasAnyTag(List<String> hashtags) {
-        List<String> loweredHashtags = hashtags.stream()
-                .map(String::toLowerCase)
-                .toList();
-        return tags.stream()
-                .map(String::toLowerCase)
-                .anyMatch(loweredHashtags::contains);
+        List<String> loweredHashtags = hashtags.stream().map(String::toLowerCase).toList();
+        return tags.stream().map(String::toLowerCase).anyMatch(loweredHashtags::contains);
     }
 
     private Summary getOrCreateSummary() {

@@ -18,11 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 소셜 로그인 성공 → FE 로 토큰을 넘기는 일회용 로그인 코드.
- * 토큰을 리다이렉트 URL 에 실으면 FE 호스팅 접근 로그 · 브라우저 기록에 남으므로,
- * URL 에는 코드만 담고 FE 가 POST /auth/token 으로 코드를 토큰과 바꾼다.
- * - 코드: 32바이트 난수(base64url, 패딩 없음). DB 에는 SHA-256 해시만 저장
- * - 60초 안에 한 번만 바꿀 수 있다 (바꾸는 순간 행 삭제)
+ * 소셜 로그인 성공 → FE 로 토큰을 넘기는 일회용 로그인 코드. 토큰을 리다이렉트 URL 에 실으면 FE 호스팅 접근 로그 · 브라우저 기록에 남으므로, URL 에는 코드만
+ * 담고 FE 가 POST /auth/token 으로 코드를 토큰과 바꾼다. - 코드: 32바이트 난수(base64url, 패딩 없음). DB 에는 SHA-256 해시만 저장 -
+ * 60초 안에 한 번만 바꿀 수 있다 (바꾸는 순간 행 삭제)
  */
 @Service
 public class LoginCodeService {
@@ -36,8 +34,11 @@ public class LoginCodeService {
     private final MemberRepository memberRepository;
     private final JwtTokenProvider jwtTokenProvider;
 
-    public LoginCodeService(LoginCodeRepository loginCodeRepository, AuthTokenService authTokenService,
-            MemberRepository memberRepository, JwtTokenProvider jwtTokenProvider) {
+    public LoginCodeService(
+            LoginCodeRepository loginCodeRepository,
+            AuthTokenService authTokenService,
+            MemberRepository memberRepository,
+            JwtTokenProvider jwtTokenProvider) {
         this.loginCodeRepository = loginCodeRepository;
         this.authTokenService = authTokenService;
         this.memberRepository = memberRepository;
@@ -51,10 +52,9 @@ public class LoginCodeService {
     }
 
     /**
-     * POST /auth/extension-code: 로그인한 웹이 확장에 넘길 코드 발급.
-     * 확장은 POST /auth/token 으로 바꿔 자기 토큰을 받는다. 웹과 같은 묶음이라 로그아웃은 함께 되지만,
-     * refresh 토큰은 따로라 재발급해도 서로 영향을 주지 않는다.
-     * 묶음이 없는 토큰(도입 전 발급)이나 이미 로그아웃된 묶음이면 401: FE 가 재발급으로 새 묶음을 받거나 로그인으로 돌아간다
+     * POST /auth/extension-code: 로그인한 웹이 확장에 넘길 코드 발급. 확장은 POST /auth/token 으로 바꿔 자기 토큰을 받는다. 웹과 같은
+     * 묶음이라 로그아웃은 함께 되지만, refresh 토큰은 따로라 재발급해도 서로 영향을 주지 않는다. 묶음이 없는 토큰(도입 전 발급)이나 이미 로그아웃된 묶음이면
+     * 401: FE 가 재발급으로 새 묶음을 받거나 로그인으로 돌아간다
      */
     @Transactional
     public ExtensionCodeResponse issueForExtension(Long memberId, String accessToken) {
@@ -62,8 +62,10 @@ public class LoginCodeService {
         if (!authTokenService.isActiveGroup(groupId)) {
             throw new CustomException(ErrorCode.LOGIN_EXPIRED);
         }
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new CustomException(ErrorCode.LOGIN_EXPIRED));
+        Member member =
+                memberRepository
+                        .findById(memberId)
+                        .orElseThrow(() -> new CustomException(ErrorCode.LOGIN_EXPIRED));
         String code = issue(memberId, member.getNickname() == null, groupId);
         return new ExtensionCodeResponse(code, CODE_VALIDITY_SECONDS);
     }
@@ -74,7 +76,9 @@ public class LoginCodeService {
         String code = Base64.getUrlEncoder().withoutPadding().encodeToString(random);
 
         LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(CODE_VALIDITY_SECONDS);
-        loginCodeRepository.save(new LoginCode(TokenHashes.sha256(code), memberId, needsNickname, expiresAt, groupId));
+        loginCodeRepository.save(
+                new LoginCode(
+                        TokenHashes.sha256(code), memberId, needsNickname, expiresAt, groupId));
         return code;
     }
 
@@ -85,8 +89,10 @@ public class LoginCodeService {
             throw new CustomException(ErrorCode.INVALID_LOGIN_CODE);
         }
         String codeHash = TokenHashes.sha256(code);
-        LoginCode loginCode = loginCodeRepository.findById(codeHash)
-                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_LOGIN_CODE));
+        LoginCode loginCode =
+                loginCodeRepository
+                        .findById(codeHash)
+                        .orElseThrow(() -> new CustomException(ErrorCode.INVALID_LOGIN_CODE));
 
         // 코드를 받은 뒤 60초 안에 탈퇴한 경우
         if (memberRepository.existsByIdAndWithdrawnAtIsNotNull(loginCode.getMemberId())) {
@@ -94,7 +100,8 @@ public class LoginCodeService {
         }
 
         // 코드를 받은 뒤 60초 안에 웹에서 로그아웃한 경우
-        if (loginCode.getGroupId() != null && !authTokenService.isActiveGroup(loginCode.getGroupId())) {
+        if (loginCode.getGroupId() != null
+                && !authTokenService.isActiveGroup(loginCode.getGroupId())) {
             throw new CustomException(ErrorCode.INVALID_LOGIN_CODE);
         }
 
@@ -104,7 +111,9 @@ public class LoginCodeService {
             throw new CustomException(ErrorCode.INVALID_LOGIN_CODE);
         }
 
-        TokenResponse tokens = authTokenService.issue(loginCode.getMemberId(), loginCode.getGroupId());
-        return new LoginTokenResponse(tokens.accessToken(), tokens.refreshToken(), loginCode.isNeedsNickname());
+        TokenResponse tokens =
+                authTokenService.issue(loginCode.getMemberId(), loginCode.getGroupId());
+        return new LoginTokenResponse(
+                tokens.accessToken(), tokens.refreshToken(), loginCode.isNeedsNickname());
     }
 }

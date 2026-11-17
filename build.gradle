@@ -2,6 +2,8 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '4.0.6'
 	id 'io.spring.dependency-management' version '1.1.7'
+	id 'checkstyle'
+	id 'com.diffplug.spotless' version '8.11.0'
 }
 
 group = 'com.justinneed'
@@ -11,6 +13,25 @@ java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(17)
 	}
+}
+
+// 정책 #13: 포맷은 google-java-format AOSP (공백 4칸 · 줄 100자). 고치기: ./gradlew spotlessApply
+spotless {
+	java {
+		target 'src/**/*.java'
+		googleJavaFormat('1.28.0').aosp().reflowLongStrings(false)
+		removeUnusedImports()
+		trimTrailingWhitespace()
+		endWithNewline()
+	}
+}
+
+// 정책 #17: 버그로 이어지는 최소 규칙만, 하나라도 걸리면 실패. 포맷(줄 길이 · 들여쓰기)은 Spotless 가 맡는다
+checkstyle {
+	toolVersion = '10.26.1'
+	configFile = file('config/checkstyle/checkstyle.xml')
+	maxWarnings = 0
+	ignoreFailures = false
 }
 
 repositories {

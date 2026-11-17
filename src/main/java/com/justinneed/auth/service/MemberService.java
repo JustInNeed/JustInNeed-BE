@@ -48,7 +48,8 @@ public class MemberService {
 
     // 탈퇴한 회원은 토큰이 남아 있어도 없는 회원으로 본다
     private Member findMember(Long memberId) {
-        return memberRepository.findByIdAndWithdrawnAtIsNull(memberId)
+        return memberRepository
+                .findByIdAndWithdrawnAtIsNull(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
     }
 }

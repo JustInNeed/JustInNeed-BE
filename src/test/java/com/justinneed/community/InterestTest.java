@@ -1,14 +1,20 @@
 package com.justinneed.community;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.justinneed.community.domain.CommunityProfile;
 import com.justinneed.community.interest.InterestService;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,12 +28,18 @@ class InterestTest extends CommunityTestSupport {
     @Test
     void registersKoreanEnglishAndNumbersAndRejectsCaseInsensitiveDuplicate() throws Exception {
         for (String tag : List.of("Java", "한글123")) {
-            mvc.perform(post("/community/me/interests").header("Authorization", auth(ownerId))
-                            .contentType(MediaType.APPLICATION_JSON).content("{\"hashtag\":\"" + tag + "\"}"))
+            mvc.perform(
+                            post("/community/me/interests")
+                                    .header("Authorization", auth(ownerId))
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content("{\"hashtag\":\"" + tag + "\"}"))
                     .andExpect(status().isCreated());
         }
-        mvc.perform(post("/community/me/interests").header("Authorization", auth(ownerId))
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"hashtag\":\"JAVA\"}"))
+        mvc.perform(
+                        post("/community/me/interests")
+                                .header("Authorization", auth(ownerId))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"hashtag\":\"JAVA\"}"))
                 .andExpect(status().isBadRequest());
         mvc.perform(get("/community/me/interests").header("Authorization", auth(ownerId)))
                 .andExpect(jsonPath("$.data.length()").value(2));
@@ -38,14 +50,24 @@ class InterestTest extends CommunityTestSupport {
     @Test
     void rejectsInvalidAndMissingHashtags() throws Exception {
         for (String tag : List.of("", "#Java", "two words", "12345678901", " Java ")) {
-            mvc.perform(post("/community/me/interests").header("Authorization", auth(ownerId))
-                            .contentType(MediaType.APPLICATION_JSON).content("{\"hashtag\":\"" + tag + "\"}"))
+            mvc.perform(
+                            post("/community/me/interests")
+                                    .header("Authorization", auth(ownerId))
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content("{\"hashtag\":\"" + tag + "\"}"))
                     .andExpect(status().isBadRequest());
         }
-        mvc.perform(post("/community/me/interests").header("Authorization", auth(ownerId))
-                        .contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isBadRequest());
-        mvc.perform(post("/community/me/interests").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"hashtag\":\"Java\"}")).andExpect(status().isUnauthorized());
+        mvc.perform(
+                        post("/community/me/interests")
+                                .header("Authorization", auth(ownerId))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(
+                        post("/community/me/interests")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"hashtag\":\"Java\"}"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -53,13 +75,22 @@ class InterestTest extends CommunityTestSupport {
         var profile = new CommunityProfile(ownerId);
         profile.replaceInterests(IntStream.range(0, 9).mapToObj(i -> "tag" + i).toList());
         profiles.saveAndFlush(profile);
-        mvc.perform(post("/community/me/interests").header("Authorization", auth(ownerId))
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"hashtag\":\"1234567890\"}"))
-                .andExpect(status().isCreated()).andExpect(jsonPath("$.data.interestCount").value(10));
-        mvc.perform(post("/community/me/interests").header("Authorization", auth(ownerId))
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"hashtag\":\"extra\"}"))
+        mvc.perform(
+                        post("/community/me/interests")
+                                .header("Authorization", auth(ownerId))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"hashtag\":\"1234567890\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.interestCount").value(10));
+        mvc.perform(
+                        post("/community/me/interests")
+                                .header("Authorization", auth(ownerId))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"hashtag\":\"extra\"}"))
                 .andExpect(status().isBadRequest());
-        assertThat(profiles.findById(ownerId).orElseThrow().getInterests()).hasSize(10).doesNotContain("extra");
+        assertThat(profiles.findById(ownerId).orElseThrow().getInterests())
+                .hasSize(10)
+                .doesNotContain("extra");
     }
 
     @Test
@@ -69,7 +100,9 @@ class InterestTest extends CommunityTestSupport {
         profile.replaceHiddenHashtags(List.of("secret"));
         profiles.saveAndFlush(profile);
         syncProfileTags(profile);
-        mvc.perform(get("/community/profiles/{id}/interests", ownerId).header("Authorization", auth(viewerId)))
+        mvc.perform(
+                        get("/community/profiles/{id}/interests", ownerId)
+                                .header("Authorization", auth(viewerId)))
                 .andExpect(jsonPath("$.data.length()").value(1))
                 .andExpect(jsonPath("$.data[0]").value("Java"));
         mvc.perform(get("/community/me/interests").header("Authorization", auth(ownerId)))

@@ -1,16 +1,29 @@
 package com.justinneed.community.recommend;
 
-import com.justinneed.community.activity.*;
+import com.justinneed.community.activity.ActivityKind;
+import com.justinneed.community.activity.ActivityRecorder;
+import com.justinneed.community.activity.CommunityActivityRepository;
+import com.justinneed.community.activity.TrendingActivity;
 import com.justinneed.community.api.CommunityErrors;
 import com.justinneed.community.catalog.CommunityTags;
 import com.justinneed.community.domain.CommunityProfile;
 import com.justinneed.community.service.CommunitySharing;
-import java.time.*;
-import java.util.*;
+import io.swagger.v3.oas.annotations.media.Schema;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * 떠오르는 해시태그. 직전 기간은 지금 기간과 길이가 같다. 날짜는 KST 기준이다.
@@ -27,31 +40,43 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @Service
 public class TrendingService {
     public enum Period {
-        TODAY, WEEK;
+        TODAY,
+        WEEK;
+
         public static Period parse(String value) {
-            return Arrays.stream(values()).filter(p -> p.name().equalsIgnoreCase(value)).findFirst()
+            return Arrays.stream(values())
+                    .filter(p -> p.name().equalsIgnoreCase(value))
+                    .findFirst()
                     .orElseThrow(() -> CommunityErrors.invalid("기간은 today 또는 week 만 쓸 수 있습니다"));
         }
     }
+
     private final CommunityActivityRepository activities;
     private final CommunitySharing sharing;
     private static final Duration WEEK = Duration.ofDays(7);
     private final Clock clock;
-    public TrendingService(CommunityActivityRepository activities, CommunitySharing sharing, Clock clock) {
-        this.activities = activities; this.sharing = sharing; this.clock = clock;
+
+    public TrendingService(
+            CommunityActivityRepository activities, CommunitySharing sharing, Clock clock) {
+        this.activities = activities;
+        this.sharing = sharing;
+        this.clock = clock;
     }
+
     @Transactional(readOnly = true)
     public Trends trending(Period period, int limit) {
         RecommendationService.checkLimit(limit);
         Instant now = clock.instant();
         var today = now.atZone(ActivityRecorder.ZONE).toLocalDate();
-        Instant start = period == Period.TODAY
-                ? today.atStartOfDay(ActivityRecorder.ZONE).toInstant()
-                : now.minus(WEEK);
+        Instant start =
+                period == Period.TODAY
+                        ? today.atStartOfDay(ActivityRecorder.ZONE).toInstant()
+                        : now.minus(WEEK);
         Duration length = Duration.between(start, now);
-        Instant previousStart = period == Period.TODAY
-                ? today.minusDays(1).atStartOfDay(ActivityRecorder.ZONE).toInstant()
-                : start.minus(length);
+        Instant previousStart =
+                period == Period.TODAY
+                        ? today.minusDays(1).atStartOfDay(ActivityRecorder.ZONE).toInstant()
+                        : start.minus(length);
         Instant previousEnd = previousStart.plus(length);
         var shown = shown(previousStart, now);
         var groups = new HashMap<String, Counts>();
@@ -63,17 +88,30 @@ public class TrendingService {
             if (!event.occurredAt().isBefore(start)) count.current(person, event);
             else if (event.occurredAt().isBefore(previousEnd)) count.previous.add(person);
         }
-        var ranked = groups.values().stream().filter(c -> !c.current.isEmpty())
-                .sorted(Comparator.comparingInt((Counts c) -> c.current.size()).reversed().thenComparing(c -> c.key))
-                .limit(limit).toList();
+        var ranked =
+                groups.values().stream()
+                        .filter(c -> !c.current.isEmpty())
+                        .sorted(
+                                Comparator.comparingInt((Counts c) -> c.current.size())
+                                        .reversed()
+                                        .thenComparing(c -> c.key))
+                        .limit(limit)
+                        .toList();
         var result = new ArrayList<Trend>();
-        for (var c : ranked) result.add(new Trend(result.size() + 1, c.name, c.current.size(),
-                (long) c.current.size() - c.previous.size()));
+        for (var c : ranked)
+            result.add(
+                    new Trend(
+                            result.size() + 1,
+                            c.name,
+                            c.current.size(),
+                            (long) c.current.size() - c.previous.size()));
         return new Trends(period, List.copyOf(result));
     }
+
     private Shown shown(Instant start, Instant end) {
-        var owners = activities.findTrendingOwners(start, end).stream()
-                .collect(Collectors.toMap(CommunityProfile::getUserId, p -> p));
+        var owners =
+                activities.findTrendingOwners(start, end).stream()
+                        .collect(Collectors.toMap(CommunityProfile::getUserId, p -> p));
         var bySession = new HashMap<Long, Set<String>>();
         var byOwner = new HashMap<Long, Set<String>>();
         for (var session : activities.findTrendingSessions(start, end)) {
@@ -81,16 +119,25 @@ public class TrendingService {
             bySession.put(session.id(), tags);
             byOwner.computeIfAbsent(session.ownerId(), ignored -> new HashSet<>()).addAll(tags);
         }
-        owners.values().forEach(p -> byOwner.computeIfAbsent(p.getUserId(), ignored -> new HashSet<>())
-                .addAll(p.getInterests().stream().map(CommunityTags::key).toList()));
+        owners.values()
+                .forEach(
+                        p ->
+                                byOwner.computeIfAbsent(p.getUserId(), ignored -> new HashSet<>())
+                                        .addAll(
+                                                p.getInterests().stream()
+                                                        .map(CommunityTags::key)
+                                                        .toList()));
         return new Shown(owners, bySession, byOwner);
     }
+
     /**
-     * 지금 공개된 태그. 비공개로 돌린 태그는 그 태그만 빠지고 같은 세션의 다른 태그는 남는다.
-     * 해시태그 대상은 주인의 공개 세션 태그 · 관심사에 있어야 하고, 노드 대상은 그 노드의 세션이 공개이고 그 태그가 달려 있어야 한다.
-     * 출처 목록은 보지 않는다: 태그는 그대로 공개이고, AI 노드는 출처에 없다.
+     * 지금 공개된 태그. 비공개로 돌린 태그는 그 태그만 빠지고 같은 세션의 다른 태그는 남는다. 해시태그 대상은 주인의 공개 세션 태그 · 관심사에 있어야 하고, 노드
+     * 대상은 그 노드의 세션이 공개이고 그 태그가 달려 있어야 한다. 출처 목록은 보지 않는다: 태그는 그대로 공개이고, AI 노드는 출처에 없다.
      */
-    private record Shown(Map<Long, CommunityProfile> owners, Map<Long, Set<String>> bySession, Map<Long, Set<String>> byOwner) {
+    private record Shown(
+            Map<Long, CommunityProfile> owners,
+            Map<Long, Set<String>> bySession,
+            Map<Long, Set<String>> byOwner) {
         boolean includes(TrendingActivity event, CommunitySharing sharing) {
             var owner = owners.get(event.ownerId());
             if (owner != null && sharing.isHidden(owner, event.tagName())) return false;
@@ -101,21 +148,32 @@ public class TrendingService {
             };
         }
     }
+
     @Schema(name = "TrendingServicePerson")
-    private record Person(Long actorId, ActivityKind kind, LocalDate day) { }
+    private record Person(Long actorId, ActivityKind kind, LocalDate day) {}
+
     private static class Counts {
         final String key;
         final Set<Person> current = new HashSet<>();
         final Set<Person> previous = new HashSet<>();
         String name;
         Long tagId;
-        Counts(String key) { this.key = key; }
+
+        Counts(String key) {
+            this.key = key;
+        }
+
         // 주인이 달라도 이름이 같으면 한 태그다. 표시는 가장 오래된 행의 이름을 쓴다
         void current(Person person, TrendingActivity event) {
             current.add(person);
-            if (tagId == null || event.tagId() < tagId) { tagId = event.tagId(); name = event.tagName(); }
+            if (tagId == null || event.tagId() < tagId) {
+                tagId = event.tagId();
+                name = event.tagName();
+            }
         }
     }
-    public record Trend(int rank, String name, long count, long trend) { }
-    public record Trends(Period period, List<Trend> hashtags) { }
+
+    public record Trend(int rank, String name, long count, long trend) {}
+
+    public record Trends(Period period, List<Trend> hashtags) {}
 }

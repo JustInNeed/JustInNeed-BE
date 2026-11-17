@@ -12,8 +12,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * AI 컨테이너 → Spring 분석 입력 조회 (내부 전용, X-Internal-Token 필요).
- * POST /analyze 는 알림만 보내고, AI 가 여기서 원본 · 모델 · 이전 세션 유닛 피처를 가져간다.
+ * AI 컨테이너 → Spring 분석 입력 조회 (내부 전용, X-Internal-Token 필요). POST /analyze 는 알림만 보내고, AI 가 여기서 원본 · 모델
+ * · 이전 세션 유닛 피처를 가져간다.
  */
 @RestController
 @RequestMapping("/internal/ai/sessions/{sessionId}")
@@ -31,8 +31,7 @@ public class AiInternalController {
     @GetMapping("/input")
     public ApiResponse<AiAnalysisInput> getInput(
             @RequestHeader(value = AiInternalToken.HEADER, required = false) String token,
-            @PathVariable Long sessionId
-    ) {
+            @PathVariable Long sessionId) {
         internalToken.verify(token);
         return ApiResponse.ok(inputService.input(sessionId));
     }
@@ -41,8 +40,7 @@ public class AiInternalController {
     @GetMapping("/history")
     public ApiResponse<AiSessionHistory> getHistory(
             @RequestHeader(value = AiInternalToken.HEADER, required = false) String token,
-            @PathVariable Long sessionId
-    ) {
+            @PathVariable Long sessionId) {
         internalToken.verify(token);
         return ApiResponse.ok(inputService.history(sessionId));
     }

@@ -17,20 +17,25 @@ public interface SessionRawChunkRepository extends JpaRepository<SessionRawChunk
 
     long countByUserIdAndCollectorSessionId(Long userId, String collectorSessionId);
 
-    List<SessionRawChunk> findByUserIdAndCollectorSessionIdOrderByNAsc(Long userId, String collectorSessionId);
+    List<SessionRawChunk> findByUserIdAndCollectorSessionIdOrderByNAsc(
+            Long userId, String collectorSessionId);
 
     // 번호 · final · maxN 만 (payload 는 읽지 않는다) — 다 왔는지 먼저 가볍게 본다
-    @Query("select chunk.n, chunk.finalChunk, chunk.maxN from SessionRawChunk chunk"
-            + " where chunk.userId = :userId and chunk.collectorSessionId = :collectorSessionId")
-    List<Object[]> findHeads(@Param("userId") Long userId, @Param("collectorSessionId") String collectorSessionId);
+    @Query(
+            "select chunk.n, chunk.finalChunk, chunk.maxN from SessionRawChunk chunk"
+                    + " where chunk.userId = :userId and chunk.collectorSessionId = :collectorSessionId")
+    List<Object[]> findHeads(
+            @Param("userId") Long userId, @Param("collectorSessionId") String collectorSessionId);
 
     @Modifying
-    @Query("""
+    @Query(
+            """
             delete from SessionRawChunk chunk
             where chunk.userId = :userId
               and chunk.collectorSessionId = :collectorSessionId
             """)
-    int deleteBySession(@Param("userId") Long userId, @Param("collectorSessionId") String collectorSessionId);
+    int deleteBySession(
+            @Param("userId") Long userId, @Param("collectorSessionId") String collectorSessionId);
 
     // 분석에 성공했고 마지막 청크를 받은 지 보관 기한이 지난 세션의 청크.
     // 확장이 재전송하는 기간 동안만 다시 온 청크의 내용 비교(409)에 쓴다
@@ -39,7 +44,8 @@ public interface SessionRawChunkRepository extends JpaRepository<SessionRawChunk
     }
 
     @Modifying
-    @Query("""
+    @Query(
+            """
             delete from SessionRawChunk chunk
             where exists (select 1
                           from BrowsingSession session
@@ -52,7 +58,8 @@ public interface SessionRawChunkRepository extends JpaRepository<SessionRawChunk
                                 and recent.collectorSessionId = chunk.collectorSessionId
                                 and recent.receivedAt >= :lastReceivedBefore)
             """)
-    int deleteCompletedBefore(@Param("status") SessionStatus status,
+    int deleteCompletedBefore(
+            @Param("status") SessionStatus status,
             @Param("lastReceivedBefore") LocalDateTime lastReceivedBefore);
 
     // 실패한 지 보관 기한이 지난 세션의 청크
@@ -61,7 +68,8 @@ public interface SessionRawChunkRepository extends JpaRepository<SessionRawChunk
     }
 
     @Modifying
-    @Query("""
+    @Query(
+            """
             delete from SessionRawChunk chunk
             where exists (select 1
                           from BrowsingSession session
@@ -71,5 +79,7 @@ public interface SessionRawChunkRepository extends JpaRepository<SessionRawChunk
                             and session.status = :status
                             and collection.failedAt < :failedBefore)
             """)
-    int deleteFailedBefore(@Param("status") SessionStatus status, @Param("failedBefore") LocalDateTime failedBefore);
+    int deleteFailedBefore(
+            @Param("status") SessionStatus status,
+            @Param("failedBefore") LocalDateTime failedBefore);
 }

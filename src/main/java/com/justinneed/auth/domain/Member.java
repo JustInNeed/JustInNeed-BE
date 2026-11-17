@@ -15,11 +15,10 @@ import java.time.LocalDateTime;
 @Entity
 @Table(
         name = "members",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_member_provider",
-                columnNames = {"social_provider", "provider_id"}
-        )
-)
+        uniqueConstraints =
+                @UniqueConstraint(
+                        name = "uk_member_provider",
+                        columnNames = {"social_provider", "provider_id"}))
 public class Member extends BaseEntity {
 
     // 탈퇴(익명화)한 회원 행의 provider_id 접두어. 뒤에 회원 id 를 붙여 (social_provider, provider_id) 유니크를 지킨다
@@ -42,8 +41,7 @@ public class Member extends BaseEntity {
     private String nickname;
 
     // 선택값: 카카오/네이버 동의 항목에 따라 없을 수 있음
-    @Column
-    private String email;
+    @Column private String email;
 
     @Column(name = "withdrawal_reason", length = 500)
     private String withdrawalReason;
@@ -51,8 +49,7 @@ public class Member extends BaseEntity {
     @Column(name = "withdrawn_at")
     private LocalDateTime withdrawnAt;
 
-    protected Member() {
-    }
+    protected Member() {}
 
     public Member(SocialProvider socialProvider, String providerId, String nickname, String email) {
         this.socialProvider = socialProvider;

@@ -32,8 +32,8 @@ import org.springframework.transaction.annotation.Transactional;
  * community_cards    = 공개 카드 세션만. 그 밖의 세션은 행을 지운다
  * </pre>
  *
- * 부르는 곳: 세션 수정 · 삭제, AI 결과 저장, 재분석. 고정은 세션을 바꾸지 않아 부르지 않는다.
- * 공개 범위 · 비공개 해시태그는 읽을 때 적용하므로 바꿔도 부르지 않는다.
+ * 부르는 곳: 세션 수정 · 삭제, AI 결과 저장, 재분석. 고정은 세션을 바꾸지 않아 부르지 않는다. 공개 범위 · 비공개 해시태그는 읽을 때 적용하므로 바꿔도 부르지
+ * 않는다.
  */
 @Service
 public class CommunityCardSync {
@@ -45,8 +45,12 @@ public class CommunityCardSync {
     private final SessionMindmaps mindmaps;
     private final MemberRepository members;
 
-    public CommunityCardSync(CommunityCardRepository cards, CommunityTags tags, CommunityNodeRepository nodes,
-            SessionMindmaps mindmaps, MemberRepository members) {
+    public CommunityCardSync(
+            CommunityCardRepository cards,
+            CommunityTags tags,
+            CommunityNodeRepository nodes,
+            SessionMindmaps mindmaps,
+            MemberRepository members) {
         this.cards = cards;
         this.tags = tags;
         this.nodes = nodes;
@@ -67,11 +71,18 @@ public class CommunityCardSync {
         SessionMindmapResponse mindmap = mindmaps.of(session);
         ensureNodes(session, urls.keySet(), mindmap);
 
-        CommunityCardRow card = cards.findById(session.getId())
-                .orElseGet(() -> new CommunityCardRow(session.getId(), session.getUserId()));
+        CommunityCardRow card =
+                cards.findById(session.getId())
+                        .orElseGet(
+                                () -> new CommunityCardRow(session.getId(), session.getUserId()));
         Summary summary = session.getSummary();
-        card.replace(session.getTitle(), summary == null ? null : CardSnippet.of(summary.getMarkdown()),
-                session.getTags(), relatedUrls(urls), mindmap.nodes().size(), urls.size(),
+        card.replace(
+                session.getTitle(),
+                summary == null ? null : CardSnippet.of(summary.getMarkdown()),
+                session.getTags(),
+                relatedUrls(urls),
+                mindmap.nodes().size(),
+                urls.size(),
                 session.getEndedAt() != null ? session.getEndedAt() : session.getStartedAt());
         cards.save(card);
     }
@@ -83,7 +94,9 @@ public class CommunityCardSync {
     }
 
     private boolean isPublicCard(BrowsingSession session) {
-        return session.isPublicSession() && !session.isDeleted() && session.getStatus() == SessionStatus.COMPLETED
+        return session.isPublicSession()
+                && !session.isDeleted()
+                && session.getStatus() == SessionStatus.COMPLETED
                 && !members.findById(session.getUserId()).map(Member::isWithdrawn).orElse(true);
     }
 
@@ -103,20 +116,32 @@ public class CommunityCardSync {
     }
 
     private static List<RelatedUrl> relatedUrls(Map<String, Source> urls) {
-        return urls.values().stream().limit(MAX_URLS)
-                .map(source -> new RelatedUrl(source.title() == null || source.title().isBlank() ? null : source.title(),
-                        source.url()))
+        return urls.values().stream()
+                .limit(MAX_URLS)
+                .map(
+                        source ->
+                                new RelatedUrl(
+                                        source.title() == null || source.title().isBlank()
+                                                ? null
+                                                : source.title(),
+                                        source.url()))
                 .toList();
     }
 
-    private void ensureNodes(BrowsingSession session, Set<String> urls, SessionMindmapResponse mindmap) {
+    private void ensureNodes(
+            BrowsingSession session, Set<String> urls, SessionMindmapResponse mindmap) {
         List<String> keys = new ArrayList<>();
         urls.forEach(url -> keys.add(SelectionKey.of(url)));
         mindmap.nodes().forEach(node -> keys.add(SelectionKey.of("ai:" + node.id())));
 
         Set<String> existing = new HashSet<>();
         nodes.findBySessionId(session.getId()).forEach(node -> existing.add(node.getSourceKey()));
-        keys.stream().filter(existing::add)
-                .forEach(key -> nodes.save(new CommunityNode(session.getUserId(), session.getId(), key)));
+        keys.stream()
+                .filter(existing::add)
+                .forEach(
+                        key ->
+                                nodes.save(
+                                        new CommunityNode(
+                                                session.getUserId(), session.getId(), key)));
     }
 }

@@ -8,7 +8,9 @@ class CardSnippetTest {
 
     @Test
     void takesFirstBodyParagraphAsPlainText() {
-        assertThat(CardSnippet.of("""
+        assertThat(
+                        CardSnippet.of(
+                                """
                 # 대제목
 
                 ## 소제목
@@ -16,12 +18,14 @@ class CardSnippetTest {
                 `예약`한다.
 
                 둘째 문단
-                """)).isEqualTo("콜로세움은 공식 사이트에서 예약한다.");
+                """))
+                .isEqualTo("콜로세움은 공식 사이트에서 예약한다.");
     }
 
     @Test
     void skipsCodeBlocksRulesAndImagesAndStripsQuotesAndLists() {
-        assertThat(CardSnippet.of("```\n코드\n\n코드\n```\n\n---\n\n![그림](a.png)\n\n> 인용 *강조*")).isEqualTo("인용 강조");
+        assertThat(CardSnippet.of("```\n코드\n\n코드\n```\n\n---\n\n![그림](a.png)\n\n> 인용 *강조*"))
+                .isEqualTo("인용 강조");
         assertThat(CardSnippet.of("- 항목 snake_case 3*4")).isEqualTo("항목 snake_case 3*4");
         assertThat(CardSnippet.of("1. 첫째\n2. 둘째")).isEqualTo("첫째 둘째");
     }

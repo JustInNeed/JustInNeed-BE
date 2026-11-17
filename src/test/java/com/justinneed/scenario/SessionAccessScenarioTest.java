@@ -26,8 +26,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpStatus;
 
 /**
- * GET /sessions/{id} 접근 규칙. 없거나 삭제 404, 소유자는 전부, 다른 사용자는 공개 세션만 읽기 전용, 그 밖에는 403.
- * "공개"는 커뮤니티가 보여주는 기준(CommunitySharing.visibleSessions)과 같다.
+ * GET /sessions/{id} 접근 규칙. 없거나 삭제 404, 소유자는 전부, 다른 사용자는 공개 세션만 읽기 전용, 그 밖에는 403. "공개"는 커뮤니티가 보여주는
+ * 기준(CommunitySharing.visibleSessions)과 같다.
  */
 @DisplayName("세션 상세 접근 규칙")
 class SessionAccessScenarioTest extends ScenarioTestSupport {
@@ -54,7 +54,8 @@ class SessionAccessScenarioTest extends ScenarioTestSupport {
     @EnumSource(SessionStatus.class)
     @DisplayName("소유자는 어떤 상태든 전체를 보고 isOwner=true 다")
     void ownerSeesEveryStatus(SessionStatus status) throws Exception {
-        BrowsingSession mine = sessionWithStatus(me, "내 세션", "2026-10-30T09:00:00", null, status, List.of("로마"));
+        BrowsingSession mine =
+                sessionWithStatus(me, "내 세션", "2026-10-30T09:00:00", null, status, List.of("로마"));
 
         mvc.perform(get("/sessions/{id}", mine.getId()).with(as(me)))
                 .andExpect(okEnvelope())
@@ -68,7 +69,10 @@ class SessionAccessScenarioTest extends ScenarioTestSupport {
     void patchResponseIsOwner() throws Exception {
         BrowsingSession rome = seedMockSessions(me).rome();
 
-        mvc.perform(patch("/sessions/{id}", rome.getId()).with(as(me)).with(json(Map.of("isFavorite", false))))
+        mvc.perform(
+                        patch("/sessions/{id}", rome.getId())
+                                .with(as(me))
+                                .with(json(Map.of("isFavorite", false))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.isOwner").value(true));
     }
@@ -87,7 +91,9 @@ class SessionAccessScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.isPublic").value(true))
                 .andExpect(jsonPath("$.data.title").value("프라하 1박 일정 짜기"))
                 .andExpect(jsonPath("$.data.tags").value(contains("프라하", "카를교", "체코")))
-                .andExpect(jsonPath("$.data.summary.markdown").value("# 프라하 1박\n\n카를교 → 프라하 성 순서로 걷는다."))
+                .andExpect(
+                        jsonPath("$.data.summary.markdown")
+                                .value("# 프라하 1박\n\n카를교 → 프라하 성 순서로 걷는다."))
                 .andExpect(jsonPath("$.data.sources[0].excerpt").value("성 내부는 통합권으로 본다."));
     }
 
@@ -101,7 +107,9 @@ class SessionAccessScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.summary").value(nullValue()))
                 .andExpect(jsonPath("$.data.tags").value(contains("프라하", "카를교", "체코")))
                 .andExpect(jsonPath("$.data.sources", hasSize(2)))
-                .andExpect(jsonPath("$.data.sources[0].url").value("https://www.hrad.cz/en/prague-castle-for-visitors"))
+                .andExpect(
+                        jsonPath("$.data.sources[0].url")
+                                .value("https://www.hrad.cz/en/prague-castle-for-visitors"))
                 .andExpect(jsonPath("$.data.sources[0].title").value(nullValue()))
                 .andExpect(jsonPath("$.data.sources[0].excerpt").value(nullValue()));
     }
@@ -111,22 +119,30 @@ class SessionAccessScenarioTest extends ScenarioTestSupport {
     @DisplayName("다른 사용자의 세션 출처에는 http(s) 링크만 온다: 화면이 href 로 그대로 쓴다. 소유자에게는 그대로다")
     void viewerSeesOnlyWebLinks(boolean content) throws Exception {
         BrowsingSession prague = wanderer.prague();
-        prague.replaceSources(List.of(new Source("글", "https://www.prague.eu/en", "발췌"),
-                new Source("위험", "javascript:alert(1)", "발췌")));
+        prague.replaceSources(
+                List.of(
+                        new Source("글", "https://www.prague.eu/en", "발췌"),
+                        new Source("위험", "javascript:alert(1)", "발췌")));
         sessions.saveAndFlush(prague);
         if (content) {
             showContent(wanderer);
         }
 
         mvc.perform(get("/sessions/{id}", prague.getId()).with(as(me)))
-                .andExpect(jsonPath("$.data.sources[*].url").value(contains("https://www.prague.eu/en")));
+                .andExpect(
+                        jsonPath("$.data.sources[*].url")
+                                .value(contains("https://www.prague.eu/en")));
         mvc.perform(get("/sessions/{id}", prague.getId()).with(as(wanderer.member())))
                 .andExpect(jsonPath("$.data.sources", hasSize(2)));
         String shared = "/community/profiles/{id}/shared-sessions/{sessionId}";
-        var viewerView = mvc.perform(get(shared, wanderer.id(), prague.getId()).with(as(me)))
-                .andExpect(jsonPath("$.data.urls").value(contains("https://www.prague.eu/en")));
+        var viewerView =
+                mvc.perform(get(shared, wanderer.id(), prague.getId()).with(as(me)))
+                        .andExpect(
+                                jsonPath("$.data.urls")
+                                        .value(contains("https://www.prague.eu/en")));
         if (content) {
-            viewerView.andExpect(jsonPath("$.data.sources[*].url").value(contains("https://www.prague.eu/en")));
+            viewerView.andExpect(
+                    jsonPath("$.data.sources[*].url").value(contains("https://www.prague.eu/en")));
         }
         mvc.perform(get(shared, wanderer.id(), prague.getId()).with(as(wanderer.member())))
                 .andExpect(jsonPath("$.data.urls", hasSize(2)));
@@ -163,8 +179,14 @@ class SessionAccessScenarioTest extends ScenarioTestSupport {
     @EnumSource(value = SessionStatus.class, names = "COMPLETED", mode = EnumSource.Mode.EXCLUDE)
     @DisplayName("is_public 이 켜져 있어도 분석이 끝나지 않은 세션은 다른 사용자에게 403 이다")
     void unfinishedPublicSession(SessionStatus status) throws Exception {
-        BrowsingSession unfinished = sessionWithStatus(wanderer.member(), "진행 중", "2026-10-30T09:00:00", null,
-                status, List.of("프라하"));
+        BrowsingSession unfinished =
+                sessionWithStatus(
+                        wanderer.member(),
+                        "진행 중",
+                        "2026-10-30T09:00:00",
+                        null,
+                        status,
+                        List.of("프라하"));
         unfinished.update(null, null, true, null, null);
         sessions.saveAndFlush(unfinished);
 

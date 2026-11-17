@@ -19,6 +19,7 @@ import com.justinneed.session.analysis.category.SiteCategory;
 import com.justinneed.session.management.domain.SessionStatus;
 import com.justinneed.session.management.dto.SessionListResponse;
 import com.justinneed.session.taggroup.repository.TagGroupRepository;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -41,7 +42,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * 홈 대시보드 집계. 대상은 내 완료(COMPLETED) · 미삭제 세션이고, 날짜 기준은 세션 시작 시각(KST)이다.
@@ -70,13 +70,16 @@ public class HomeService {
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("M.d");
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
     // 쿼리에는 URI 가 거부하는 문자(| { } 등)가 그대로 남을 수 있어 host 판단에 필요한 앞부분만 쓴다
-    private static final Pattern WEB_ORIGIN = Pattern.compile("^https?://[^/?#]*", Pattern.CASE_INSENSITIVE);
+    private static final Pattern WEB_ORIGIN =
+            Pattern.compile("^https?://[^/?#]*", Pattern.CASE_INSENSITIVE);
 
     private final HomeSessionRepository homeSessionRepository;
     private final TagGroupRepository tagGroupRepository;
     private final Clock clock;
 
-    public HomeService(HomeSessionRepository homeSessionRepository, TagGroupRepository tagGroupRepository,
+    public HomeService(
+            HomeSessionRepository homeSessionRepository,
+            TagGroupRepository tagGroupRepository,
             Clock clock) {
         this.homeSessionRepository = homeSessionRepository;
         this.tagGroupRepository = tagGroupRepository;
@@ -89,50 +92,65 @@ public class HomeService {
 
         List<HomeSessionRow> sessions = homeSessionRepository.findCompletedByUserId(userId);
         List<HomeSessionRow> thisWeek = oldestFirstBetween(sessions, weekStart, today);
-        List<HomeSessionRow> lastWeek = oldestFirstBetween(sessions, weekStart.minusDays(WEEK_DAYS),
-                weekStart.minusDays(1));
+        List<HomeSessionRow> lastWeek =
+                oldestFirstBetween(
+                        sessions, weekStart.minusDays(WEEK_DAYS), weekStart.minusDays(1));
 
         HomeGraphBuilder.Result graph = HomeGraphBuilder.build(sessions, today);
         List<TagTally> tags = rankTags(sessions);
 
         return new HomeResponse(
-                new Graph(graph.nodes(), graph.edges(), graph.nodeMeta(), tagGroups(userId), filterTags(tags)),
+                new Graph(
+                        graph.nodes(),
+                        graph.edges(),
+                        graph.nodeMeta(),
+                        tagGroups(userId),
+                        filterTags(tags)),
                 stats(graph, tags.size(), thisWeek, lastWeek),
                 weekActivity(thisWeek, today),
                 topTags(tags),
                 todayTimeline(thisWeek, today),
                 weekSessions(thisWeek, today),
-                recentSessions(sessions)
-        );
+                recentSessions(sessions));
     }
 
     /** 홈 stats.totalNodes 와 같은 값. */
     public int totalNodes(Long userId) {
         LocalDate today = LocalDate.ofInstant(clock.instant(), KST);
-        return HomeGraphBuilder.build(homeSessionRepository.findCompletedByUserId(userId), today).totalNodes();
+        return HomeGraphBuilder.build(homeSessionRepository.findCompletedByUserId(userId), today)
+                .totalNodes();
     }
 
-    private static List<HomeSessionRow> oldestFirstBetween(List<HomeSessionRow> newestFirst, LocalDate from,
-            LocalDate to) {
-        List<HomeSessionRow> sessions = newestFirst.stream()
-                .filter(session -> !session.startDate().isBefore(from) && !session.startDate().isAfter(to))
-                .collect(Collectors.toCollection(ArrayList::new));
+    private static List<HomeSessionRow> oldestFirstBetween(
+            List<HomeSessionRow> newestFirst, LocalDate from, LocalDate to) {
+        List<HomeSessionRow> sessions =
+                newestFirst.stream()
+                        .filter(
+                                session ->
+                                        !session.startDate().isBefore(from)
+                                                && !session.startDate().isAfter(to))
+                        .collect(Collectors.toCollection(ArrayList::new));
         Collections.reverse(sessions);
         return sessions;
     }
 
-    private static Stats stats(HomeGraphBuilder.Result graph, int hashtagCount, List<HomeSessionRow> thisWeek,
+    private static Stats stats(
+            HomeGraphBuilder.Result graph,
+            int hashtagCount,
+            List<HomeSessionRow> thisWeek,
             List<HomeSessionRow> lastWeek) {
-        double averageSeconds = thisWeek.stream()
-                .filter(session -> session.endedAt() != null)
-                .mapToLong(HomeService::lengthSeconds)
-                .average()
-                .orElse(0);
+        double averageSeconds =
+                thisWeek.stream()
+                        .filter(session -> session.endedAt() != null)
+                        .mapToLong(HomeService::lengthSeconds)
+                        .average()
+                        .orElse(0);
         ReadingDistribution thisWeekUnits = readingUnits(thisWeek);
         ReadingDistribution lastWeekUnits = readingUnits(lastWeek);
-        int deepReadingDelta = thisWeekUnits.hasData() && lastWeekUnits.hasData()
-                ? thisWeekUnits.deepReadingPct() - lastWeekUnits.deepReadingPct()
-                : 0;
+        int deepReadingDelta =
+                thisWeekUnits.hasData() && lastWeekUnits.hasData()
+                        ? thisWeekUnits.deepReadingPct() - lastWeekUnits.deepReadingPct()
+                        : 0;
 
         return new Stats(
                 graph.totalNodes(),
@@ -142,17 +160,19 @@ public class HomeService {
                 thisWeek.size() - lastWeek.size(),
                 (int) Math.round(averageSeconds / SECONDS_PER_MINUTE),
                 thisWeekUnits.deepReadingPct(),
-                deepReadingDelta
-        );
+                deepReadingDelta);
     }
 
     // 이번 주 활동 막대만 일요일 시작 주(일 ~ 토)로 그린다. 오늘 이후 요일은 0분 (QA-005).
     // 일요일은 늘 오늘 포함 최근 7일 안이라 재료는 thisWeek 로 충분하다.
     // 세션은 시작한 날에 넣는다. 자정을 넘긴 세션도 시작일 한 칸에 모두 들어간다
     private static WeekActivity weekActivity(List<HomeSessionRow> thisWeek, LocalDate today) {
-        Map<LocalDate, Long> secondsByDay = thisWeek.stream()
-                .collect(Collectors.groupingBy(HomeSessionRow::startDate,
-                        Collectors.summingLong(HomeService::lengthSeconds)));
+        Map<LocalDate, Long> secondsByDay =
+                thisWeek.stream()
+                        .collect(
+                                Collectors.groupingBy(
+                                        HomeSessionRow::startDate,
+                                        Collectors.summingLong(HomeService::lengthSeconds)));
 
         LocalDate sunday = today.minusDays(today.getDayOfWeek().getValue() % WEEK_DAYS);
         LocalDate saturday = sunday.plusDays(WEEK_DAYS - 1);
@@ -162,7 +182,8 @@ public class HomeService {
             String weekday = WEEKDAYS.get(day.getDayOfWeek().getValue() - 1);
             days.add(new DayActivity(weekday, (int) Math.round(seconds / SECONDS_PER_MINUTE)));
         }
-        return new WeekActivity(sunday.format(DATE_FORMAT) + " — " + saturday.format(DATE_FORMAT), days);
+        return new WeekActivity(
+                sunday.format(DATE_FORMAT) + " — " + saturday.format(DATE_FORMAT), days);
     }
 
     // 종료 시각이 없으면 0. 종료가 시작보다 앞서는 잘못된 값도 0 으로 본다
@@ -173,14 +194,17 @@ public class HomeService {
         return Math.max(0, Duration.between(session.startedAt(), session.endedAt()).toSeconds());
     }
 
-    private static List<TimelineSlot> todayTimeline(List<HomeSessionRow> thisWeek, LocalDate today) {
+    private static List<TimelineSlot> todayTimeline(
+            List<HomeSessionRow> thisWeek, LocalDate today) {
         return thisWeek.stream()
                 .filter(session -> session.startDate().equals(today))
-                .map(session -> new TimelineSlot(
-                        time(session.startedAt()),
-                        session.endedAt() == null ? null : time(session.endedAt()),
-                        session.tags(),
-                        topSites(session)))
+                .map(
+                        session ->
+                                new TimelineSlot(
+                                        time(session.startedAt()),
+                                        session.endedAt() == null ? null : time(session.endedAt()),
+                                        session.tags(),
+                                        topSites(session)))
                 .toList();
     }
 
@@ -195,23 +219,27 @@ public class HomeService {
             dwellByDomain.merge(visit.domain(), visit.dwellMs(), Long::sum);
         }
         return dwellByDomain.entrySet().stream()
-                .sorted(Map.Entry.<String, Long>comparingByValue(Comparator.reverseOrder())
-                        .thenComparing(Map.Entry.comparingByKey()))
+                .sorted(
+                        Map.Entry.<String, Long>comparingByValue(Comparator.reverseOrder())
+                                .thenComparing(Map.Entry.comparingByKey()))
                 .limit(MAX_TODAY_SITES)
                 .map(Map.Entry::getKey)
                 .toList();
     }
 
     private static List<WeekSession> weekSessions(List<HomeSessionRow> thisWeek, LocalDate today) {
-        return thisWeek.stream()
-                .map(session -> weekSession(session, today))
-                .toList();
+        return thisWeek.stream().map(session -> weekSession(session, today)).toList();
     }
 
     private static WeekSession weekSession(HomeSessionRow session, LocalDate today) {
-        List<Visit> visits = pageVisits(session).stream()
-                .map(visit -> new Visit(visit.domain(), Math.round(visit.dwellMs() / MILLIS_PER_SECOND)))
-                .toList();
+        List<Visit> visits =
+                pageVisits(session).stream()
+                        .map(
+                                visit ->
+                                        new Visit(
+                                                visit.domain(),
+                                                Math.round(visit.dwellMs() / MILLIS_PER_SECOND)))
+                        .toList();
         int dayOffset = (int) ChronoUnit.DAYS.between(today, session.startDate());
         return new WeekSession(dayOffset, time(session.startedAt()), session.tags(), visits);
     }
@@ -225,7 +253,11 @@ public class HomeService {
         for (Object item : session.pages()) {
             if (item instanceof Map<?, ?> page) {
                 domainOf(page.get("url"))
-                        .ifPresent(domain -> visits.add(new PageVisit(domain, nonNegative(page.get("dwellMs")))));
+                        .ifPresent(
+                                domain ->
+                                        visits.add(
+                                                new PageVisit(
+                                                        domain, nonNegative(page.get("dwellMs")))));
             }
         }
         return visits;
@@ -243,7 +275,8 @@ public class HomeService {
     }
 
     private static ReadingDistribution readingUnits(List<HomeSessionRow> sessions) {
-        return ReadingDistribution.ofSummaries(sessions.stream().map(HomeSessionRow::analysisSummary).toList());
+        return ReadingDistribution.ofSummaries(
+                sessions.stream().map(HomeSessionRow::analysisSummary).toList());
     }
 
     // AI JSON 의 체류시간. Integer · Long · Double 어느 쪽으로든 올 수 있고, 숫자가 아니거나 음수면 0
@@ -269,9 +302,11 @@ public class HomeService {
             }
         }
         return tallyByKey.values().stream()
-                .sorted(Comparator.comparingInt(TagTally::count).reversed()
-                        .thenComparingInt(TagTally::latestOrder)
-                        .thenComparing(TagTally::tag))
+                .sorted(
+                        Comparator.comparingInt(TagTally::count)
+                                .reversed()
+                                .thenComparingInt(TagTally::latestOrder)
+                                .thenComparing(TagTally::tag))
                 .toList();
     }
 
@@ -283,10 +318,7 @@ public class HomeService {
     }
 
     private static List<String> filterTags(List<TagTally> tags) {
-        return tags.stream()
-                .limit(MAX_FILTER_TAGS)
-                .map(TagTally::tag)
-                .toList();
+        return tags.stream().limit(MAX_FILTER_TAGS).map(TagTally::tag).toList();
     }
 
     private List<TagGroup> tagGroups(Long userId) {
@@ -298,21 +330,22 @@ public class HomeService {
     private static List<SessionListResponse> recentSessions(List<HomeSessionRow> sessions) {
         return sessions.stream()
                 .limit(MAX_SESSIONS)
-                .map(session -> new SessionListResponse(
-                        session.id(),
-                        session.title(),
-                        session.startedAt(),
-                        session.endedAt(),
-                        session.pageCount(),
-                        SessionStatus.COMPLETED,
-                        session.favorite(),
-                        session.publicSession(),
-                        session.tags()))
+                .map(
+                        session ->
+                                new SessionListResponse(
+                                        session.id(),
+                                        session.title(),
+                                        session.startedAt(),
+                                        session.endedAt(),
+                                        session.pageCount(),
+                                        SessionStatus.COMPLETED,
+                                        session.favorite(),
+                                        session.publicSession(),
+                                        session.tags()))
                 .toList();
     }
 
-    private record PageVisit(String domain, long dwellMs) {
-    }
+    private record PageVisit(String domain, long dwellMs) {}
 
     @Schema(name = "HomeServiceTagTally")
     private static final class TagTally {

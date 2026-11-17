@@ -12,8 +12,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * 시간이 지나야 진행되는 일과 서버가 죽어 끊긴 일을 이어서 처리한다. 상태는 모두 DB 에 있어 재시작해도 그대로 이어진다.
- * 수집 중(COLLECTING) 세션을 끝내는 일은 ChunkSessionTimeoutScheduler 가 한다.
+ * 시간이 지나야 진행되는 일과 서버가 죽어 끊긴 일을 이어서 처리한다. 상태는 모두 DB 에 있어 재시작해도 그대로 이어진다. 수집 중(COLLECTING) 세션을 끝내는 일은
+ * ChunkSessionTimeoutScheduler 가 한다.
  *
  * <pre>
  * READY       AI 호출이 안 나간 세션을 다시 요청한다
@@ -32,7 +32,8 @@ public class CollectionRecoveryService {
     private final AnalysisRequestService analysisRequestService;
     private final CollectionSettings settings;
 
-    public CollectionRecoveryService(SessionCollectionRepository collectionRepository,
+    public CollectionRecoveryService(
+            SessionCollectionRepository collectionRepository,
             BrowsingSessionRepository sessionRepository,
             AnalysisRequestService analysisRequestService,
             CollectionSettings settings) {
@@ -43,9 +44,14 @@ public class CollectionRecoveryService {
     }
 
     public void run(LocalDateTime now) {
-        forEach(sessionRepository.findIdsByStatus(SessionStatus.READY), analysisRequestService::requestAnalysis);
-        forEach(collectionRepository.findAwaitingInput(), id -> analysisRequestService.resendIfDue(id, now));
-        forEach(collectionRepository.findCallbackOverdue(now.minus(settings.callbackTimeout())),
+        forEach(
+                sessionRepository.findIdsByStatus(SessionStatus.READY),
+                analysisRequestService::requestAnalysis);
+        forEach(
+                collectionRepository.findAwaitingInput(),
+                id -> analysisRequestService.resendIfDue(id, now));
+        forEach(
+                collectionRepository.findCallbackOverdue(now.minus(settings.callbackTimeout())),
                 id -> analysisRequestService.failIfCallbackOverdue(id, now));
     }
 

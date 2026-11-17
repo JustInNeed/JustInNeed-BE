@@ -5,6 +5,7 @@ import com.justinneed.home.dto.HomeResponse.NodeMeta;
 import com.justinneed.home.repository.HomeSessionRow;
 import com.justinneed.session.analysis.SessionHashtagSelector;
 import com.justinneed.session.analysis.dto.AiMindmapNode;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayDeque;
@@ -19,7 +20,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * 세션별 마인드맵(session_results.mindmap)을 합쳐 홈 전체 마인드맵을 만든다. DB · 시계 없이 입력만으로 계산한다.
@@ -48,18 +48,17 @@ public final class HomeGraphBuilder {
     private static final int WEEK_DAYS = 7;
     private static final int MONTH_DAYS = 30;
 
-    private static final Comparator<MergedNode> KEEP_ORDER = Comparator
-            .comparing(MergedNode::type)
-            .thenComparing(MergedNode::sessionCount, Comparator.reverseOrder())
-            .thenComparingInt(MergedNode::latestOrder)
-            .thenComparing(MergedNode::key);
+    private static final Comparator<MergedNode> KEEP_ORDER =
+            Comparator.comparing(MergedNode::type)
+                    .thenComparing(MergedNode::sessionCount, Comparator.reverseOrder())
+                    .thenComparingInt(MergedNode::latestOrder)
+                    .thenComparing(MergedNode::key);
 
-    private HomeGraphBuilder() {
-    }
+    private HomeGraphBuilder() {}
 
     /**
      * @param sessions 대상 세션, 시작 시각 최신순
-     * @param today    오늘 (KST)
+     * @param today 오늘 (KST)
      */
     public static Result build(List<HomeSessionRow> sessions, LocalDate today) {
         Map<String, MergedNode> mergedByKey = new LinkedHashMap<>();
@@ -70,22 +69,22 @@ public final class HomeGraphBuilder {
             addEdges(session, mergedById, edges);
         }
 
-        List<MergedNode> kept = mergedByKey.values().stream()
-                .sorted(KEEP_ORDER)
-                .limit(MAX_NODES - 1)
-                .toList();
+        List<MergedNode> kept =
+                mergedByKey.values().stream().sorted(KEEP_ORDER).limit(MAX_NODES - 1).toList();
         List<MergedNode> connected = connectedToCore(kept, edges.values());
 
         LocalDate weekStart = today.minusDays(WEEK_DAYS - 1);
-        int nodeDelta = (int) mergedByKey.values().stream()
-                .filter(node -> !node.firstSeenOn().isBefore(weekStart))
-                .count();
+        int nodeDelta =
+                (int)
+                        mergedByKey.values().stream()
+                                .filter(node -> !node.firstSeenOn().isBefore(weekStart))
+                                .count();
         return toResult(connected, edges.values(), mergedByKey.size(), nodeDelta, today);
     }
 
     // 세션 하나의 노드를 합치고, 이 세션의 노드 id → 합친 노드를 돌려준다 (엣지를 옮기는 데 쓴다)
-    private static Map<String, MergedNode> mergeNodes(HomeSessionRow session, int order,
-            Map<String, MergedNode> mergedByKey) {
+    private static Map<String, MergedNode> mergeNodes(
+            HomeSessionRow session, int order, Map<String, MergedNode> mergedByKey) {
         Map<String, MergedNode> mergedById = new HashMap<>();
         for (Object item : listOf(mapValue(session.mindmap(), "nodes"))) {
             if (!(item instanceof Map<?, ?> node)) {
@@ -99,8 +98,9 @@ public final class HomeGraphBuilder {
             if (key.isEmpty()) {
                 continue;
             }
-            MergedNode merged = mergedByKey.computeIfAbsent(key,
-                    newKey -> new MergedNode(newKey, keyword.strip(), order, session));
+            MergedNode merged =
+                    mergedByKey.computeIfAbsent(
+                            key, newKey -> new MergedNode(newKey, keyword.strip(), order, session));
             merged.addOccurrence(type, session);
             if (node.get("id") instanceof String id) {
                 mergedById.put(id, merged);
@@ -109,10 +109,13 @@ public final class HomeGraphBuilder {
         return mergedById;
     }
 
-    private static void addEdges(HomeSessionRow session, Map<String, MergedNode> mergedById,
+    private static void addEdges(
+            HomeSessionRow session,
+            Map<String, MergedNode> mergedById,
             Map<Set<String>, Edge> edges) {
         for (Object item : listOf(mapValue(session.mindmap(), "edges"))) {
-            if (!(item instanceof Map<?, ?> edge) || !EDGE_TYPE_HIERARCHY.equals(edge.get("type"))) {
+            if (!(item instanceof Map<?, ?> edge)
+                    || !EDGE_TYPE_HIERARCHY.equals(edge.get("type"))) {
                 continue;
             }
             MergedNode from = mergedById.get(edge.get("from"));
@@ -151,12 +154,14 @@ public final class HomeGraphBuilder {
                 }
             }
         }
-        return kept.stream()
-                .filter(reached::contains)
-                .toList();
+        return kept.stream().filter(reached::contains).toList();
     }
 
-    private static Result toResult(List<MergedNode> nodes, Collection<Edge> edges, int totalNodes, int nodeDelta,
+    private static Result toResult(
+            List<MergedNode> nodes,
+            Collection<Edge> edges,
+            int totalNodes,
+            int nodeDelta,
             LocalDate today) {
         if (nodes.isEmpty()) {
             return new Result(List.of(), List.of(), Map.of(), totalNodes, nodeDelta);
@@ -171,7 +176,10 @@ public final class HomeGraphBuilder {
             String id = "n" + (idByNode.size() + 1);
             idByNode.put(node, id);
             responseNodes.add(new Node(id, node.label(), node.size(), node.type().group()));
-            nodeMeta.put(id, new NodeMeta(seen(node.lastSeenOn(), today), node.tags(), node.latestSessionId()));
+            nodeMeta.put(
+                    id,
+                    new NodeMeta(
+                            seen(node.lastSeenOn(), today), node.tags(), node.latestSessionId()));
             if (node.type() == NodeType.ROOT) {
                 responseEdges.add(List.of(CORE_ID, id));
             }
@@ -215,8 +223,8 @@ public final class HomeGraphBuilder {
     }
 
     /**
-     * nodes 는 core 가 맨 앞(남은 노드가 없으면 빈 목록), totalNodes 는 개수 제한 전 합친 노드 수 (core 제외),
-     * nodeDelta 는 그중 최근 7일 세션에서 처음 나온 노드 수.
+     * nodes 는 core 가 맨 앞(남은 노드가 없으면 빈 목록), totalNodes 는 개수 제한 전 합친 노드 수 (core 제외), nodeDelta 는 그중
+     * 최근 7일 세션에서 처음 나온 노드 수.
      */
     @Schema(name = "HomeGraphBuilderResult")
     public record Result(
@@ -224,13 +232,10 @@ public final class HomeGraphBuilder {
             List<List<String>> edges,
             Map<String, NodeMeta> nodeMeta,
             int totalNodes,
-            int nodeDelta
-    ) {
-    }
+            int nodeDelta) {}
 
     @Schema(name = "HomeGraphBuilderEdge")
-    private record Edge(MergedNode from, MergedNode to) {
-    }
+    private record Edge(MergedNode from, MergedNode to) {}
 
     // 선언 순서가 곧 우선순위다 (root > topic > unit)
     private enum NodeType {
@@ -280,7 +285,8 @@ public final class HomeGraphBuilder {
         private NodeType type;
         private int sessionCount;
 
-        private MergedNode(String key, String label, int latestOrder, HomeSessionRow latestSession) {
+        private MergedNode(
+                String key, String label, int latestOrder, HomeSessionRow latestSession) {
             this.key = key;
             this.label = label;
             this.latestOrder = latestOrder;

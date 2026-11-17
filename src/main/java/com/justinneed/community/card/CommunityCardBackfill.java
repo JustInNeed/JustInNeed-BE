@@ -1,8 +1,8 @@
 package com.justinneed.community.card;
 
-import com.justinneed.community.catalog.CommunityTags;
 import com.justinneed.community.catalog.CommunityHashtag;
 import com.justinneed.community.catalog.CommunityHashtagRepository;
+import com.justinneed.community.catalog.CommunityTags;
 import com.justinneed.community.repository.CommunitySessionRepository;
 import com.justinneed.session.management.repository.BrowsingSessionRepository;
 import java.util.ArrayList;
@@ -20,9 +20,9 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 조회 때 만들던 행(community_hashtags · community_nodes)과 community_cards 를 쓰기 시점으로 옮기기 전에 생긴 세션을
- * 앱 시작 때 채운다. 빠진 행만 만들므로 한 번 돈 뒤에는 읽기만 하고 끝나, 매번 시작할 때 실행해도 안전하다.
- * 한 세션이 실패해도 앱 시작을 막지 않고 나머지를 진행한다 (다음 시작 때 다시 시도).
+ * 조회 때 만들던 행(community_hashtags · community_nodes)과 community_cards 를 쓰기 시점으로 옮기기 전에 생긴 세션을 앱 시작 때
+ * 채운다. 빠진 행만 만들므로 한 번 돈 뒤에는 읽기만 하고 끝나, 매번 시작할 때 실행해도 안전하다. 한 세션이 실패해도 앱 시작을 막지 않고 나머지를 진행한다 (다음 시작
+ * 때 다시 시도).
  */
 @Component
 public class CommunityCardBackfill implements ApplicationRunner {
@@ -36,8 +36,12 @@ public class CommunityCardBackfill implements ApplicationRunner {
     private final CommunityCardSync sync;
     private final TransactionTemplate transaction;
 
-    public CommunityCardBackfill(CommunitySessionRepository communitySessions, BrowsingSessionRepository sessions,
-            CommunityHashtagRepository hashtags, CommunityTags tags, CommunityCardSync sync,
+    public CommunityCardBackfill(
+            CommunitySessionRepository communitySessions,
+            BrowsingSessionRepository sessions,
+            CommunityHashtagRepository hashtags,
+            CommunityTags tags,
+            CommunityCardSync sync,
             PlatformTransactionManager transactionManager) {
         this.communitySessions = communitySessions;
         this.sessions = sessions;
@@ -58,22 +62,35 @@ public class CommunityCardBackfill implements ApplicationRunner {
 
     private int fillTags() {
         Map<Long, List<String>> wanted = new HashMap<>();
-        communitySessions.findLiveSessionTags().forEach(row ->
-                wanted.computeIfAbsent(row.userId(), ignored -> new ArrayList<>()).addAll(row.tags()));
-        communitySessions.findLiveProfiles().forEach(profile -> {
-            var names = wanted.computeIfAbsent(profile.getUserId(), ignored -> new ArrayList<>());
-            names.addAll(profile.getInterests());
-            names.addAll(profile.getHiddenHashtags());
-        });
+        communitySessions
+                .findLiveSessionTags()
+                .forEach(
+                        row ->
+                                wanted.computeIfAbsent(row.userId(), ignored -> new ArrayList<>())
+                                        .addAll(row.tags()));
+        communitySessions
+                .findLiveProfiles()
+                .forEach(
+                        profile -> {
+                            var names =
+                                    wanted.computeIfAbsent(
+                                            profile.getUserId(), ignored -> new ArrayList<>());
+                            names.addAll(profile.getInterests());
+                            names.addAll(profile.getHiddenHashtags());
+                        });
 
         Map<Long, Set<String>> existing = new HashMap<>();
         for (CommunityHashtag tag : hashtags.findAll()) {
-            existing.computeIfAbsent(tag.getOwnerId(), ignored -> new HashSet<>()).add(tag.getNormalizedName());
+            existing.computeIfAbsent(tag.getOwnerId(), ignored -> new HashSet<>())
+                    .add(tag.getNormalizedName());
         }
         int created = 0;
         for (var entry : wanted.entrySet()) {
             Set<String> have = existing.getOrDefault(entry.getKey(), Set.of());
-            List<String> missing = entry.getValue().stream().filter(name -> !have.contains(CommunityTags.key(name))).toList();
+            List<String> missing =
+                    entry.getValue().stream()
+                            .filter(name -> !have.contains(CommunityTags.key(name)))
+                            .toList();
             if (!missing.isEmpty()) {
                 tags.ensure(entry.getKey(), missing);
                 created += missing.size();
@@ -87,10 +104,14 @@ public class CommunityCardBackfill implements ApplicationRunner {
         for (Long id : communitySessions.findPublicIdsWithoutCard()) {
             try {
                 // 세션을 고치는 다른 경로와 같이 세션 행을 먼저 잠근다
-                transaction.executeWithoutResult(status -> sessions.lockById(id).ifPresent(sync::sync));
+                transaction.executeWithoutResult(
+                        status -> sessions.lockById(id).ifPresent(sync::sync));
                 filled++;
             } catch (RuntimeException error) {
-                log.warn("[community card backfill] session {} 카드를 만들지 못함: {}", id, error.getMessage());
+                log.warn(
+                        "[community card backfill] session {} 카드를 만들지 못함: {}",
+                        id,
+                        error.getMessage());
             }
         }
         return filled;

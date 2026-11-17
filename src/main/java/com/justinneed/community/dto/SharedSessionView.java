@@ -9,20 +9,36 @@ import java.util.List;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record SharedSessionView(
-        Long id, List<String> tags, List<String> urls,
-        LocalDateTime startedAt, LocalDateTime endedAt, int pageCount, SessionStatus status,
-        String title, String markdown, List<Source> sources, boolean isPinned
-) {
-    public static SharedSessionView from(BrowsingSession session, List<String> tags, List<Source> sources,
-            boolean includeContent, boolean pinned) {
+        Long id,
+        List<String> tags,
+        List<String> urls,
+        LocalDateTime startedAt,
+        LocalDateTime endedAt,
+        int pageCount,
+        SessionStatus status,
+        String title,
+        String markdown,
+        List<Source> sources,
+        boolean isPinned) {
+    public static SharedSessionView from(
+            BrowsingSession session,
+            List<String> tags,
+            List<Source> sources,
+            boolean includeContent,
+            boolean pinned) {
         return new SharedSessionView(
-                session.getId(), tags,
+                session.getId(),
+                tags,
                 sources.stream().map(Source::url).distinct().toList(),
-                session.getStartedAt(), session.getEndedAt(), session.getPageCount(), session.getStatus(),
+                session.getStartedAt(),
+                session.getEndedAt(),
+                session.getPageCount(),
+                session.getStatus(),
                 includeContent ? session.getTitle() : null,
-                includeContent && session.getSummary() != null ? session.getSummary().getMarkdown() : null,
+                includeContent && session.getSummary() != null
+                        ? session.getSummary().getMarkdown()
+                        : null,
                 includeContent ? sources : null,
-                pinned
-        );
+                pinned);
     }
 }

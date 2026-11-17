@@ -17,8 +17,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * 방문 집계 (ANA-1-1 · 1-2 · 1-4). 재료는 session_results.page_visits (짧은 방문 포함)이고,
- * 방문 횟수는 재방문을 포함한다. pageVisits 가 없는 세션은 빠진다.
+ * 방문 집계 (ANA-1-1 · 1-2 · 1-4). 재료는 session_results.page_visits (짧은 방문 포함)이고, 방문 횟수는 재방문을 포함한다.
+ * pageVisits 가 없는 세션은 빠진다.
  */
 final class VisitAggregator {
 
@@ -59,10 +59,16 @@ final class VisitAggregator {
             return null;
         }
         List<SiteCategory> order = List.of(SiteCategory.values());
-        int[] percents = ReadingDistribution.percentagesOf(order.stream().mapToLong(categoryVisits::get).toArray());
+        int[] percents =
+                ReadingDistribution.percentagesOf(
+                        order.stream().mapToLong(categoryVisits::get).toArray());
         List<Category> categories = new ArrayList<>();
         for (int i = 0; i < percents.length; i++) {
-            categories.add(new Category(order.get(i).getDisplayName(), percents[i], categoryVisits.get(order.get(i))));
+            categories.add(
+                    new Category(
+                            order.get(i).getDisplayName(),
+                            percents[i],
+                            categoryVisits.get(order.get(i))));
         }
         categories.sort(Comparator.comparingLong(Category::count).reversed());
         return new Categories(categories, categoryNote(categories));
@@ -70,17 +76,25 @@ final class VisitAggregator {
 
     private Note categoryNote(List<Category> categories) {
         Category first = categories.get(0);
-        String analysis = first.pct() >= AnalyticsRules.LEADING_CATEGORY_PCT
-                ? CATEGORY_LEADS.formatted(first.name(), first.pct())
-                : CATEGORIES_BALANCED.formatted(categories.stream()
-                        .filter(category -> category.count() > 0)
-                        .limit(MAX_BALANCED_CATEGORIES)
-                        .map(category -> "%s %d%%".formatted(category.name(), category.pct()))
-                        .collect(Collectors.joining(" / ")));
-        String recommendation = recommendations().stream()
-                .findFirst()
-                .map(item -> item.title() + " " + item.body())
-                .orElse(null);
+        String analysis =
+                first.pct() >= AnalyticsRules.LEADING_CATEGORY_PCT
+                        ? CATEGORY_LEADS.formatted(first.name(), first.pct())
+                        : CATEGORIES_BALANCED.formatted(
+                                categories.stream()
+                                        .filter(category -> category.count() > 0)
+                                        .limit(MAX_BALANCED_CATEGORIES)
+                                        .map(
+                                                category ->
+                                                        "%s %d%%"
+                                                                .formatted(
+                                                                        category.name(),
+                                                                        category.pct()))
+                                        .collect(Collectors.joining(" / ")));
+        String recommendation =
+                recommendations().stream()
+                        .findFirst()
+                        .map(item -> item.title() + " " + item.body())
+                        .orElse(null);
         return new Note(analysis, recommendation);
     }
 
@@ -90,30 +104,38 @@ final class VisitAggregator {
             return List.of();
         }
         List<Recommendation> recommendations = new ArrayList<>();
-        long blogAndCommunity = categoryVisits.get(SiteCategory.BLOG) + categoryVisits.get(SiteCategory.COMMUNITY);
+        long blogAndCommunity =
+                categoryVisits.get(SiteCategory.BLOG) + categoryVisits.get(SiteCategory.COMMUNITY);
         if (pct(blogAndCommunity) >= AnalyticsRules.BLOG_AND_COMMUNITY_PCT) {
-            recommendations.add(new Recommendation("공식 문서도 한 번 정독해보세요.",
-                    "지금 공부하는 주제의 공식 문서나 원문을 한 번쯤 읽으며 핵심 개념을 정리해보는 건 어떨까요?"));
+            recommendations.add(
+                    new Recommendation(
+                            "공식 문서도 한 번 정독해보세요.",
+                            "지금 공부하는 주제의 공식 문서나 원문을 한 번쯤 읽으며 핵심 개념을 정리해보는 건 어떨까요?"));
         }
         double communityPct = pct(categoryVisits.get(SiteCategory.COMMUNITY));
         if (communityPct >= AnalyticsRules.COMMUNITY_PCT) {
-            recommendations.add(new Recommendation(
-                    "커뮤니티 탐색 비중이 %d%%로 가장 높아요.".formatted(Math.round(communityPct)),
-                    "문제 해결에는 효과적이지만 전체 구조를 이해하는 데는 한계가 있을 수 있어요. 공식 문서를 한 번쯤 정독해보는 건 어떨까요?"));
+            recommendations.add(
+                    new Recommendation(
+                            "커뮤니티 탐색 비중이 %d%%로 가장 높아요.".formatted(Math.round(communityPct)),
+                            "문제 해결에는 효과적이지만 전체 구조를 이해하는 데는 한계가 있을 수 있어요. 공식 문서를 한 번쯤 정독해보는 건 어떨까요?"));
         }
         topSite()
                 .filter(site -> pct(siteVisits.get(site)) >= AnalyticsRules.ONE_SITE_PCT)
-                .ifPresent(site -> recommendations.add(new Recommendation(
-                        site + "에 정보 탐색이 몰려 있어요.",
-                        "다양한 출처를 함께 참고하면 같은 주제도 더 넓고 깊게 이해할 수 있어요.")));
+                .ifPresent(
+                        site ->
+                                recommendations.add(
+                                        new Recommendation(
+                                                site + "에 정보 탐색이 몰려 있어요.",
+                                                "다양한 출처를 함께 참고하면 같은 주제도 더 넓고 깊게 이해할 수 있어요.")));
         return recommendations;
     }
 
     // 방문이 가장 많은 사이트. 같으면 이름순
     private Optional<String> topSite() {
         return siteVisits.entrySet().stream()
-                .min(Map.Entry.<String, Long>comparingByValue(Comparator.reverseOrder())
-                        .thenComparing(Map.Entry.comparingByKey()))
+                .min(
+                        Map.Entry.<String, Long>comparingByValue(Comparator.reverseOrder())
+                                .thenComparing(Map.Entry.comparingByKey()))
                 .map(Map.Entry::getKey);
     }
 

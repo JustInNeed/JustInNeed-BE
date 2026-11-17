@@ -1,0 +1,7 @@
+# git blame 에서 뺄 커밋 (줄 내용은 그대로이고 포맷 · import 모양만 바꾼 커밋)
+# 한 번만 설정: git config blame.ignoreRevsFile .git-blame-ignore-revs  (GitHub 의 blame 화면은 자동으로 읽는다)
+
+# 정책 #17: 와일드카드 import 를 명시적 import 로 풀기
+5b9bbcd7f43127d21f27b5cdd4a2d961b678e9a1
+# 정책 #13: google-java-format(AOSP) 로 기존 BE 코드 전체 포맷 정리
+473630d34f3adece600db445cc2c5d520df3d03b

@@ -16,22 +16,25 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class ExtensionSettingServiceTest {
 
-    @Autowired
-    private ExtensionSettingService extensionSettingService;
+    @Autowired private ExtensionSettingService extensionSettingService;
 
-    @Autowired
-    private ExtensionSettingRepository extensionSettingRepository;
+    @Autowired private ExtensionSettingRepository extensionSettingRepository;
 
-    @Autowired
-    private MemberRepository memberRepository;
+    @Autowired private MemberRepository memberRepository;
 
     @Test
     void updatesOnlyRequestedSettingAndKeepsOneRowPerMember() {
-        Long memberId = memberRepository.save(new Member(SocialProvider.KAKAO, "extension", "toggler", null)).getId();
+        Long memberId =
+                memberRepository
+                        .save(new Member(SocialProvider.KAKAO, "extension", "toggler", null))
+                        .getId();
 
-        ExtensionSettingResponse popup = extensionSettingService.updatePopupVisible(memberId, false);
-        ExtensionSettingResponse notification = extensionSettingService.updateAutoEndNotification(memberId, false);
-        ExtensionSettingResponse manualScrap = extensionSettingService.updateManualScrap(memberId, false);
+        ExtensionSettingResponse popup =
+                extensionSettingService.updatePopupVisible(memberId, false);
+        ExtensionSettingResponse notification =
+                extensionSettingService.updateAutoEndNotification(memberId, false);
+        ExtensionSettingResponse manualScrap =
+                extensionSettingService.updateManualScrap(memberId, false);
 
         assertThat(popup.popupVisible()).isFalse();
         assertThat(popup.autoEndNotificationEnabled()).isNull();

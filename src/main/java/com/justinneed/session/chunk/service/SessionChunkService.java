@@ -37,8 +37,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  *   지운 세션    저장하지 않고 200 으로 답해 재전송을 멈추게 한다
  * </pre>
  *
- * 저장은 세션 행 잠금 안에서 한다. 합치기와 줄을 서므로 합친 뒤에 저장되어 빠지는 청크가 생기지 않고, 같은 청크가 동시에 와도 하나만 저장된다.
- * 합치기는 저장을 커밋한 뒤 따로 한다. 합치기가 실패해도 청크는 남고 요청은 성공한다 (실패 횟수는 ChunkSessionService 가 센다).
+ * 저장은 세션 행 잠금 안에서 한다. 합치기와 줄을 서므로 합친 뒤에 저장되어 빠지는 청크가 생기지 않고, 같은 청크가 동시에 와도 하나만 저장된다. 합치기는 저장을 커밋한 뒤
+ * 따로 한다. 합치기가 실패해도 청크는 남고 요청은 성공한다 (실패 횟수는 ChunkSessionService 가 센다).
  */
 @Service
 public class SessionChunkService {
@@ -52,7 +52,8 @@ public class SessionChunkService {
     private final ChunkSessionService chunkSessionService;
     private final TransactionTemplate transactionTemplate;
 
-    public SessionChunkService(SessionRawChunkRepository chunkRepository,
+    public SessionChunkService(
+            SessionRawChunkRepository chunkRepository,
             BrowsingSessionRepository sessionRepository,
             SessionCollectionRepository collectionRepository,
             SessionCollectionService collectionService,
@@ -69,9 +70,13 @@ public class SessionChunkService {
     public ChunkUploadResponse receive(Long userId, ChunkUploadRequest request) {
         checkMember(userId, request.payload());
         // 1번 청크 안의 시작 기록 시각. 다른 번호가 먼저 오면 지금 시각으로 만들고, 1번이 오면 고친다
-        LocalDateTime startedAt = request.n() == 1 ? ChunkSessionService.startedAtOf(request.payload()) : null;
-        Long sessionId = collectionService.findOrCreate(userId, request.sessionId(),
-                startedAt != null ? startedAt : LocalDateTime.now());
+        LocalDateTime startedAt =
+                request.n() == 1 ? ChunkSessionService.startedAtOf(request.payload()) : null;
+        Long sessionId =
+                collectionService.findOrCreate(
+                        userId,
+                        request.sessionId(),
+                        startedAt != null ? startedAt : LocalDateTime.now());
         Stored stored = transactionTemplate.execute(status -> store(sessionId, request, startedAt));
         if (stored.collecting()) {
             chunkSessionService.advance(sessionId);
@@ -80,33 +85,52 @@ public class SessionChunkService {
     }
 
     private Stored store(Long sessionId, ChunkUploadRequest request, LocalDateTime startedAt) {
-        BrowsingSession session = sessionRepository.lockById(sessionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        BrowsingSession session =
+                sessionRepository
+                        .lockById(sessionId)
+                        .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         LocalDateTime now = LocalDateTime.now();
         if (session.isDeleted()) {
-            log.info("[session chunk] session {} 은 지운 세션이라 청크 n {} 를 저장하지 않음", sessionId, request.n());
-            return new Stored(ChunkUploadResponse.ignored(request.sessionId(), request.n(), now), false);
+            log.info(
+                    "[session chunk] session {} 은 지운 세션이라 청크 n {} 를 저장하지 않음",
+                    sessionId,
+                    request.n());
+            return new Stored(
+                    ChunkUploadResponse.ignored(request.sessionId(), request.n(), now), false);
         }
         boolean collecting = session.getStatus() == SessionStatus.COLLECTING;
 
         Long userId = session.getUserId();
-        var existing = chunkRepository.findByUserIdAndCollectorSessionIdAndN(userId, request.sessionId(), request.n());
+        var existing =
+                chunkRepository.findByUserIdAndCollectorSessionIdAndN(
+                        userId, request.sessionId(), request.n());
         if (existing.isPresent()) {
             return new Stored(duplicateOf(existing.get(), request), collecting);
         }
 
-        SessionRawChunk saved = chunkRepository.saveAndFlush(new SessionRawChunk(
-                userId, request.sessionId(), request.n(),
-                request.lastChunk(), request.maxN(), request.stopReason(),
-                request.payload(), now));
+        SessionRawChunk saved =
+                chunkRepository.saveAndFlush(
+                        new SessionRawChunk(
+                                userId,
+                                request.sessionId(),
+                                request.n(),
+                                request.lastChunk(),
+                                request.maxN(),
+                                request.stopReason(),
+                                request.payload(),
+                                now));
         if (collecting) {
             collectionRepository.getOrCreate(sessionId).chunkReceived(now);
             if (startedAt != null && !startedAt.equals(session.getStartedAt())) {
                 session.correctStartedAt(startedAt);
             }
         } else {
-            log.info("[session chunk] session {} (수집기 {}) 는 이미 {} — 늦게 온 청크 n {} 는 받아만 두고 분석에 넣지 않음",
-                    sessionId, request.sessionId(), session.getStatus(), request.n());
+            log.info(
+                    "[session chunk] session {} (수집기 {}) 는 이미 {} — 늦게 온 청크 n {} 는 받아만 두고 분석에 넣지 않음",
+                    sessionId,
+                    request.sessionId(),
+                    session.getStatus(),
+                    request.n());
         }
         return new Stored(ChunkUploadResponse.of(saved, false), collecting);
     }
@@ -122,15 +146,20 @@ public class SessionChunkService {
     }
 
     private static boolean isWhole(Number n) {
-        return n instanceof Integer || n instanceof Long || n instanceof Short || n instanceof Byte
+        return n instanceof Integer
+                || n instanceof Long
+                || n instanceof Short
+                || n instanceof Byte
                 || n instanceof BigInteger;
     }
 
-    private static ChunkUploadResponse duplicateOf(SessionRawChunk stored, ChunkUploadRequest request) {
-        boolean same = stored.isFinalChunk() == request.lastChunk()
-                && Objects.equals(stored.getMaxN(), request.maxN())
-                && Objects.equals(stored.getStopReason(), request.stopReason())
-                && sameJson(stored.getPayload(), request.payload());
+    private static ChunkUploadResponse duplicateOf(
+            SessionRawChunk stored, ChunkUploadRequest request) {
+        boolean same =
+                stored.isFinalChunk() == request.lastChunk()
+                        && Objects.equals(stored.getMaxN(), request.maxN())
+                        && Objects.equals(stored.getStopReason(), request.stopReason())
+                        && sameJson(stored.getPayload(), request.payload());
         if (!same) {
             throw new CustomException(ErrorCode.CHUNK_CONTENT_CONFLICT);
         }
@@ -168,9 +197,5 @@ public class SessionChunkService {
     }
 
     // collecting = 저장 뒤 합치기를 시도할지 (수집 중인 세션)
-    private record Stored(
-            ChunkUploadResponse response,
-            boolean collecting
-    ) {
-    }
+    private record Stored(ChunkUploadResponse response, boolean collecting) {}
 }

@@ -93,14 +93,16 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
                  "edges": [
                    {"from": "root:1", "to": "topic:0", "type": "hierarchy", "primary": true},
                    {"from": "topic:0", "to": "%4$s#pid1", "type": "hierarchy", "primary": true}]}
-                """.formatted(prefix, CARD_KEYWORD, TOPIC_KEYWORD, url, UNIT_KEYWORD);
+                """
+                .formatted(prefix, CARD_KEYWORD, TOPIC_KEYWORD, url, UNIT_KEYWORD);
     }
 
     private static String selected(String url) {
         return """
                 [{"unitKey": "%1$s#pid1", "pageTitle": "AI 글 제목", "pageUrl": "%1$s",
                   "text": "%2$s", "score": 0.5, "firstSeenAt": "2026-10-04T09:40:00+00:00"}]
-                """.formatted(url, UNIT_TEXT);
+                """
+                .formatted(url, UNIT_TEXT);
     }
 
     private void analyse(BrowsingSession session, String prefix, String url) {
@@ -109,32 +111,52 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     }
 
     private void replaceAnalysis(BrowsingSession session, String prefix, String url) {
-        jdbc.update("update session_results set mindmap = JSON '" + aiMindmap(prefix, url)
-                + "', selected_units = JSON '" + selected(url) + "' where session_id = ?", session.getId());
+        jdbc.update(
+                "update session_results set mindmap = JSON '"
+                        + aiMindmap(prefix, url)
+                        + "', selected_units = JSON '"
+                        + selected(url)
+                        + "' where session_id = ?",
+                session.getId());
         cardSync.sync(session);
     }
 
     private void setScope(NodeVisibility scope) throws Exception {
-        mvc.perform(patch("/community/me/visibility").with(as(wanderer.member()))
-                .with(json(Map.of("visibility", scope.name())))).andExpect(okEnvelope());
+        mvc.perform(
+                        patch("/community/me/visibility")
+                                .with(as(wanderer.member()))
+                                .with(json(Map.of("visibility", scope.name()))))
+                .andExpect(okEnvelope());
     }
 
     private void editSession(BrowsingSession session, Map<String, Object> body) throws Exception {
-        mvc.perform(patch("/sessions/{id}", session.getId()).with(as(wanderer.member())).with(json(body)))
+        mvc.perform(
+                        patch("/sessions/{id}", session.getId())
+                                .with(as(wanderer.member()))
+                                .with(json(body)))
                 .andExpect(okEnvelope());
     }
 
     private void like(Member actor, BrowsingSession session) throws Exception {
-        mvc.perform(patch("/community/mindmaps/{id}/like", session.getId()).with(as(actor))
-                .with(json(Map.of("liked", true)))).andExpect(okEnvelope());
+        mvc.perform(
+                        patch("/community/mindmaps/{id}/like", session.getId())
+                                .with(as(actor))
+                                .with(json(Map.of("liked", true))))
+                .andExpect(okEnvelope());
     }
 
     private Long saveCard(BrowsingSession session) throws Exception {
-        return readLong(mvc.perform(patch("/community/mindmaps/{id}/bookmark", session.getId()).with(as(me))
-                .with(json(Map.of("bookmarked", true)))).andExpect(okEnvelope()), "$.data.bookmarkId");
+        return readLong(
+                mvc.perform(
+                                patch("/community/mindmaps/{id}/bookmark", session.getId())
+                                        .with(as(me))
+                                        .with(json(Map.of("bookmarked", true))))
+                        .andExpect(okEnvelope()),
+                "$.data.bookmarkId");
     }
 
-    private ResultActions save(String targetType, List<Long> ids, String saveType, String name) throws Exception {
+    private ResultActions save(String targetType, List<Long> ids, String saveType, String name)
+            throws Exception {
         Map<String, Object> body = new HashMap<>();
         body.put("targetType", targetType);
         body.put("targetIds", ids);
@@ -145,7 +167,9 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     }
 
     private Long saveNodes(List<Long> ids) throws Exception {
-        return readLong(save("NODE", ids, "MINI_MINDMAP", null).andExpect(status().isCreated()), "$.data.bookmarkId");
+        return readLong(
+                save("NODE", ids, "MINI_MINDMAP", null).andExpect(status().isCreated()),
+                "$.data.bookmarkId");
     }
 
     private Long saveTags(String... hashtags) throws Exception {
@@ -153,7 +177,9 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
         for (String hashtag : hashtags) {
             ids.add(hashtagId(wanderer.member(), hashtag));
         }
-        return readLong(save("HASHTAG", ids, "MINI_MINDMAP", null).andExpect(status().isCreated()), "$.data.bookmarkId");
+        return readLong(
+                save("HASHTAG", ids, "MINI_MINDMAP", null).andExpect(status().isCreated()),
+                "$.data.bookmarkId");
     }
 
     private Long node(String sourceUrl) throws Exception {
@@ -161,7 +187,9 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     }
 
     private Long aiNode(String keyword) throws Exception {
-        List<Number> found = JsonPath.read(body(graph()), "$.data.nodes[?(@.label == '" + keyword + "')].nodeId");
+        List<Number> found =
+                JsonPath.read(
+                        body(graph()), "$.data.nodes[?(@.label == '" + keyword + "')].nodeId");
         return found.get(0).longValue();
     }
 
@@ -174,7 +202,8 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     }
 
     private ResultActions original(Long bookmarkId) throws Exception {
-        return mvc.perform(get("/community/me/bookmarks/{id}/original", bookmarkId).with(as(me))).andExpect(okEnvelope());
+        return mvc.perform(get("/community/me/bookmarks/{id}/original", bookmarkId).with(as(me)))
+                .andExpect(okEnvelope());
     }
 
     private static String body(ResultActions result) throws Exception {
@@ -198,10 +227,26 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
 
         String response = body(saved().andExpect(jsonPath("$.data.hasNext").value(false)));
 
-        assertThat(JsonPath.<Map<String, Object>>read(response, "$.data")).containsOnlyKeys("mindmaps", "hasNext");
-        assertThat(JsonPath.<Map<String, Object>>read(response, "$.data.mindmaps[0]")).containsOnlyKeys(
-                "bookmarkId", "sessionId", "sourceMindmapId", "owner", "title", "snippet", "hashtags", "nodes", "edges",
-                "nodeCount", "likeCount", "savedAt", "saveType", "targetType", "targetIds", "cardBookmark");
+        assertThat(JsonPath.<Map<String, Object>>read(response, "$.data"))
+                .containsOnlyKeys("mindmaps", "hasNext");
+        assertThat(JsonPath.<Map<String, Object>>read(response, "$.data.mindmaps[0]"))
+                .containsOnlyKeys(
+                        "bookmarkId",
+                        "sessionId",
+                        "sourceMindmapId",
+                        "owner",
+                        "title",
+                        "snippet",
+                        "hashtags",
+                        "nodes",
+                        "edges",
+                        "nodeCount",
+                        "likeCount",
+                        "savedAt",
+                        "saveType",
+                        "targetType",
+                        "targetIds",
+                        "cardBookmark");
         assertThat(JsonPath.<Map<String, Object>>read(response, "$.data.mindmaps[0].hashtags[0]"))
                 .containsOnlyKeys("hashtagId", "name");
     }
@@ -210,19 +255,43 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     @DisplayName("해시태그 묶음 항목은 이름 · 다시 저장에 필요한 값까지 온다")
     void bundleItemShape() throws Exception {
         Long prague = hashtagId(wanderer.member(), "프라하");
-        Long bookmarkId = readLong(save("HASHTAG", List.of(prague), "HASHTAG_BUNDLE", "동유럽 자료"), "$.data.bookmarkId");
+        Long bookmarkId =
+                readLong(
+                        save("HASHTAG", List.of(prague), "HASHTAG_BUNDLE", "동유럽 자료"),
+                        "$.data.bookmarkId");
 
-        String response = body(mvc.perform(get(BUNDLES).with(as(me))).andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.bundles[0].bookmarkId").value(bookmarkId))
-                .andExpect(jsonPath("$.data.bundles[0].name").value("동유럽 자료"))
-                .andExpect(jsonPath("$.data.bundles[0].hashtags").value(contains("프라하")))
-                .andExpect(jsonPath("$.data.bundles[0].targetType").value("HASHTAG"))
-                .andExpect(jsonPath("$.data.bundles[0].targetIds").value(contains(prague.intValue())))
-                .andExpect(jsonPath("$.data.bundles[0].saveType").value("HASHTAG_BUNDLE"))
-                .andExpect(jsonPath("$.data.bundles[0].sourceMindmapId").value(wanderer.id())));
+        String response =
+                body(
+                        mvc.perform(get(BUNDLES).with(as(me)))
+                                .andExpect(okEnvelope())
+                                .andExpect(
+                                        jsonPath("$.data.bundles[0].bookmarkId").value(bookmarkId))
+                                .andExpect(jsonPath("$.data.bundles[0].name").value("동유럽 자료"))
+                                .andExpect(
+                                        jsonPath("$.data.bundles[0].hashtags")
+                                                .value(contains("프라하")))
+                                .andExpect(
+                                        jsonPath("$.data.bundles[0].targetType").value("HASHTAG"))
+                                .andExpect(
+                                        jsonPath("$.data.bundles[0].targetIds")
+                                                .value(contains(prague.intValue())))
+                                .andExpect(
+                                        jsonPath("$.data.bundles[0].saveType")
+                                                .value("HASHTAG_BUNDLE"))
+                                .andExpect(
+                                        jsonPath("$.data.bundles[0].sourceMindmapId")
+                                                .value(wanderer.id())));
 
-        assertThat(JsonPath.<Map<String, Object>>read(response, "$.data.bundles[0]")).containsOnlyKeys(
-                "bookmarkId", "name", "hashtags", "savedAt", "saveType", "targetType", "targetIds", "sourceMindmapId");
+        assertThat(JsonPath.<Map<String, Object>>read(response, "$.data.bundles[0]"))
+                .containsOnlyKeys(
+                        "bookmarkId",
+                        "name",
+                        "hashtags",
+                        "savedAt",
+                        "saveType",
+                        "targetType",
+                        "targetIds",
+                        "sourceMindmapId");
     }
 
     // ---------- 세션 하나: 카드의 지금 상태 ----------
@@ -236,13 +305,16 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
         like(member("other"), wanderer.prague());
 
         saved().andExpect(jsonPath("$.data.mindmaps[0].bookmarkId").value(id))
-                .andExpect(jsonPath("$.data.mindmaps[0].sessionId").value(wanderer.prague().getId()))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[0].sessionId").value(wanderer.prague().getId()))
                 .andExpect(jsonPath("$.data.mindmaps[0].cardBookmark").value(true))
                 .andExpect(jsonPath("$.data.mindmaps[0].owner.userId").value(wanderer.id()))
                 .andExpect(jsonPath("$.data.mindmaps[0].owner.nickname").value("wanderer"))
                 .andExpect(jsonPath("$.data.mindmaps[0].title").value(PRAGUE_TITLE))
                 .andExpect(jsonPath("$.data.mindmaps[0].snippet").value(PRAGUE_SNIPPET))
-                .andExpect(jsonPath("$.data.mindmaps[0].hashtags[*].name").value(contains("프라하", "카를교", "체코")))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[0].hashtags[*].name")
+                                .value(contains("프라하", "카를교", "체코")))
                 .andExpect(jsonPath("$.data.mindmaps[0].nodeCount").value(3))
                 .andExpect(jsonPath("$.data.mindmaps[0].likeCount").value(1))
                 // 태그 3개 → 뿌리, 뿌리 → 주제 → 유닛
@@ -258,7 +330,8 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
         saved().andExpect(jsonPath("$.data.mindmaps[0].sessionId").value(wanderer.prague().getId()))
                 .andExpect(jsonPath("$.data.mindmaps[0].cardBookmark").value(false))
                 .andExpect(jsonPath("$.data.mindmaps[0].title").value(PRAGUE_TITLE))
-                .andExpect(jsonPath("$.data.mindmaps[0].nodes[*].sourceUrl").value(contains(CASTLE)))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[0].nodes[*].sourceUrl").value(contains(CASTLE)))
                 // 프라하 세션은 AI 결과가 없어 내용까지 카드의 노드 수가 0 이다
                 .andExpect(jsonPath("$.data.mindmaps[0].nodeCount").value(0));
     }
@@ -271,7 +344,8 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
         Long id = saveCard(wanderer.prague());
         BookmarkSnapshot before = rows.findById(id).orElseThrow().getSnapshot();
 
-        editSession(wanderer.prague(), Map.of("title", "새 제목", "editedMarkdown", "# 머리말\n\n고친 첫 문단"));
+        editSession(
+                wanderer.prague(), Map.of("title", "새 제목", "editedMarkdown", "# 머리말\n\n고친 첫 문단"));
 
         saved().andExpect(jsonPath("$.data.mindmaps[0].title").value("새 제목"))
                 .andExpect(jsonPath("$.data.mindmaps[0].snippet").value("고친 첫 문단"));
@@ -289,11 +363,19 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
         editSession(wanderer.prague(), Map.of("tags", List.of("프라하", "새태그")));
 
         Long added = hashtagId(wanderer.member(), "새태그");
-        saved().andExpect(jsonPath("$.data.mindmaps[0].hashtags[*].name").value(contains("프라하", "새태그")))
+        saved().andExpect(
+                        jsonPath("$.data.mindmaps[0].hashtags[*].name")
+                                .value(contains("프라하", "새태그")))
                 .andExpect(jsonPath("$.data.mindmaps[0].hashtags[1].hashtagId").value(added))
                 .andExpect(jsonPath("$.data.mindmaps[0].edges", hasSize(4)))
-                .andExpect(jsonPath("$.data.mindmaps[0].edges[?(@.from == 'tag:" + added + "')]", hasSize(2)))
-                .andExpect(jsonPath("$.data.mindmaps[0].edges[?(@.from == 'tag:" + removed + "')]", hasSize(0)));
+                .andExpect(
+                        jsonPath(
+                                "$.data.mindmaps[0].edges[?(@.from == 'tag:" + added + "')]",
+                                hasSize(2)))
+                .andExpect(
+                        jsonPath(
+                                "$.data.mindmaps[0].edges[?(@.from == 'tag:" + removed + "')]",
+                                hasSize(0)));
         assertThat(rows.findById(id).orElseThrow().getSnapshot()).isEqualTo(before);
     }
 
@@ -306,13 +388,16 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
         saved().andExpect(jsonPath("$.data.mindmaps[0].sessionId").value(wanderer.prague().getId()))
                 .andExpect(jsonPath("$.data.mindmaps[0].targetType").value("HASHTAG"))
                 .andExpect(jsonPath("$.data.mindmaps[0].title").value(PRAGUE_TITLE))
-                .andExpect(jsonPath("$.data.mindmaps[0].hashtags[*].name").value(contains("프라하", "카를교", "체코")));
+                .andExpect(
+                        jsonPath("$.data.mindmaps[0].hashtags[*].name")
+                                .value(contains("프라하", "카를교", "체코")));
     }
 
     // ---------- URL만으로 바꾼 뒤 ----------
 
     @Test
-    @DisplayName("내용까지 → URL만: 제목 · 요약 null, 노드는 URL 라벨만, URL 이 없는 AI 노드는 빠지고 AI 글이 응답에 없다. 되돌리면 다시 보인다")
+    @DisplayName(
+            "내용까지 → URL만: 제목 · 요약 null, 노드는 URL 라벨만, URL 이 없는 AI 노드는 빠지고 AI 글이 응답에 없다. 되돌리면 다시 보인다")
     void contentToUrlOnlyDropsAiText() throws Exception {
         setScope(NodeVisibility.CONTENT);
         analyse(wanderer.prague(), "", CASTLE);
@@ -323,41 +408,88 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
 
         setScope(NodeVisibility.URL_ONLY);
 
-        ResultActions list = saved().andExpect(jsonPath("$.data.mindmaps[0].title").value(nullValue()))
-                .andExpect(jsonPath("$.data.mindmaps[0].snippet").value(nullValue()))
-                .andExpect(jsonPath("$.data.mindmaps[0].sessionId").value(wanderer.prague().getId()))
-                .andExpect(jsonPath("$.data.mindmaps[0].hashtags[*].name").value(contains("프라하", "카를교", "체코")))
-                .andExpect(jsonPath("$.data.mindmaps[0].nodeCount").value(2))
-                .andExpect(jsonPath("$.data.mindmaps[0].nodes[*].nodeId").value(contains(unit.intValue())))
-                .andExpect(jsonPath("$.data.mindmaps[0].nodes[0].label").value(CASTLE))
-                .andExpect(jsonPath("$.data.mindmaps[0].nodes[0].sourceUrl").value(CASTLE))
-                .andExpect(jsonPath("$.data.mindmaps[0].nodes[0].content").value(nullValue()))
-                .andExpect(jsonPath("$.data.mindmaps[0].nodes[0].visibilityScope").value("URL_ONLY"))
-                .andExpect(jsonPath("$.data.mindmaps[0].edges", hasSize(3)))
-                .andExpect(jsonPath("$.data.mindmaps[0].edges[*].from", everyItem(startsWith("tag:"))));
-        assertThat(body(list)).doesNotContain(CARD_KEYWORD, TOPIC_KEYWORD, UNIT_KEYWORD, UNIT_TEXT, PRAGUE_TITLE, DEFAULT_TITLE);
+        ResultActions list =
+                saved().andExpect(jsonPath("$.data.mindmaps[0].title").value(nullValue()))
+                        .andExpect(jsonPath("$.data.mindmaps[0].snippet").value(nullValue()))
+                        .andExpect(
+                                jsonPath("$.data.mindmaps[0].sessionId")
+                                        .value(wanderer.prague().getId()))
+                        .andExpect(
+                                jsonPath("$.data.mindmaps[0].hashtags[*].name")
+                                        .value(contains("프라하", "카를교", "체코")))
+                        .andExpect(jsonPath("$.data.mindmaps[0].nodeCount").value(2))
+                        .andExpect(
+                                jsonPath("$.data.mindmaps[0].nodes[*].nodeId")
+                                        .value(contains(unit.intValue())))
+                        .andExpect(jsonPath("$.data.mindmaps[0].nodes[0].label").value(CASTLE))
+                        .andExpect(jsonPath("$.data.mindmaps[0].nodes[0].sourceUrl").value(CASTLE))
+                        .andExpect(
+                                jsonPath("$.data.mindmaps[0].nodes[0].content").value(nullValue()))
+                        .andExpect(
+                                jsonPath("$.data.mindmaps[0].nodes[0].visibilityScope")
+                                        .value("URL_ONLY"))
+                        .andExpect(jsonPath("$.data.mindmaps[0].edges", hasSize(3)))
+                        .andExpect(
+                                jsonPath(
+                                        "$.data.mindmaps[0].edges[*].from",
+                                        everyItem(startsWith("tag:"))));
+        assertThat(body(list))
+                .doesNotContain(
+                        CARD_KEYWORD,
+                        TOPIC_KEYWORD,
+                        UNIT_KEYWORD,
+                        UNIT_TEXT,
+                        PRAGUE_TITLE,
+                        DEFAULT_TITLE);
         assertThat(rows.findById(id).orElseThrow().getSnapshot()).isEqualTo(before);
 
         setScope(NodeVisibility.CONTENT);
 
         saved().andExpect(jsonPath("$.data.mindmaps[0].title").value(PRAGUE_TITLE))
                 .andExpect(jsonPath("$.data.mindmaps[0].nodes", hasSize(3)))
-                .andExpect(jsonPath("$.data.mindmaps[0].nodes[?(@.label == '" + UNIT_KEYWORD + "')].content")
-                        .value(contains(UNIT_TEXT)));
+                .andExpect(
+                        jsonPath(
+                                        "$.data.mindmaps[0].nodes[?(@.label == '"
+                                                + UNIT_KEYWORD
+                                                + "')].content")
+                                .value(contains(UNIT_TEXT)));
     }
 
     @Test
     @DisplayName("URL만: 같은 URL 을 인용한 AI 노드는 한 번만 보이고, http(s) 가 아닌 인용 URL 은 빠진다")
     void urlOnlyDeduplicatesAndDropsUnsafeUrls() throws Exception {
-        BookmarkSnapshot.Node first = new BookmarkSnapshot.Node(node(CASTLE), "AI 첫째", CASTLE, UNIT_TEXT, NodeVisibility.CONTENT);
-        BookmarkSnapshot.Node second = new BookmarkSnapshot.Node(node(PRAGUE_EU), "AI 둘째", CASTLE, UNIT_TEXT, NodeVisibility.CONTENT);
-        BookmarkSnapshot.Node unsafe = new BookmarkSnapshot.Node(node(PRAGUE_EU), "AI 셋째", "javascript:alert(1)", UNIT_TEXT,
-                NodeVisibility.CONTENT);
-        rows.saveAndFlush(new CommunityBookmark(me.getId(), SaveType.MINI_MINDMAP, TargetType.NODE, "same-url", wanderer.id(),
-                List.of(first.nodeId(), second.nodeId()), new BookmarkSnapshot(DEFAULT_TITLE, List.of(),
-                        List.of(first, second, unsafe), List.of()), Instant.now()));
+        BookmarkSnapshot.Node first =
+                new BookmarkSnapshot.Node(
+                        node(CASTLE), "AI 첫째", CASTLE, UNIT_TEXT, NodeVisibility.CONTENT);
+        BookmarkSnapshot.Node second =
+                new BookmarkSnapshot.Node(
+                        node(PRAGUE_EU), "AI 둘째", CASTLE, UNIT_TEXT, NodeVisibility.CONTENT);
+        BookmarkSnapshot.Node unsafe =
+                new BookmarkSnapshot.Node(
+                        node(PRAGUE_EU),
+                        "AI 셋째",
+                        "javascript:alert(1)",
+                        UNIT_TEXT,
+                        NodeVisibility.CONTENT);
+        rows.saveAndFlush(
+                new CommunityBookmark(
+                        me.getId(),
+                        SaveType.MINI_MINDMAP,
+                        TargetType.NODE,
+                        "same-url",
+                        wanderer.id(),
+                        List.of(first.nodeId(), second.nodeId()),
+                        new BookmarkSnapshot(
+                                DEFAULT_TITLE,
+                                List.of(),
+                                List.of(first, second, unsafe),
+                                List.of()),
+                        Instant.now()));
 
-        ResultActions list = saved().andExpect(jsonPath("$.data.mindmaps[0].nodes[*].label").value(contains(CASTLE)));
+        ResultActions list =
+                saved().andExpect(
+                                jsonPath("$.data.mindmaps[0].nodes[*].label")
+                                        .value(contains(CASTLE)));
         assertThat(body(list)).doesNotContain("javascript", UNIT_TEXT, "AI 첫째");
     }
 
@@ -366,16 +498,39 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     void urlOnlyDropsSavedStructure() throws Exception {
         Long castle = node(CASTLE);
         Long eu = node(PRAGUE_EU);
-        rows.saveAndFlush(new CommunityBookmark(me.getId(), SaveType.MINI_MINDMAP, TargetType.NODE, "structure", wanderer.id(),
-                List.of(castle, eu), new BookmarkSnapshot(DEFAULT_TITLE, List.of(),
-                        List.of(new BookmarkSnapshot.Node(castle, "AI 위", CASTLE, UNIT_TEXT, NodeVisibility.CONTENT),
-                                new BookmarkSnapshot.Node(eu, "AI 아래", PRAGUE_EU, UNIT_TEXT, NodeVisibility.CONTENT)),
-                        List.of(new BookmarkSnapshot.Edge("node:" + castle, "node:" + eu))), Instant.now()));
+        rows.saveAndFlush(
+                new CommunityBookmark(
+                        me.getId(),
+                        SaveType.MINI_MINDMAP,
+                        TargetType.NODE,
+                        "structure",
+                        wanderer.id(),
+                        List.of(castle, eu),
+                        new BookmarkSnapshot(
+                                DEFAULT_TITLE,
+                                List.of(),
+                                List.of(
+                                        new BookmarkSnapshot.Node(
+                                                castle,
+                                                "AI 위",
+                                                CASTLE,
+                                                UNIT_TEXT,
+                                                NodeVisibility.CONTENT),
+                                        new BookmarkSnapshot.Node(
+                                                eu,
+                                                "AI 아래",
+                                                PRAGUE_EU,
+                                                UNIT_TEXT,
+                                                NodeVisibility.CONTENT)),
+                                List.of(new BookmarkSnapshot.Edge("node:" + castle, "node:" + eu))),
+                        Instant.now()));
 
         saved().andExpect(jsonPath("$.data.mindmaps[0].nodes", hasSize(2)))
                 // 프라하 세션 태그 3개 × 노드 2개
                 .andExpect(jsonPath("$.data.mindmaps[0].edges", hasSize(6)))
-                .andExpect(jsonPath("$.data.mindmaps[0].edges[*].from", everyItem(startsWith("tag:"))));
+                .andExpect(
+                        jsonPath(
+                                "$.data.mindmaps[0].edges[*].from", everyItem(startsWith("tag:"))));
     }
 
     @Test
@@ -387,36 +542,64 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
 
         saved().andExpect(jsonPath("$.data.mindmaps[0].title").value(PRAGUE_TITLE))
                 .andExpect(jsonPath("$.data.mindmaps[0].snippet").value(PRAGUE_SNIPPET))
-                .andExpect(jsonPath("$.data.mindmaps[0].nodes[*].label").value(contains(CASTLE, PRAGUE_EU)))
-                .andExpect(jsonPath("$.data.mindmaps[0].nodes[*].visibilityScope", everyItem(is("CONTENT"))));
+                .andExpect(
+                        jsonPath("$.data.mindmaps[0].nodes[*].label")
+                                .value(contains(CASTLE, PRAGUE_EU)))
+                .andExpect(
+                        jsonPath(
+                                "$.data.mindmaps[0].nodes[*].visibilityScope",
+                                everyItem(is("CONTENT"))));
     }
 
     @Test
     @DisplayName("옛 기본 제목(영문 · 한글)은 어떤 경우에도 나오지 않는다: 카드가 있으면 카드 제목, 없으면 null")
     void defaultTitlesNeverLeak() throws Exception {
-        BookmarkSnapshot.Node stored = new BookmarkSnapshot.Node(node(CASTLE), CASTLE, CASTLE, null, NodeVisibility.URL_ONLY);
-        BookmarkSnapshot.Tag interest = new BookmarkSnapshot.Tag(hashtagId(wanderer.member(), "카페투어"), wanderer.id(), "카페투어");
+        BookmarkSnapshot.Node stored =
+                new BookmarkSnapshot.Node(
+                        node(CASTLE), CASTLE, CASTLE, null, NodeVisibility.URL_ONLY);
+        BookmarkSnapshot.Tag interest =
+                new BookmarkSnapshot.Tag(
+                        hashtagId(wanderer.member(), "카페투어"), wanderer.id(), "카페투어");
         Instant now = Instant.now();
-        rows.save(new CommunityBookmark(me.getId(), SaveType.MINI_MINDMAP, TargetType.NODE, "old-node", wanderer.id(),
-                List.of(stored.nodeId()), new BookmarkSnapshot(OLD_TITLE, List.of(), List.of(stored), List.of()), now));
+        rows.save(
+                new CommunityBookmark(
+                        me.getId(),
+                        SaveType.MINI_MINDMAP,
+                        TargetType.NODE,
+                        "old-node",
+                        wanderer.id(),
+                        List.of(stored.nodeId()),
+                        new BookmarkSnapshot(OLD_TITLE, List.of(), List.of(stored), List.of()),
+                        now));
         // 관심사 태그만 고른 미니 마인드맵은 노드가 없어 이어진 세션이 없다
-        rows.saveAndFlush(new CommunityBookmark(me.getId(), SaveType.MINI_MINDMAP, TargetType.HASHTAG, "old-tag", wanderer.id(),
-                List.of(interest.hashtagId()), new BookmarkSnapshot(OLD_TITLE, List.of(interest), List.of(), List.of()),
-                now.plusSeconds(1)));
+        rows.saveAndFlush(
+                new CommunityBookmark(
+                        me.getId(),
+                        SaveType.MINI_MINDMAP,
+                        TargetType.HASHTAG,
+                        "old-tag",
+                        wanderer.id(),
+                        List.of(interest.hashtagId()),
+                        new BookmarkSnapshot(OLD_TITLE, List.of(interest), List.of(), List.of()),
+                        now.plusSeconds(1)));
 
-        ResultActions urlOnly = saved().andExpect(jsonPath("$.data.mindmaps", hasSize(2)))
-                .andExpect(jsonPath("$.data.mindmaps[0].sessionId").value(nullValue()))
-                .andExpect(jsonPath("$.data.mindmaps[0].title").value(nullValue()))
-                .andExpect(jsonPath("$.data.mindmaps[0].hashtags[*].name").value(contains("카페투어")))
-                .andExpect(jsonPath("$.data.mindmaps[0].owner.nickname").value("wanderer"))
-                .andExpect(jsonPath("$.data.mindmaps[0].nodeCount").value(0))
-                .andExpect(jsonPath("$.data.mindmaps[1].title").value(nullValue()));
+        ResultActions urlOnly =
+                saved().andExpect(jsonPath("$.data.mindmaps", hasSize(2)))
+                        .andExpect(jsonPath("$.data.mindmaps[0].sessionId").value(nullValue()))
+                        .andExpect(jsonPath("$.data.mindmaps[0].title").value(nullValue()))
+                        .andExpect(
+                                jsonPath("$.data.mindmaps[0].hashtags[*].name")
+                                        .value(contains("카페투어")))
+                        .andExpect(jsonPath("$.data.mindmaps[0].owner.nickname").value("wanderer"))
+                        .andExpect(jsonPath("$.data.mindmaps[0].nodeCount").value(0))
+                        .andExpect(jsonPath("$.data.mindmaps[1].title").value(nullValue()));
         assertThat(body(urlOnly)).doesNotContain(OLD_TITLE);
 
         setScope(NodeVisibility.CONTENT);
 
-        ResultActions content = saved().andExpect(jsonPath("$.data.mindmaps[0].title").value(nullValue()))
-                .andExpect(jsonPath("$.data.mindmaps[1].title").value(PRAGUE_TITLE));
+        ResultActions content =
+                saved().andExpect(jsonPath("$.data.mindmaps[0].title").value(nullValue()))
+                        .andExpect(jsonPath("$.data.mindmaps[1].title").value(PRAGUE_TITLE));
         assertThat(body(content)).doesNotContain(OLD_TITLE);
     }
 
@@ -424,13 +607,19 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     @DisplayName("관심사 태그만 고른 저장은 이어진 세션이 없어 태그 공개 규칙을 따른다: 태그가 비공개가 되면 숨기고, 원본 보기도 닫힌다")
     void tagOnlyMiniFollowsTagVisibility() throws Exception {
         Long interest = hashtagId(wanderer.member(), "카페투어");
-        Long id = readLong(save("HASHTAG", List.of(interest), "MINI_MINDMAP", null).andExpect(status().isCreated()),
-                "$.data.bookmarkId");
+        Long id =
+                readLong(
+                        save("HASHTAG", List.of(interest), "MINI_MINDMAP", null)
+                                .andExpect(status().isCreated()),
+                        "$.data.bookmarkId");
         saved().andExpect(jsonPath("$.data.mindmaps[*].bookmarkId").value(contains(ids(id))))
                 .andExpect(jsonPath("$.data.mindmaps[0].nodes", hasSize(0)));
 
-        mvc.perform(patch("/community/me/hashtags/{id}/visibility", interest).with(as(wanderer.member()))
-                .with(json(Map.of("isPublic", false)))).andExpect(okEnvelope());
+        mvc.perform(
+                        patch("/community/me/hashtags/{id}/visibility", interest)
+                                .with(as(wanderer.member()))
+                                .with(json(Map.of("isPublic", false))))
+                .andExpect(okEnvelope());
 
         saved().andExpect(jsonPath("$.data.mindmaps", hasSize(0)));
         original(id).andExpect(jsonPath("$.data.sourceAvailable").value(false));
@@ -442,8 +631,10 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
         Long card = saveCard(wanderer.prague());
         Long picked = saveNodes(List.of(node(WIEN)));
 
-        assertThat(rows.findById(card).orElseThrow().getSnapshot().title()).isEqualTo(DEFAULT_TITLE);
-        assertThat(rows.findById(picked).orElseThrow().getSnapshot().title()).isEqualTo(DEFAULT_TITLE);
+        assertThat(rows.findById(card).orElseThrow().getSnapshot().title())
+                .isEqualTo(DEFAULT_TITLE);
+        assertThat(rows.findById(picked).orElseThrow().getSnapshot().title())
+                .isEqualTo(DEFAULT_TITLE);
     }
 
     // ---------- 세션 여러 개 ----------
@@ -468,15 +659,18 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.mindmaps[0].snippet").value(nullValue()))
                 .andExpect(jsonPath("$.data.mindmaps[0].owner.userId").value(wanderer.id()))
                 .andExpect(jsonPath("$.data.mindmaps[0].owner.nickname").value("wanderer"))
-                .andExpect(jsonPath("$.data.mindmaps[0].hashtags[*].name").value(
-                        containsInAnyOrder("프라하", "카를교", "체코", "비엔나", "미술관")))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[0].hashtags[*].name")
+                                .value(containsInAnyOrder("프라하", "카를교", "체코", "비엔나", "미술관")))
                 .andExpect(jsonPath("$.data.mindmaps[0].nodeCount").value(2))
                 .andExpect(jsonPath("$.data.mindmaps[0].likeCount").value(2))
                 .andExpect(jsonPath("$.data.mindmaps[0].edges", hasSize(5)))
-                .andExpect(jsonPath("$.data.mindmaps[0].edges[?(@.from == 'tag:" + museum + "')].to")
-                        .value(contains("node:" + wien)))
-                .andExpect(jsonPath("$.data.mindmaps[0].edges[?(@.from == 'tag:" + vienna + "')].to")
-                        .value(contains("node:" + wien)));
+                .andExpect(
+                        jsonPath("$.data.mindmaps[0].edges[?(@.from == 'tag:" + museum + "')].to")
+                                .value(contains("node:" + wien)))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[0].edges[?(@.from == 'tag:" + vienna + "')].to")
+                                .value(contains("node:" + wien)));
     }
 
     @Test
@@ -492,9 +686,14 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
 
         saved().andExpect(jsonPath("$.data.mindmaps[0].sessionId").value(nullValue()))
                 .andExpect(jsonPath("$.data.mindmaps[0].title").value(nullValue()))
-                .andExpect(jsonPath("$.data.mindmaps[0].nodes[*].nodeId").value(contains(castle.intValue())))
-                .andExpect(jsonPath("$.data.mindmaps[0].targetIds").value(contains(castle.intValue())))
-                .andExpect(jsonPath("$.data.mindmaps[0].hashtags[*].name").value(contains("프라하", "카를교", "체코")))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[0].nodes[*].nodeId")
+                                .value(contains(castle.intValue())))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[0].targetIds").value(contains(castle.intValue())))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[0].hashtags[*].name")
+                                .value(contains("프라하", "카를교", "체코")))
                 .andExpect(jsonPath("$.data.mindmaps[0].nodeCount").value(1))
                 .andExpect(jsonPath("$.data.mindmaps[0].likeCount").value(0));
     }
@@ -509,12 +708,14 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
 
         setScope(NodeVisibility.URL_ONLY);
 
-        ResultActions list = saved().andExpect(jsonPath("$.data.mindmaps", hasSize(1)))
-                .andExpect(jsonPath("$.data.mindmaps[0].sessionId").value(nullValue()))
-                .andExpect(jsonPath("$.data.mindmaps[0].title").value(nullValue()));
+        ResultActions list =
+                saved().andExpect(jsonPath("$.data.mindmaps", hasSize(1)))
+                        .andExpect(jsonPath("$.data.mindmaps[0].sessionId").value(nullValue()))
+                        .andExpect(jsonPath("$.data.mindmaps[0].title").value(nullValue()));
         String response = body(list);
         assertThat(JsonPath.<List<String>>read(response, "$.data.mindmaps[0].nodes[*].label"))
-                .contains(CASTLE, WIEN).doesNotContain(UNIT_KEYWORD);
+                .contains(CASTLE, WIEN)
+                .doesNotContain(UNIT_KEYWORD);
         assertThat(response).doesNotContain(CARD_KEYWORD, TOPIC_KEYWORD, UNIT_KEYWORD, UNIT_TEXT);
     }
 
@@ -529,9 +730,15 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
 
         setScope(NodeVisibility.URL_ONLY);
 
-        original(id).andExpect(jsonPath("$.data.sourceAvailable").value(true))
-                .andExpect(jsonPath("$.data.mindmap.nodes[*].label", not(org.hamcrest.Matchers.hasItem(UNIT_KEYWORD))))
-                .andExpect(jsonPath("$.data.highlightedNodeIds").value(containsInAnyOrder(ids(node(CASTLE), node(PRAGUE_EU)))));
+        original(id)
+                .andExpect(jsonPath("$.data.sourceAvailable").value(true))
+                .andExpect(
+                        jsonPath(
+                                "$.data.mindmap.nodes[*].label",
+                                not(org.hamcrest.Matchers.hasItem(UNIT_KEYWORD))))
+                .andExpect(
+                        jsonPath("$.data.highlightedNodeIds")
+                                .value(containsInAnyOrder(ids(node(CASTLE), node(PRAGUE_EU)))));
         expectHighlightsAreGraphNodes(id);
     }
 
@@ -539,8 +746,16 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     @DisplayName("원래 마인드맵: 태그로 고른 저장은 URL만이면 id 로 맞추고, 내용까지 → URL만 뒤에는 세션들의 URL 노드가 강조된다")
     void originalHighlightsTagPick() throws Exception {
         Long urlPick = saveTags("비엔나");
-        original(urlPick).andExpect(jsonPath("$.data.highlightedNodeIds").value(
-                containsInAnyOrder(ids(node(WIEN), node(BELVEDERE), node("https://www.cafecentral.wien/en/")))));
+        original(urlPick)
+                .andExpect(
+                        jsonPath("$.data.highlightedNodeIds")
+                                .value(
+                                        containsInAnyOrder(
+                                                ids(
+                                                        node(WIEN),
+                                                        node(BELVEDERE),
+                                                        node(
+                                                                "https://www.cafecentral.wien/en/")))));
 
         setScope(NodeVisibility.CONTENT);
         analyse(wanderer.prague(), "프라하", CASTLE);
@@ -549,9 +764,17 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
 
         setScope(NodeVisibility.URL_ONLY);
 
-        original(aiPick).andExpect(jsonPath("$.data.sourceAvailable").value(true))
-                .andExpect(jsonPath("$.data.highlightedNodeIds").value(
-                        containsInAnyOrder(ids(node(CASTLE), node(PRAGUE_EU), node(WIEN), node(BELVEDERE)))));
+        original(aiPick)
+                .andExpect(jsonPath("$.data.sourceAvailable").value(true))
+                .andExpect(
+                        jsonPath("$.data.highlightedNodeIds")
+                                .value(
+                                        containsInAnyOrder(
+                                                ids(
+                                                        node(CASTLE),
+                                                        node(PRAGUE_EU),
+                                                        node(WIEN),
+                                                        node(BELVEDERE)))));
         expectHighlightsAreGraphNodes(aiPick);
     }
 
@@ -565,8 +788,12 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
 
         setScope(NodeVisibility.URL_ONLY);
 
-        original(id).andExpect(jsonPath("$.data.highlightedNodeIds").value(
-                containsInAnyOrder(ids(node(CASTLE), node(PRAGUE_EU), wien))));
+        original(id)
+                .andExpect(
+                        jsonPath("$.data.highlightedNodeIds")
+                                .value(
+                                        containsInAnyOrder(
+                                                ids(node(CASTLE), node(PRAGUE_EU), wien))));
     }
 
     @Test
@@ -574,7 +801,9 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     void originalKeepsIdMatch() throws Exception {
         Long id = saveNodes(List.of(node(CASTLE)));
 
-        original(id).andExpect(jsonPath("$.data.highlightedNodeIds").value(contains(ids(node(CASTLE)))));
+        original(id)
+                .andExpect(
+                        jsonPath("$.data.highlightedNodeIds").value(contains(ids(node(CASTLE)))));
     }
 
     @Test
@@ -582,15 +811,23 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     void originalAfterReanalysis() throws Exception {
         setScope(NodeVisibility.CONTENT);
         analyse(wanderer.prague(), "옛", CASTLE);
-        Long id = readLong(save("NODE", List.of(aiNode("옛" + UNIT_KEYWORD)), "MINI_MINDMAP", null), "$.data.bookmarkId");
+        Long id =
+                readLong(
+                        save("NODE", List.of(aiNode("옛" + UNIT_KEYWORD)), "MINI_MINDMAP", null),
+                        "$.data.bookmarkId");
 
         replaceAnalysis(wanderer.prague(), "새", PRAGUE_EU);
 
         Long renewed = aiNode("새" + UNIT_KEYWORD);
-        original(id).andExpect(jsonPath("$.data.sourceAvailable").value(true))
-                .andExpect(jsonPath("$.data.mindmap.nodes[*].label").value(org.hamcrest.Matchers.hasItem("새" + UNIT_KEYWORD)))
+        original(id)
+                .andExpect(jsonPath("$.data.sourceAvailable").value(true))
+                .andExpect(
+                        jsonPath("$.data.mindmap.nodes[*].label")
+                                .value(org.hamcrest.Matchers.hasItem("새" + UNIT_KEYWORD)))
                 .andExpect(jsonPath("$.data.highlightedNodeIds", hasSize(3)))
-                .andExpect(jsonPath("$.data.highlightedNodeIds").value(org.hamcrest.Matchers.hasItem(renewed.intValue())));
+                .andExpect(
+                        jsonPath("$.data.highlightedNodeIds")
+                                .value(org.hamcrest.Matchers.hasItem(renewed.intValue())));
         expectHighlightsAreGraphNodes(id);
     }
 
@@ -601,13 +838,17 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
         analyse(wanderer.prague(), "", CASTLE);
         Long id = saveNodes(List.of(aiNode(UNIT_KEYWORD)));
 
-        jdbc.update("update session_results set mindmap = JSON '{\"nodes\": [], \"edges\": []}' where session_id = ?",
+        jdbc.update(
+                "update session_results set mindmap = JSON '{\"nodes\": [], \"edges\": []}' where session_id = ?",
                 wanderer.prague().getId());
         cardSync.sync(wanderer.prague());
 
-        original(id).andExpect(jsonPath("$.data.sourceAvailable").value(true))
+        original(id)
+                .andExpect(jsonPath("$.data.sourceAvailable").value(true))
                 .andExpect(jsonPath("$.data.highlightedNodeIds", hasSize(2)))
-                .andExpect(jsonPath("$.data.mindmap.nodes[*].sourceUrl").value(org.hamcrest.Matchers.hasItems(CASTLE, PRAGUE_EU)));
+                .andExpect(
+                        jsonPath("$.data.mindmap.nodes[*].sourceUrl")
+                                .value(org.hamcrest.Matchers.hasItems(CASTLE, PRAGUE_EU)));
         expectHighlightsAreGraphNodes(id);
     }
 
@@ -621,7 +862,8 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
 
         editSession(wanderer.prague(), Map.of("isPublic", false));
 
-        original(id).andExpect(jsonPath("$.data.sourceAvailable").value(false))
+        original(id)
+                .andExpect(jsonPath("$.data.sourceAvailable").value(false))
                 .andExpect(jsonPath("$.data.mindmap").value(nullValue()))
                 .andExpect(jsonPath("$.data.highlightedNodeIds", hasSize(0)));
     }
@@ -639,9 +881,11 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("묶음 이름: 앞뒤 공백을 지우고 저장하며 저장 응답에도 온다. 공백뿐이면 null 이다")
     void bundleNameIsTrimmed() throws Exception {
-        saveBundleNamed("  동유럽 자료  ", "프라하").andExpect(status().isCreated())
+        saveBundleNamed("  동유럽 자료  ", "프라하")
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.name").value("동유럽 자료"));
-        saveBundleNamed("   ", "비엔나").andExpect(status().isCreated())
+        saveBundleNamed("   ", "비엔나")
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.name").value(nullValue()));
         saveBundleNamed(null, "야간열차").andExpect(status().isCreated());
 
@@ -678,7 +922,8 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
 
         save("HASHTAG", List.of(prague), "MINI_MINDMAP", "이름")
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "이름은 해시태그 묶음에만 붙일 수 있습니다."));
-        save("HASHTAG", List.of(prague), "MINI_MINDMAP", "  ").andExpect(status().isCreated())
+        save("HASHTAG", List.of(prague), "MINI_MINDMAP", "  ")
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.name").value(nullValue()));
     }
 
@@ -689,7 +934,8 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
         Instant savedAt = rows.findById(id).orElseThrow().getSavedAt();
         Long other = readLong(saveBundleNamed(null, "비엔나"), "$.data.bookmarkId");
 
-        saveBundleNamed("바꾼 이름", "프라하").andExpect(status().isCreated())
+        saveBundleNamed("바꾼 이름", "프라하")
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.bookmarkId").value(id))
                 .andExpect(jsonPath("$.data.name").value("바꾼 이름"));
         rows.flush();
@@ -707,7 +953,8 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     private Map<String, Object> resaveBody(String response, String path) {
         Map<String, Object> item = JsonPath.read(response, path);
         Map<String, Object> body = new HashMap<>();
-        for (String key : List.of("targetType", "targetIds", "saveType", "sourceMindmapId", "name")) {
+        for (String key :
+                List.of("targetType", "targetIds", "saveType", "sourceMindmapId", "name")) {
             body.put(key, item.get(key));
         }
         return body;
@@ -718,16 +965,25 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     void undoCardBookmark() throws Exception {
         Long first = saveCard(wanderer.prague());
         Long other = saveCard(wanderer.vienna());
-        String response = body(saved().andExpect(jsonPath("$.data.mindmaps[1].cardBookmark").value(true)));
+        String response =
+                body(saved().andExpect(jsonPath("$.data.mindmaps[1].cardBookmark").value(true)));
         Number sessionId = JsonPath.read(response, "$.data.mindmaps[1].sessionId");
 
         mvc.perform(delete(BOOKMARKS + "/{id}", first).with(as(me))).andExpect(okEnvelope());
-        Long again = readLong(mvc.perform(patch("/community/mindmaps/{id}/bookmark", sessionId).with(as(me))
-                        .with(json(Map.of("bookmarked", true)))).andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.bookmarkCount").value(1)), "$.data.bookmarkId");
+        Long again =
+                readLong(
+                        mvc.perform(
+                                        patch("/community/mindmaps/{id}/bookmark", sessionId)
+                                                .with(as(me))
+                                                .with(json(Map.of("bookmarked", true))))
+                                .andExpect(okEnvelope())
+                                .andExpect(jsonPath("$.data.bookmarkCount").value(1)),
+                        "$.data.bookmarkId");
 
         assertThat(again).isNotEqualTo(first);
-        saved().andExpect(jsonPath("$.data.mindmaps[*].bookmarkId").value(contains(ids(again, other))));
+        saved().andExpect(
+                        jsonPath("$.data.mindmaps[*].bookmarkId")
+                                .value(contains(ids(again, other))));
     }
 
     @Test
@@ -739,12 +995,23 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
         assertThat(JsonPath.<Boolean>read(response, "$.data.mindmaps[1].cardBookmark")).isFalse();
 
         mvc.perform(delete(BOOKMARKS + "/{id}", first).with(as(me))).andExpect(okEnvelope());
-        Long again = readLong(mvc.perform(post(BOOKMARKS).with(as(me))
-                        .with(json(resaveBody(response, "$.data.mindmaps[1]")))).andExpect(status().isCreated()),
-                "$.data.bookmarkId");
+        Long again =
+                readLong(
+                        mvc.perform(
+                                        post(BOOKMARKS)
+                                                .with(as(me))
+                                                .with(
+                                                        json(
+                                                                resaveBody(
+                                                                        response,
+                                                                        "$.data.mindmaps[1]"))))
+                                .andExpect(status().isCreated()),
+                        "$.data.bookmarkId");
 
         assertThat(again).isNotEqualTo(first);
-        saved().andExpect(jsonPath("$.data.mindmaps[*].bookmarkId").value(contains(ids(again, other))));
+        saved().andExpect(
+                        jsonPath("$.data.mindmaps[*].bookmarkId")
+                                .value(contains(ids(again, other))));
     }
 
     @Test
@@ -755,12 +1022,22 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
         String response = body(mvc.perform(get(BUNDLES).with(as(me))));
 
         mvc.perform(delete(BOOKMARKS + "/{id}", first).with(as(me))).andExpect(okEnvelope());
-        Long again = readLong(mvc.perform(post(BOOKMARKS).with(as(me))
-                        .with(json(resaveBody(response, "$.data.bundles[1]")))).andExpect(status().isCreated()),
-                "$.data.bookmarkId");
+        Long again =
+                readLong(
+                        mvc.perform(
+                                        post(BOOKMARKS)
+                                                .with(as(me))
+                                                .with(
+                                                        json(
+                                                                resaveBody(
+                                                                        response,
+                                                                        "$.data.bundles[1]"))))
+                                .andExpect(status().isCreated()),
+                        "$.data.bookmarkId");
 
         mvc.perform(get(BUNDLES).with(as(me)))
-                .andExpect(jsonPath("$.data.bundles[*].bookmarkId").value(contains(ids(again, other))))
+                .andExpect(
+                        jsonPath("$.data.bundles[*].bookmarkId").value(contains(ids(again, other))))
                 .andExpect(jsonPath("$.data.bundles[0].name").value("동유럽 자료"));
     }
 
@@ -775,15 +1052,28 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
         String response = body(saved());
 
         mvc.perform(delete(BOOKMARKS + "/{id}", pick).with(as(me))).andExpect(okEnvelope());
-        Long newPick = readLong(mvc.perform(post(BOOKMARKS).with(as(me))
-                        .with(json(resaveBody(response, "$.data.mindmaps[0]")))).andExpect(status().isCreated()),
-                "$.data.bookmarkId");
+        Long newPick =
+                readLong(
+                        mvc.perform(
+                                        post(BOOKMARKS)
+                                                .with(as(me))
+                                                .with(
+                                                        json(
+                                                                resaveBody(
+                                                                        response,
+                                                                        "$.data.mindmaps[0]"))))
+                                .andExpect(status().isCreated()),
+                        "$.data.bookmarkId");
         mvc.perform(delete(BOOKMARKS + "/{id}", card).with(as(me))).andExpect(okEnvelope());
         Long newCard = saveCard(wanderer.prague());
 
-        saved().andExpect(jsonPath("$.data.mindmaps[*].bookmarkId").value(contains(ids(newCard, newPick))));
-        assertThat(rows.findById(newCard).orElseThrow().getSnapshot().toString()).doesNotContain(UNIT_KEYWORD, UNIT_TEXT);
-        assertThat(rows.findById(newPick).orElseThrow().getSnapshot().toString()).doesNotContain(UNIT_KEYWORD, UNIT_TEXT);
+        saved().andExpect(
+                        jsonPath("$.data.mindmaps[*].bookmarkId")
+                                .value(contains(ids(newCard, newPick))));
+        assertThat(rows.findById(newCard).orElseThrow().getSnapshot().toString())
+                .doesNotContain(UNIT_KEYWORD, UNIT_TEXT);
+        assertThat(rows.findById(newPick).orElseThrow().getSnapshot().toString())
+                .doesNotContain(UNIT_KEYWORD, UNIT_TEXT);
     }
 
     @Test
@@ -793,18 +1083,35 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
         Long vienna = hashtagId(wanderer.member(), "비엔나");
         Long tags = saveTags("프라하", "비엔나");
         Long bundle = readLong(saveBundleNamed("이름", "프라하", "비엔나"), "$.data.bookmarkId");
-        mvc.perform(patch("/community/me/hashtags/{id}/visibility", vienna).with(as(wanderer.member()))
-                .with(json(Map.of("isPublic", false)))).andExpect(okEnvelope());
+        mvc.perform(
+                        patch("/community/me/hashtags/{id}/visibility", vienna)
+                                .with(as(wanderer.member()))
+                                .with(json(Map.of("isPublic", false))))
+                .andExpect(okEnvelope());
 
-        String minis = body(saved().andExpect(jsonPath("$.data.mindmaps[0].targetIds").value(contains(prague.intValue()))));
-        String bundles = body(mvc.perform(get(BUNDLES).with(as(me)))
-                .andExpect(jsonPath("$.data.bundles[0].targetIds").value(contains(prague.intValue()))));
+        String minis =
+                body(
+                        saved().andExpect(
+                                        jsonPath("$.data.mindmaps[0].targetIds")
+                                                .value(contains(prague.intValue()))));
+        String bundles =
+                body(
+                        mvc.perform(get(BUNDLES).with(as(me)))
+                                .andExpect(
+                                        jsonPath("$.data.bundles[0].targetIds")
+                                                .value(contains(prague.intValue()))));
 
         mvc.perform(delete(BOOKMARKS + "/{id}", tags).with(as(me))).andExpect(okEnvelope());
         mvc.perform(delete(BOOKMARKS + "/{id}", bundle).with(as(me))).andExpect(okEnvelope());
-        mvc.perform(post(BOOKMARKS).with(as(me)).with(json(resaveBody(minis, "$.data.mindmaps[0]"))))
+        mvc.perform(
+                        post(BOOKMARKS)
+                                .with(as(me))
+                                .with(json(resaveBody(minis, "$.data.mindmaps[0]"))))
                 .andExpect(status().isCreated());
-        mvc.perform(post(BOOKMARKS).with(as(me)).with(json(resaveBody(bundles, "$.data.bundles[0]"))))
+        mvc.perform(
+                        post(BOOKMARKS)
+                                .with(as(me))
+                                .with(json(resaveBody(bundles, "$.data.bundles[0]"))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.name").value("이름"));
     }
@@ -814,9 +1121,23 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     void postedMiniDoesNotCountOnCard() throws Exception {
         Long picked = saveNodes(List.of(node(CASTLE), node(PRAGUE_EU)));
 
-        String cards = body(mvc.perform(get("/community/profiles/{id}/mindmaps", wanderer.id()).with(as(me))));
-        List<Number> count = JsonPath.read(cards, "$.data.mindmaps[?(@.mindmapId == " + wanderer.prague().getId() + ")].bookmarkCount");
-        List<Object> bookmarkId = JsonPath.read(cards, "$.data.mindmaps[?(@.mindmapId == " + wanderer.prague().getId() + ")].bookmarkId");
+        String cards =
+                body(
+                        mvc.perform(
+                                get("/community/profiles/{id}/mindmaps", wanderer.id())
+                                        .with(as(me))));
+        List<Number> count =
+                JsonPath.read(
+                        cards,
+                        "$.data.mindmaps[?(@.mindmapId == "
+                                + wanderer.prague().getId()
+                                + ")].bookmarkCount");
+        List<Object> bookmarkId =
+                JsonPath.read(
+                        cards,
+                        "$.data.mindmaps[?(@.mindmapId == "
+                                + wanderer.prague().getId()
+                                + ")].bookmarkId");
         assertThat(count.get(0).intValue()).isZero();
         assertThat(bookmarkId.get(0)).isNull();
 
@@ -850,8 +1171,18 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
             saveNodes(List.of(node(CASTLE), node(WIEN)));
             for (int i = 0; i < 3; i++) {
                 Member author = member("author" + i);
-                BrowsingSession session = session(author, "글 " + i, "2026-04-15T10:00:00", "2026-04-15T11:00:00", 1, false, true,
-                        List.of("태그" + i), List.of(new Source("글", "https://example.com/" + i, "발췌")), "본문");
+                BrowsingSession session =
+                        session(
+                                author,
+                                "글 " + i,
+                                "2026-04-15T10:00:00",
+                                "2026-04-15T11:00:00",
+                                1,
+                                false,
+                                true,
+                                List.of("태그" + i),
+                                List.of(new Source("글", "https://example.com/" + i, "발췌")),
+                                "본문");
                 saveCard(session);
             }
             assertThat(listStatements(8)).isEqualTo(one);

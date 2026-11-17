@@ -27,11 +27,18 @@ public class TagNodeCounts {
         var maps = mindmaps.of(mine);
         Map<String, Set<String>> keywords = new HashMap<>();
         for (var session : mine) {
-            List<String> keys = maps.get(session.getId()).nodes().stream()
-                    .map(node -> HomeGraphBuilder.keyOf(node.keyword())).filter(key -> !key.isEmpty()).toList();
+            List<String> keys =
+                    maps.get(session.getId()).nodes().stream()
+                            .map(node -> HomeGraphBuilder.keyOf(node.keyword()))
+                            .filter(key -> !key.isEmpty())
+                            .toList();
             if (keys.isEmpty()) continue;
-            session.getTags().forEach(tag ->
-                    keywords.computeIfAbsent(CommunityTags.key(tag), key -> new HashSet<>()).addAll(keys));
+            session.getTags()
+                    .forEach(
+                            tag ->
+                                    keywords.computeIfAbsent(
+                                                    CommunityTags.key(tag), key -> new HashSet<>())
+                                            .addAll(keys));
         }
         Map<String, Long> counts = new HashMap<>();
         keywords.forEach((tag, keys) -> counts.put(tag, (long) keys.size()));

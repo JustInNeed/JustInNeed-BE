@@ -23,8 +23,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.ResultActions;
 
 /**
- * 확장 전용 토큰 (웹이 POST /auth/extension-code 로 받은 코드를 확장이 POST /auth/token 으로 교환).
- * 웹과 확장은 refresh 토큰이 따로라 재발급이 서로 영향을 주지 않고, 같은 묶음이라 로그아웃은 함께 된다.
+ * 확장 전용 토큰 (웹이 POST /auth/extension-code 로 받은 코드를 확장이 POST /auth/token 으로 교환). 웹과 확장은 refresh 토큰이
+ * 따로라 재발급이 서로 영향을 주지 않고, 같은 묶음이라 로그아웃은 함께 된다.
  */
 @DisplayName("확장 전용 토큰")
 class ExtensionTokenScenarioTest extends ScenarioTestSupport {
@@ -33,11 +33,9 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
     private static final String INVALID_REFRESH_MESSAGE = "유효하지 않은 리프레시 토큰입니다.";
     private static final String INVALID_LOGIN_CODE_MESSAGE = "로그인 정보가 만료되었어요. 다시 로그인해 주세요.";
 
-    @Autowired
-    private AuthTokenService authTokenService;
+    @Autowired private AuthTokenService authTokenService;
 
-    @Autowired
-    private RefreshTokenRepository refreshTokens;
+    @Autowired private RefreshTokenRepository refreshTokens;
 
     private ResultActions requestCode(String accessToken) throws Exception {
         return mvc.perform(post("/auth/extension-code").with(bearerToken(accessToken)));
@@ -53,7 +51,8 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
 
     private TokenResponse connect(TokenResponse web) throws Exception {
         ResultActions result = exchange(code(web)).andExpect(okEnvelope());
-        return new TokenResponse(read(result, "$.data.accessToken"), read(result, "$.data.refreshToken"));
+        return new TokenResponse(
+                read(result, "$.data.accessToken"), read(result, "$.data.refreshToken"));
     }
 
     private ResultActions refresh(String refreshToken) throws Exception {
@@ -62,12 +61,15 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
 
     private TokenResponse refreshed(TokenResponse tokens) throws Exception {
         ResultActions result = refresh(tokens.refreshToken()).andExpect(okEnvelope());
-        return new TokenResponse(read(result, "$.data.accessToken"), read(result, "$.data.refreshToken"));
+        return new TokenResponse(
+                read(result, "$.data.accessToken"), read(result, "$.data.refreshToken"));
     }
 
     private ResultActions logout(TokenResponse tokens) throws Exception {
-        return mvc.perform(post("/auth/logout").with(bearerToken(tokens.accessToken()))
-                .with(json(Map.of("refreshToken", tokens.refreshToken()))));
+        return mvc.perform(
+                post("/auth/logout")
+                        .with(bearerToken(tokens.accessToken()))
+                        .with(json(Map.of("refreshToken", tokens.refreshToken()))));
     }
 
     @Test
@@ -86,7 +88,8 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
         mvc.perform(get("/members/me").with(bearerToken(extension.accessToken())))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.id").value(me.getId()));
-        mvc.perform(get("/members/me").with(bearerToken(web.accessToken()))).andExpect(okEnvelope());
+        mvc.perform(get("/members/me").with(bearerToken(web.accessToken())))
+                .andExpect(okEnvelope());
     }
 
     @Test
@@ -100,7 +103,8 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
         TokenResponse web3 = refreshed(web2);
         refreshed(extension2);
 
-        refresh(web2.refreshToken()).andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_REFRESH_MESSAGE));
+        refresh(web2.refreshToken())
+                .andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_REFRESH_MESSAGE));
         code(web3);
     }
 
@@ -113,8 +117,10 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
 
         logout(refreshed(web)).andExpect(okEnvelope());
 
-        refresh(extension.refreshToken()).andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_REFRESH_MESSAGE));
-        assertThat(refreshTokens.findAll()).noneMatch(token -> token.getMemberId().equals(me.getId()));
+        refresh(extension.refreshToken())
+                .andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_REFRESH_MESSAGE));
+        assertThat(refreshTokens.findAll())
+                .noneMatch(token -> token.getMemberId().equals(me.getId()));
     }
 
     @Test
@@ -125,7 +131,8 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
 
         logout(extension).andExpect(okEnvelope());
 
-        refresh(web.refreshToken()).andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_REFRESH_MESSAGE));
+        refresh(web.refreshToken())
+                .andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_REFRESH_MESSAGE));
     }
 
     @Test
@@ -133,7 +140,8 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
     void webLogoutBlocksExtensionAccessToken() throws Exception {
         TokenResponse web = authTokenService.issue(member("sprout").getId());
         TokenResponse extension = refreshed(connect(web));
-        mvc.perform(get("/members/me").with(bearerToken(extension.accessToken()))).andExpect(okEnvelope());
+        mvc.perform(get("/members/me").with(bearerToken(extension.accessToken())))
+                .andExpect(okEnvelope());
 
         logout(web).andExpect(okEnvelope());
 
@@ -163,8 +171,10 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
 
         logout(laptop).andExpect(okEnvelope());
 
-        mvc.perform(get("/members/me").with(bearerToken(desktop.accessToken()))).andExpect(okEnvelope());
-        mvc.perform(get("/members/me").with(bearerToken(desktopExtension.accessToken()))).andExpect(okEnvelope());
+        mvc.perform(get("/members/me").with(bearerToken(desktop.accessToken())))
+                .andExpect(okEnvelope());
+        mvc.perform(get("/members/me").with(bearerToken(desktopExtension.accessToken())))
+                .andExpect(okEnvelope());
     }
 
     @Test
@@ -187,7 +197,8 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
         String code = code(authTokenService.issue(member("sprout").getId()));
 
         exchange(code).andExpect(okEnvelope());
-        exchange(code).andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_LOGIN_CODE_MESSAGE));
+        exchange(code)
+                .andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_LOGIN_CODE_MESSAGE));
     }
 
     @Test
@@ -208,7 +219,8 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
 
         logout(connect(web)).andExpect(okEnvelope());
 
-        requestCode(web.accessToken()).andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, LOGIN_EXPIRED_MESSAGE));
+        requestCode(web.accessToken())
+                .andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, LOGIN_EXPIRED_MESSAGE));
     }
 
     @Test
@@ -219,7 +231,8 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
 
         logout(web).andExpect(okEnvelope());
 
-        exchange(code).andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_LOGIN_CODE_MESSAGE));
+        exchange(code)
+                .andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, INVALID_LOGIN_CODE_MESSAGE));
     }
 
     @Test
@@ -229,8 +242,11 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
         TokenResponse web = authTokenService.issue(me.getId());
         TokenResponse extension = connect(web);
 
-        mvc.perform(delete("/settings/account").with(bearerToken(web.accessToken()))
-                .with(json(Map.of("confirmText", "WITHDRAW")))).andExpect(okEnvelope());
+        mvc.perform(
+                        delete("/settings/account")
+                                .with(bearerToken(web.accessToken()))
+                                .with(json(Map.of("confirmText", "WITHDRAW"))))
+                .andExpect(okEnvelope());
 
         refresh(extension.refreshToken()).andExpect(status().isUnauthorized());
         mvc.perform(get("/members/me").with(bearerToken(extension.accessToken())))
@@ -243,7 +259,9 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
         Member me = member(null, SocialProvider.KAKAO, null);
         TokenResponse web = authTokenService.issue(me.getId());
 
-        exchange(code(web)).andExpect(okEnvelope()).andExpect(jsonPath("$.data.needsNickname").value(true));
+        exchange(code(web))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.needsNickname").value(true));
     }
 
     @Test
@@ -252,11 +270,15 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         String oldAccess = jwt.createAccessToken(me.getId());
         String oldRefresh = jwt.createRefreshToken(me.getId());
-        refreshTokens.save(new RefreshToken(me.getId(), TokenHashes.sha256(oldRefresh),
-                LocalDateTime.now().plusDays(1)));
+        refreshTokens.save(
+                new RefreshToken(
+                        me.getId(),
+                        TokenHashes.sha256(oldRefresh),
+                        LocalDateTime.now().plusDays(1)));
 
         mvc.perform(get("/members/me").with(bearerToken(oldAccess))).andExpect(okEnvelope());
-        requestCode(oldAccess).andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, LOGIN_EXPIRED_MESSAGE));
+        requestCode(oldAccess)
+                .andExpect(errorEnvelope(HttpStatus.UNAUTHORIZED, LOGIN_EXPIRED_MESSAGE));
 
         TokenResponse web = refreshed(new TokenResponse(oldAccess, oldRefresh));
         TokenResponse extension = connect(web);
@@ -271,10 +293,14 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         TokenResponse other = authTokenService.issue(me.getId());
         String oldRefresh = jwt.createRefreshToken(me.getId());
-        refreshTokens.save(new RefreshToken(me.getId(), TokenHashes.sha256(oldRefresh),
-                LocalDateTime.now().plusDays(1)));
+        refreshTokens.save(
+                new RefreshToken(
+                        me.getId(),
+                        TokenHashes.sha256(oldRefresh),
+                        LocalDateTime.now().plusDays(1)));
 
-        logout(new TokenResponse(jwt.createAccessToken(me.getId()), oldRefresh)).andExpect(okEnvelope());
+        logout(new TokenResponse(jwt.createAccessToken(me.getId()), oldRefresh))
+                .andExpect(okEnvelope());
 
         refresh(oldRefresh).andExpect(status().isUnauthorized());
         refreshed(other);

@@ -12,6 +12,7 @@ import com.justinneed.community.domain.CommunityProfile;
 import com.justinneed.community.repository.CommunityMemberRepository;
 import com.justinneed.community.repository.CommunityProfileRepository;
 import com.justinneed.community.service.CommunitySharing;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -22,12 +23,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
- * 커뮤니티 검색. 검색어는 앞 # · 앞뒤 공백을 떼고 대소문자 무시 포함 검색한다.
- * SQL 로 후보를 좁히고 비공개 해시태그는 여기서 걸러, 페이지는 실제로 보이는 것만 세어 나눈다.
- * 내 카드 · 나도 결과에 나온다.
+ * 커뮤니티 검색. 검색어는 앞 # · 앞뒤 공백을 떼고 대소문자 무시 포함 검색한다. SQL 로 후보를 좁히고 비공개 해시태그는 여기서 걸러, 페이지는 실제로 보이는 것만 세어
+ * 나눈다. 내 카드 · 나도 결과에 나온다.
  */
 @Service
 @Transactional(readOnly = true)
@@ -44,8 +43,13 @@ public class CommunitySearchService {
     private final CommunityProfileRepository profiles;
     private final CommunitySharing sharing;
 
-    public CommunitySearchService(PublicCardSearch search, CommunityCardRepository cards, CommunityCardReader reader,
-            CommunityMemberRepository members, CommunityProfileRepository profiles, CommunitySharing sharing) {
+    public CommunitySearchService(
+            PublicCardSearch search,
+            CommunityCardRepository cards,
+            CommunityCardReader reader,
+            CommunityMemberRepository members,
+            CommunityProfileRepository profiles,
+            CommunitySharing sharing) {
         this.search = search;
         this.cards = cards;
         this.reader = reader;
@@ -61,7 +65,13 @@ public class CommunitySearchService {
         for (int batch = 0; !found.isFull(); batch++) {
             var hits = search.mindmaps(key, batch, BATCH_SIZE);
             var owners = owners(hits.stream().map(PublicCardSearch.MindmapHit::ownerId).toList());
-            hits.stream().filter(hit -> hit.matchedText() || hasTag(visible(owners, hit.ownerId(), hit.hashtags()), key))
+            hits.stream()
+                    .filter(
+                            hit ->
+                                    hit.matchedText()
+                                            || hasTag(
+                                                    visible(owners, hit.ownerId(), hit.hashtags()),
+                                                    key))
                     .forEach(hit -> found.offer(hit.sessionId()));
             if (hits.size() < BATCH_SIZE) {
                 break;
@@ -79,8 +89,14 @@ public class CommunitySearchService {
         while (true) {
             var hits = search.profileHits(key, after, BATCH_SIZE);
             var owners = owners(hits.stream().map(PublicCardSearch.ProfileHit::ownerId).toList());
-            hits.forEach(hit -> ranking.add(hit.ownerId(), hit.lastActivityAt(), hit.matchedNickname(),
-                    hasTag(visible(owners, hit.ownerId(), hit.hashtags()), key), hit.matchedTitle()));
+            hits.forEach(
+                    hit ->
+                            ranking.add(
+                                    hit.ownerId(),
+                                    hit.lastActivityAt(),
+                                    hit.matchedNickname(),
+                                    hasTag(visible(owners, hit.ownerId(), hit.hashtags()), key),
+                                    hit.matchedTitle()));
             if (hits.size() < BATCH_SIZE) {
                 break;
             }
@@ -98,14 +114,21 @@ public class CommunitySearchService {
         for (Member member : members.findActiveByIdIn(ids)) {
             nicknames.put(member.getId(), member.getNickname());
         }
-        var rows = cards.findByOwnerIdInOrderBySessionIdDesc(ids).stream()
-                .collect(Collectors.groupingBy(CommunityCardRow::getOwnerId));
+        var rows =
+                cards.findByOwnerIdInOrderBySessionIdDesc(ids).stream()
+                        .collect(Collectors.groupingBy(CommunityCardRow::getOwnerId));
         var owners = owners(ids);
-        return ids.stream().map(id -> {
-            var ownerCards = rows.getOrDefault(id, List.of()).stream()
-                    .map(row -> visible(owners, id, row.getHashtags())).toList();
-            return new ProfileItem(id, nicknames.get(id), topTags(ownerCards), ownerCards.size());
-        }).toList();
+        return ids.stream()
+                .map(
+                        id -> {
+                            var ownerCards =
+                                    rows.getOrDefault(id, List.of()).stream()
+                                            .map(row -> visible(owners, id, row.getHashtags()))
+                                            .toList();
+                            return new ProfileItem(
+                                    id, nicknames.get(id), topTags(ownerCards), ownerCards.size());
+                        })
+                .toList();
     }
 
     /** 검색어가 든 태그와 그 태그를 단 공개 카드 수. 많은 순 → 이름 순. */
@@ -117,8 +140,12 @@ public class CommunitySearchService {
         var hits = search.tagged(List.of(key), null);
         var owners = owners(hits.stream().map(PublicCardSearch.TaggedCard::ownerId).toList());
         var tally = new TagTally();
-        hits.forEach(hit -> tally.add(visible(owners, hit.ownerId(), hit.hashtags()).stream()
-                .filter(tag -> CommunityTags.key(tag).contains(key)).toList()));
+        hits.forEach(
+                hit ->
+                        tally.add(
+                                visible(owners, hit.ownerId(), hit.hashtags()).stream()
+                                        .filter(tag -> CommunityTags.key(tag).contains(key))
+                                        .toList()));
         return new Hashtags(tally.top(limit));
     }
 
@@ -136,8 +163,10 @@ public class CommunitySearchService {
                 .collect(Collectors.toMap(CommunityProfile::getUserId, Function.identity()));
     }
 
-    private List<String> visible(Map<Long, CommunityProfile> owners, Long ownerId, List<String> tags) {
-        return sharing.visibleTags(owners.getOrDefault(ownerId, new CommunityProfile(ownerId)), tags);
+    private List<String> visible(
+            Map<Long, CommunityProfile> owners, Long ownerId, List<String> tags) {
+        return sharing.visibleTags(
+                owners.getOrDefault(ownerId, new CommunityProfile(ownerId)), tags);
     }
 
     private static boolean hasTag(List<String> tags, String key) {
@@ -182,10 +211,15 @@ public class CommunitySearchService {
         }
     }
 
-    public record ProfileItem(Long userId, String nickname, List<String> hashtags, long mindmapCount) { }
-    public record TagCount(String tag, long count) { }
-    public record Profiles(List<ProfileItem> profiles, boolean hasNext) { }
+    public record ProfileItem(
+            Long userId, String nickname, List<String> hashtags, long mindmapCount) {}
+
+    public record TagCount(String tag, long count) {}
+
+    public record Profiles(List<ProfileItem> profiles, boolean hasNext) {}
+
     @Schema(name = "CommunitySearchServiceMindmaps")
-    public record Mindmaps(List<CommunityCard> mindmaps, boolean hasNext) { }
-    public record Hashtags(List<TagCount> hashtags) { }
+    public record Mindmaps(List<CommunityCard> mindmaps, boolean hasNext) {}
+
+    public record Hashtags(List<TagCount> hashtags) {}
 }

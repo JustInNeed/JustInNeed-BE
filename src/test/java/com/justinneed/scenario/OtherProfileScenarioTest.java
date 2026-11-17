@@ -38,8 +38,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.ResultActions;
 
 /**
- * 다른 사용자 프로필 (/profile/{id}). FE: ProfileView.tsx (isMine=false), 목 otherProfile("wanderlust").
- * 시드 wanderer: 공개 세션 프라하 · 비엔나 · 야간열차, 비공개 해시태그 카페 · 슬로우트래블 (ScenarioTestSupport#seedWanderer).
+ * 다른 사용자 프로필 (/profile/{id}). FE: ProfileView.tsx (isMine=false), 목 otherProfile("wanderlust"). 시드
+ * wanderer: 공개 세션 프라하 · 비엔나 · 야간열차, 비공개 해시태그 카페 · 슬로우트래블 (ScenarioTestSupport#seedWanderer).
  */
 @DisplayName("다른 사용자 프로필 화면")
 class OtherProfileScenarioTest extends ScenarioTestSupport {
@@ -62,8 +62,13 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
         wanderer = seedWanderer();
     }
 
-    private ResultActions bookmark(Member actor, String targetType, List<Long> targetIds, String saveType,
-            Long sourceMindmapId) throws Exception {
+    private ResultActions bookmark(
+            Member actor,
+            String targetType,
+            List<Long> targetIds,
+            String saveType,
+            Long sourceMindmapId)
+            throws Exception {
         Map<String, Object> body = new HashMap<>();
         body.put("targetType", targetType);
         body.put("targetIds", targetIds);
@@ -72,28 +77,46 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
         return mvc.perform(post("/community/bookmarks").with(as(actor)).with(json(body)));
     }
 
-    private ResultActions explore(Member actor, String targetType, Long targetId, boolean exploring) throws Exception {
-        return mvc.perform(patch("/community/exploring").with(as(actor))
-                .with(json(Map.of("targetType", targetType, "targetId", targetId, "exploring", exploring))));
+    private ResultActions explore(Member actor, String targetType, Long targetId, boolean exploring)
+            throws Exception {
+        return mvc.perform(
+                patch("/community/exploring")
+                        .with(as(actor))
+                        .with(
+                                json(
+                                        Map.of(
+                                                "targetType",
+                                                targetType,
+                                                "targetId",
+                                                targetId,
+                                                "exploring",
+                                                exploring))));
     }
 
     private void showContent() throws Exception {
-        mvc.perform(patch("/community/me/visibility").with(as(wanderer.member())).with(json(Map.of("visibility", "CONTENT"))))
+        mvc.perform(
+                        patch("/community/me/visibility")
+                                .with(as(wanderer.member()))
+                                .with(json(Map.of("visibility", "CONTENT"))))
                 .andExpect(okEnvelope());
     }
 
     @Test
-    @DisplayName("프로필을 열면 비공개 해시태그(카페 · 슬로우트래블)를 뺀 상위 5개 · 대표 해시태그와, 태그가 섞인 세션을 포함한 노드 수가 온다 (COM-1-2, COM-3-2~3-4)")
+    @DisplayName(
+            "프로필을 열면 비공개 해시태그(카페 · 슬로우트래블)를 뺀 상위 5개 · 대표 해시태그와, 태그가 섞인 세션을 포함한 노드 수가 온다 (COM-1-2, COM-3-2~3-4)")
     void profileHidesPrivateHashtags() throws Exception {
         mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me)))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.userId").value(wanderer.id()))
                 .andExpect(jsonPath("$.data.nickname").value("wanderer"))
                 .andExpect(jsonPath("$.data.totalNodeCount").value(7))
-                .andExpect(jsonPath("$.data.topHashtags[*].name").value(contains("프라하", "비엔나", "야간열차", "체코", "카를교")))
+                .andExpect(
+                        jsonPath("$.data.topHashtags[*].name")
+                                .value(contains("프라하", "비엔나", "야간열차", "체코", "카를교")))
                 .andExpect(jsonPath("$.data.topHashtags[0].nodeCount").value(4))
                 .andExpect(jsonPath("$.data.topHashtags[1].nodeCount").value(3))
-                .andExpect(jsonPath("$.data.interests").value(contains("프라하", "비엔나", "야간열차", "카페투어")))
+                .andExpect(
+                        jsonPath("$.data.interests").value(contains("프라하", "비엔나", "야간열차", "카페투어")))
                 .andExpect(jsonPath("$.data.sharedSessionCount").value(4))
                 .andExpect(jsonPath("$.data.pinnedSessions").doesNotExist())
                 .andExpect(jsonPath("$.data.likeCount").value(0))
@@ -108,10 +131,15 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.mindmapId").value(wanderer.id()))
                 .andExpect(jsonPath("$.data.ownerId").value(wanderer.id()))
                 .andExpect(jsonPath("$.data.nickname").value("wanderer"))
-                .andExpect(jsonPath("$.data.hashtags[*].name").value(containsInAnyOrder(
-                        "야간열차", "프라하", "비엔나", "카를교", "체코", "카페투어")))
+                .andExpect(
+                        jsonPath("$.data.hashtags[*].name")
+                                .value(
+                                        containsInAnyOrder(
+                                                "야간열차", "프라하", "비엔나", "카를교", "체코", "카페투어")))
                 .andExpect(jsonPath("$.data.nodes", hasSize(7)))
-                .andExpect(jsonPath("$.data.nodes[*].sourceUrl").value(hasItems(CAFE_URL, PRAGUE_CASTLE)))
+                .andExpect(
+                        jsonPath("$.data.nodes[*].sourceUrl")
+                                .value(hasItems(CAFE_URL, PRAGUE_CASTLE)))
                 .andExpect(jsonPath("$.data.edges", hasSize(13)))
                 .andExpect(jsonPath("$.data.edges[*].from", everyItem(startsWith("tag:"))))
                 .andExpect(jsonPath("$.data.edges[*].to", everyItem(startsWith("node:"))))
@@ -124,11 +152,22 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
         Long vienna = hashtagId(wanderer.member(), "비엔나");
         Long cafe = hashtagId(wanderer.member(), "카페");
 
-        mvc.perform(get("/community/profiles/{id}/mindmap", wanderer.id()).param("hashtagId", vienna.toString()).with(as(me)))
+        mvc.perform(
+                        get("/community/profiles/{id}/mindmap", wanderer.id())
+                                .param("hashtagId", vienna.toString())
+                                .with(as(me)))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.nodes[*].sourceUrl").value(containsInAnyOrder(
-                        "https://www.wien.info/en", "https://www.belvedere.at/en", CAFE_URL)));
-        mvc.perform(get("/community/profiles/{id}/mindmap", wanderer.id()).param("hashtagId", cafe.toString()).with(as(me)))
+                .andExpect(
+                        jsonPath("$.data.nodes[*].sourceUrl")
+                                .value(
+                                        containsInAnyOrder(
+                                                "https://www.wien.info/en",
+                                                "https://www.belvedere.at/en",
+                                                CAFE_URL)));
+        mvc.perform(
+                        get("/community/profiles/{id}/mindmap", wanderer.id())
+                                .param("hashtagId", cafe.toString())
+                                .with(as(me)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false));
     }
@@ -138,14 +177,21 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     void nodesByHashtag() throws Exception {
         mvc.perform(get("/community/profiles/{id}/nodes", wanderer.id()).with(as(me)))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data[*].hashtag").value(contains("야간열차", "프라하", "비엔나", "카를교", "체코")))
-                .andExpect(jsonPath("$.data[?(@.hashtag == '체코')].sessions[0].urls[0]").value(contains(PRAGUE_CASTLE)))
-                .andExpect(jsonPath("$.data[?(@.hashtag == '비엔나')].sessions[*].urls[*]").value(hasItem(CAFE_URL)))
+                .andExpect(
+                        jsonPath("$.data[*].hashtag")
+                                .value(contains("야간열차", "프라하", "비엔나", "카를교", "체코")))
+                .andExpect(
+                        jsonPath("$.data[?(@.hashtag == '체코')].sessions[0].urls[0]")
+                                .value(contains(PRAGUE_CASTLE)))
+                .andExpect(
+                        jsonPath("$.data[?(@.hashtag == '비엔나')].sessions[*].urls[*]")
+                                .value(hasItem(CAFE_URL)))
                 .andExpect(jsonPath("$.data[*].sessions[*].tags[*]").value(not(hasItem("카페"))));
     }
 
     @Test
-    @DisplayName("노드 공개 범위가 URL_ONLY(기본)면 원문 URL 만 보인다 (CONTENT 는 CommunityGraphSourceScenarioTest)")
+    @DisplayName(
+            "노드 공개 범위가 URL_ONLY(기본)면 원문 URL 만 보인다 (CONTENT 는 CommunityGraphSourceScenarioTest)")
     void nodeContentFollowsVisibilityScope() throws Exception {
         String castle = "$.data.nodes[?(@.sourceUrl == '" + PRAGUE_CASTLE + "')]";
         mvc.perform(get("/community/profiles/{id}/mindmap", wanderer.id()).with(as(me)))
@@ -159,7 +205,9 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     void interestsHideHiddenForVisitors() throws Exception {
         mvc.perform(get("/community/profiles/{id}/interests", wanderer.id()).with(as(me)))
                 .andExpect(jsonPath("$.data").value(contains("프라하", "비엔나", "야간열차", "카페투어")));
-        mvc.perform(get("/community/profiles/{id}/interests", wanderer.id()).with(as(wanderer.member())))
+        mvc.perform(
+                        get("/community/profiles/{id}/interests", wanderer.id())
+                                .with(as(wanderer.member())))
                 .andExpect(jsonPath("$.data").value(contains("프라하", "비엔나", "야간열차", "카페투어", "카페")));
     }
 
@@ -168,21 +216,41 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     void sharedSessionsTab() throws Exception {
         mvc.perform(get("/community/profiles/{id}/shared-sessions", wanderer.id()).with(as(me)))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(
-                        ids(wanderer.prague(), wanderer.cafe(), wanderer.nightjet(), wanderer.vienna()))))
-                .andExpect(jsonPath("$.data.sessions[*].isPinned").value(contains(true, true, true, false)))
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(
+                                        contains(
+                                                ids(
+                                                        wanderer.prague(),
+                                                        wanderer.cafe(),
+                                                        wanderer.nightjet(),
+                                                        wanderer.vienna()))))
+                .andExpect(
+                        jsonPath("$.data.sessions[*].isPinned")
+                                .value(contains(true, true, true, false)))
                 .andExpect(jsonPath("$.data.hasNext").value(false))
                 .andExpect(jsonPath("$.data.totalPages").value(1))
                 .andExpect(jsonPath("$.data.sessions[0].tags").value(contains("프라하", "카를교", "체코")))
-                .andExpect(jsonPath("$.data.sessions[0].urls").value(contains(PRAGUE_CASTLE, "https://www.prague.eu/en")))
+                .andExpect(
+                        jsonPath("$.data.sessions[0].urls")
+                                .value(contains(PRAGUE_CASTLE, "https://www.prague.eu/en")))
                 .andExpect(jsonPath("$.data.sessions[0].title").doesNotExist())
                 .andExpect(jsonPath("$.data.sessions[0].markdown").doesNotExist())
                 .andExpect(jsonPath("$.data.sessions[0].sources").doesNotExist());
 
         // 주인은 자기 공유 세션을 태그 · 내용까지 전부 본다
-        mvc.perform(get("/community/profiles/{id}/shared-sessions", wanderer.id()).with(as(wanderer.member())))
-                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(
-                        ids(wanderer.prague(), wanderer.cafe(), wanderer.nightjet(), wanderer.vienna()))))
+        mvc.perform(
+                        get("/community/profiles/{id}/shared-sessions", wanderer.id())
+                                .with(as(wanderer.member())))
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(
+                                        contains(
+                                                ids(
+                                                        wanderer.prague(),
+                                                        wanderer.cafe(),
+                                                        wanderer.nightjet(),
+                                                        wanderer.vienna()))))
                 .andExpect(jsonPath("$.data.sessions[0].title").value("프라하 1박 일정 짜기"))
                 .andExpect(jsonPath("$.data.sessions[1].tags").value(contains("비엔나", "카페")));
     }
@@ -198,11 +266,18 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.ownerId").value(wanderer.id()))
                 .andExpect(jsonPath("$.data.nickname").value("wanderer"))
                 .andExpect(jsonPath("$.data.hashtags").value(contains("프라하", "카를교", "체코")))
-                .andExpect(jsonPath("$.data.urls").value(contains(PRAGUE_CASTLE, "https://www.prague.eu/en")))
+                .andExpect(
+                        jsonPath("$.data.urls")
+                                .value(contains(PRAGUE_CASTLE, "https://www.prague.eu/en")))
                 .andExpect(jsonPath("$.data.title").value(nullValue()))
                 .andExpect(jsonPath("$.data.summary").value(nullValue()))
                 .andExpect(jsonPath("$.data.visibilityScope").value("URL_ONLY"));
-        mvc.perform(get("/community/profiles/{userId}/shared-sessions/{sessionId}", wanderer.id(), prague).with(as(me)))
+        mvc.perform(
+                        get(
+                                        "/community/profiles/{userId}/shared-sessions/{sessionId}",
+                                        wanderer.id(),
+                                        prague)
+                                .with(as(me)))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.id").value(prague))
                 .andExpect(jsonPath("$.data.urls", hasSize(2)));
@@ -222,15 +297,24 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
         mvc.perform(get("/community/sessions/{id}", vienna).with(as(me)))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.sessionId").value(vienna));
-        mvc.perform(get("/community/profiles/{userId}/shared-sessions/{sessionId}", wanderer.id(), vienna).with(as(me)))
+        mvc.perform(
+                        get(
+                                        "/community/profiles/{userId}/shared-sessions/{sessionId}",
+                                        wanderer.id(),
+                                        vienna)
+                                .with(as(me)))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.isPinned").value(false));
 
         BrowsingSession blocked = wanderer.slow();
         mvc.perform(get("/community/sessions/{id}", blocked.getId()).with(as(me)))
                 .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, SESSION_NOT_FOUND));
-        mvc.perform(get("/community/profiles/{userId}/shared-sessions/{sessionId}", wanderer.id(), blocked.getId())
-                        .with(as(me)))
+        mvc.perform(
+                        get(
+                                        "/community/profiles/{userId}/shared-sessions/{sessionId}",
+                                        wanderer.id(),
+                                        blocked.getId())
+                                .with(as(me)))
                 .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, SESSION_NOT_FOUND));
     }
 
@@ -242,7 +326,8 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("프로필 좋아요(COM-4-1): 누르면 수가 오르고 likedByMe=true, 다시 누르면(해제) 내려간다. 같은 요청을 반복해도 한 번만 센다")
+    @DisplayName(
+            "프로필 좋아요(COM-4-1): 누르면 수가 오르고 likedByMe=true, 다시 누르면(해제) 내려간다. 같은 요청을 반복해도 한 번만 센다")
     void profileLikeToggle() throws Exception {
         String like = "/community/profiles/{id}/like";
 
@@ -269,10 +354,16 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("내 프로필에 좋아요하거나 liked 를 빠뜨리면 400")
     void likeValidation() throws Exception {
-        mvc.perform(patch("/community/profiles/{id}/like", me.getId()).with(as(me)).with(json(Map.of("liked", true))))
+        mvc.perform(
+                        patch("/community/profiles/{id}/like", me.getId())
+                                .with(as(me))
+                                .with(json(Map.of("liked", true))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false));
-        mvc.perform(patch("/community/profiles/{id}/like", wanderer.id()).with(as(me)).with(json("{}")))
+        mvc.perform(
+                        patch("/community/profiles/{id}/like", wanderer.id())
+                                .with(as(me))
+                                .with(json("{}")))
                 .andExpect(status().isBadRequest());
     }
 
@@ -289,9 +380,13 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
                     .andExpect(jsonPath("$.data.exploring").value(true))
                     .andExpect(jsonPath("$.data.exploringCount").value(1));
         }
-        explore(foodtrip, "HASHTAG", prague, true).andExpect(jsonPath("$.data.exploringCount").value(2));
-        mvc.perform(get("/community/exploring").param("targetType", "HASHTAG").param("targetId", prague.toString())
-                        .with(as(me)))
+        explore(foodtrip, "HASHTAG", prague, true)
+                .andExpect(jsonPath("$.data.exploringCount").value(2));
+        mvc.perform(
+                        get("/community/exploring")
+                                .param("targetType", "HASHTAG")
+                                .param("targetId", prague.toString())
+                                .with(as(me)))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.exploring").value(true))
                 .andExpect(jsonPath("$.data.exploringCount").value(2));
@@ -299,8 +394,11 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
         explore(me, "HASHTAG", prague, false)
                 .andExpect(jsonPath("$.data.exploring").value(false))
                 .andExpect(jsonPath("$.data.exploringCount").value(1));
-        mvc.perform(get("/community/exploring").param("targetType", "HASHTAG").param("targetId", prague.toString())
-                        .with(as(me)))
+        mvc.perform(
+                        get("/community/exploring")
+                                .param("targetType", "HASHTAG")
+                                .param("targetId", prague.toString())
+                                .with(as(me)))
                 .andExpect(jsonPath("$.data.exploring").value(false))
                 .andExpect(jsonPath("$.data.exploringCount").value(1));
 
@@ -316,22 +414,33 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
         Long cafe = hashtagId(wanderer.member(), "카페");
 
         explore(me, "HASHTAG", cafe, true).andExpect(status().isNotFound());
-        mvc.perform(get("/community/exploring").param("targetType", "HASHTAG").param("targetId", cafe.toString())
-                .with(as(me))).andExpect(status().isNotFound());
+        mvc.perform(
+                        get("/community/exploring")
+                                .param("targetType", "HASHTAG")
+                                .param("targetId", cafe.toString())
+                                .with(as(me)))
+                .andExpect(status().isNotFound());
     }
 
     @Test
-    @DisplayName("해시태그 여러 개를 골라 해시태그 묶음으로 북마크(COM-4-3 · 4-4)하면 201 과 bookmarkId 가 오고, 같은 선택을 또 저장해도 같은 북마크다")
+    @DisplayName(
+            "해시태그 여러 개를 골라 해시태그 묶음으로 북마크(COM-4-3 · 4-4)하면 201 과 bookmarkId 가 오고, 같은 선택을 또 저장해도 같은 북마크다")
     void bookmarkHashtagBundle() throws Exception {
-        List<Long> tags = List.of(hashtagId(wanderer.member(), "프라하"), hashtagId(wanderer.member(), "야간열차"));
+        List<Long> tags =
+                List.of(hashtagId(wanderer.member(), "프라하"), hashtagId(wanderer.member(), "야간열차"));
 
-        Long bookmarkId = readLong(bookmark(me, "HASHTAG", tags, "HASHTAG_BUNDLE", wanderer.id())
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.code").value(201))
-                .andExpect(jsonPath("$.data.bookmarkId").isNumber())
-                .andExpect(jsonPath("$.data.targetIds").value(contains(ids(tags.toArray(Long[]::new)))))
-                .andExpect(jsonPath("$.data.saveType").value("HASHTAG_BUNDLE")), "$.data.bookmarkId");
+        Long bookmarkId =
+                readLong(
+                        bookmark(me, "HASHTAG", tags, "HASHTAG_BUNDLE", wanderer.id())
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.success").value(true))
+                                .andExpect(jsonPath("$.data.code").value(201))
+                                .andExpect(jsonPath("$.data.bookmarkId").isNumber())
+                                .andExpect(
+                                        jsonPath("$.data.targetIds")
+                                                .value(contains(ids(tags.toArray(Long[]::new)))))
+                                .andExpect(jsonPath("$.data.saveType").value("HASHTAG_BUNDLE")),
+                        "$.data.bookmarkId");
 
         bookmark(me, "HASHTAG", tags, "HASHTAG_BUNDLE", wanderer.id())
                 .andExpect(status().isCreated())
@@ -341,8 +450,10 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("노드를 골라 미니 마인드맵으로 북마크하려면 sourceMindmapId(작성자 id)가 맞아야 한다")
     void bookmarkMiniMindmap() throws Exception {
-        List<Long> nodes = List.of(nodeId(me, wanderer.member(), PRAGUE_CASTLE),
-                nodeId(me, wanderer.member(), "https://www.prague.eu/en"));
+        List<Long> nodes =
+                List.of(
+                        nodeId(me, wanderer.member(), PRAGUE_CASTLE),
+                        nodeId(me, wanderer.member(), "https://www.prague.eu/en"));
 
         bookmark(me, "NODE", nodes, "MINI_MINDMAP", wanderer.id())
                 .andExpect(status().isCreated())
@@ -357,8 +468,10 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
         Long prague = hashtagId(wanderer.member(), "프라하");
         Long cafe = hashtagId(wanderer.member(), "카페");
 
-        bookmark(me, "HASHTAG", List.of(cafe), "HASHTAG_BUNDLE", null).andExpect(status().isNotFound());
-        bookmark(me, "HASHTAG", List.of(prague, cafe), "HASHTAG_BUNDLE", null).andExpect(status().isNotFound());
+        bookmark(me, "HASHTAG", List.of(cafe), "HASHTAG_BUNDLE", null)
+                .andExpect(status().isNotFound());
+        bookmark(me, "HASHTAG", List.of(prague, cafe), "HASHTAG_BUNDLE", null)
+                .andExpect(status().isNotFound());
 
         mvc.perform(get("/community/me/bookmarks/hashtag-bundles").with(as(me)))
                 .andExpect(jsonPath("$.data.bundles", hasSize(0)));
@@ -369,20 +482,28 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     void bookmarkSelectionValidation() throws Exception {
         Long prague = hashtagId(wanderer.member(), "프라하");
 
-        bookmark(me, "HASHTAG", List.of(), "HASHTAG_BUNDLE", null).andExpect(status().isBadRequest());
-        bookmark(me, "HASHTAG", List.of(prague, prague), "HASHTAG_BUNDLE", null).andExpect(status().isBadRequest());
+        bookmark(me, "HASHTAG", List.of(), "HASHTAG_BUNDLE", null)
+                .andExpect(status().isBadRequest());
+        bookmark(me, "HASHTAG", List.of(prague, prague), "HASHTAG_BUNDLE", null)
+                .andExpect(status().isBadRequest());
         bookmark(me, "HASHTAG", List.of(prague), null, null).andExpect(status().isBadRequest());
     }
 
     @Test
     @DisplayName("팔로우 버튼: 누르면 팔로잉이 되어 프로필에 보이고, 다시 누르면 풀린다")
     void follow() throws Exception {
-        mvc.perform(patch("/community/profiles/{id}/follow", wanderer.id()).with(as(me)).with(json(Map.of("following", true))))
+        mvc.perform(
+                        patch("/community/profiles/{id}/follow", wanderer.id())
+                                .with(as(me))
+                                .with(json(Map.of("following", true))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.following").value(true));
         mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me)))
                 .andExpect(jsonPath("$.data.following").value(true));
-        mvc.perform(patch("/community/profiles/{id}/follow", wanderer.id()).with(as(me)).with(json(Map.of("following", false))))
+        mvc.perform(
+                        patch("/community/profiles/{id}/follow", wanderer.id())
+                                .with(as(me))
+                                .with(json(Map.of("following", false))))
                 .andExpect(jsonPath("$.data.following").value(false));
         mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me)))
                 .andExpect(jsonPath("$.data.following").value(false));
@@ -404,16 +525,33 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     @DisplayName("비공개 해시태그가 섞인 공유 세션은 그 태그만 빠진 채 세션 탭에 남는다")
     void mixedTagSessionStaysWithoutHiddenTag() throws Exception {
         mvc.perform(get("/community/profiles/{id}/shared-sessions", wanderer.id()).with(as(me)))
-                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(
-                        ids(wanderer.prague(), wanderer.cafe(), wanderer.nightjet(), wanderer.vienna()))))
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(
+                                        contains(
+                                                ids(
+                                                        wanderer.prague(),
+                                                        wanderer.cafe(),
+                                                        wanderer.nightjet(),
+                                                        wanderer.vienna()))))
                 .andExpect(jsonPath("$.data.sessions[1].tags").value(contains("비엔나")));
     }
 
     // ---------- 점검: 트래킹표 11 · A-10 ----------
 
-    private BrowsingSession publicSession(Member owner, String title, List<String> tags, String url) {
-        return session(owner, title, "2026-04-21T10:00:00", "2026-04-21T11:00:00", 1, false, true, tags,
-                List.of(new Source("글", url, "발췌")), "# 본문");
+    private BrowsingSession publicSession(
+            Member owner, String title, List<String> tags, String url) {
+        return session(
+                owner,
+                title,
+                "2026-04-21T10:00:00",
+                "2026-04-21T11:00:00",
+                1,
+                false,
+                true,
+                tags,
+                List.of(new Source("글", url, "발췌")),
+                "# 본문");
     }
 
     private void withdraw(Member member) {
@@ -422,9 +560,13 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     private Long hashtagInGraph(Member owner, String name) throws Exception {
-        String body = mvc.perform(get("/community/profiles/{id}/mindmap", owner.getId()).with(as(me)))
-                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
-        List<Number> found = JsonPath.read(body, "$.data.hashtags[?(@.name == '" + name + "')].hashtagId");
+        String body =
+                mvc.perform(get("/community/profiles/{id}/mindmap", owner.getId()).with(as(me)))
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString(StandardCharsets.UTF_8);
+        List<Number> found =
+                JsonPath.read(body, "$.data.hashtags[?(@.name == '" + name + "')].hashtagId");
         return found.get(0).longValue();
     }
 
@@ -443,9 +585,17 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.nodes[*].sourceUrl").value(not(hasItem(url))))
                 .andExpect(jsonPath("$.data.hashtags[*].name").value(not(hasItem("카페"))));
         mvc.perform(get("/community/profiles/{id}/shared-sessions", wanderer.id()).with(as(me)))
-                .andExpect(jsonPath("$.data.sessions[?(@.id == " + locked.getId() + ")].tags[*]", hasSize(0)));
+                .andExpect(
+                        jsonPath(
+                                "$.data.sessions[?(@.id == " + locked.getId() + ")].tags[*]",
+                                hasSize(0)));
         mvc.perform(get("/community/profiles/{id}/mindmaps", wanderer.id()).with(as(me)))
-                .andExpect(jsonPath("$.data.mindmaps[?(@.mindmapId == " + locked.getId() + ")].hashtags[*]", hasSize(0)));
+                .andExpect(
+                        jsonPath(
+                                "$.data.mindmaps[?(@.mindmapId == "
+                                        + locked.getId()
+                                        + ")].hashtags[*]",
+                                hasSize(0)));
     }
 
     @Test
@@ -464,7 +614,8 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("마인드맵 해시태그 거르기: 상위 해시태그도 걸러진 세션으로 세고, 노드 없는 관심 태그는 빈 그래프다. 남의 · 없는 태그는 404, 숫자가 아니면 400")
+    @DisplayName(
+            "마인드맵 해시태그 거르기: 상위 해시태그도 걸러진 세션으로 세고, 노드 없는 관심 태그는 빈 그래프다. 남의 · 없는 태그는 404, 숫자가 아니면 400")
     void mindmapFilterEdges() throws Exception {
         Long vienna = hashtagId(wanderer.member(), "비엔나");
         Long interestOnly = hashtagInGraph(wanderer.member(), "카페투어");
@@ -475,7 +626,10 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
         mvc.perform(get(path, wanderer.id()).param("hashtagId", vienna.toString()).with(as(me)))
                 .andExpect(jsonPath("$.data.topHashtags[*].name").value(contains("비엔나")))
                 .andExpect(jsonPath("$.data.topHashtags[0].nodeCount").value(3));
-        mvc.perform(get(path, wanderer.id()).param("hashtagId", interestOnly.toString()).with(as(me)))
+        mvc.perform(
+                        get(path, wanderer.id())
+                                .param("hashtagId", interestOnly.toString())
+                                .with(as(me)))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.nodes", hasSize(0)))
                 .andExpect(jsonPath("$.data.hashtags[*].name").value(contains("카페투어")))
@@ -489,7 +643,8 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("주소의 id: 0 · 음수 · 없는 id 는 404 라 FE 가 '프로필을 찾을 수 없어요' 를 띄우고, 숫자가 아니거나 Long 을 넘으면 400 이다")
+    @DisplayName(
+            "주소의 id: 0 · 음수 · 없는 id 는 404 라 FE 가 '프로필을 찾을 수 없어요' 를 띄우고, 숫자가 아니거나 Long 을 넘으면 400 이다")
     void profileIdTypes() throws Exception {
         for (String id : List.of("0", "-1", "999999")) {
             mvc.perform(get("/community/profiles/" + id).with(as(me)))
@@ -499,9 +654,15 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
             mvc.perform(get("/community/profiles/" + id).with(as(me)))
                     .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "요청 형식이 올바르지 않습니다."));
         }
-        mvc.perform(patch("/community/profiles/0/like").with(as(me)).with(json(Map.of("liked", true))))
+        mvc.perform(
+                        patch("/community/profiles/0/like")
+                                .with(as(me))
+                                .with(json(Map.of("liked", true))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다."));
-        mvc.perform(patch("/community/profiles/-1/follow").with(as(me)).with(json(Map.of("following", true))))
+        mvc.perform(
+                        patch("/community/profiles/-1/follow")
+                                .with(as(me))
+                                .with(json(Map.of("following", true))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다."));
     }
 
@@ -518,7 +679,10 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
         for (boolean liked : List.of(true, false)) {
             mvc.perform(patch(like, 999_999).with(as(me)).with(json(Map.of("liked", liked))))
                     .andExpect(status().isNotFound());
-            mvc.perform(patch(like, wanderer.id()).with(as(foodtrip)).with(json(Map.of("liked", liked))))
+            mvc.perform(
+                            patch(like, wanderer.id())
+                                    .with(as(foodtrip))
+                                    .with(json(Map.of("liked", liked))))
                     .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, "요청한 정보를 찾을 수 없습니다."));
         }
         assertThat(likes.existsByActorIdAndProfileId(foodtrip.getId(), wanderer.id())).isTrue();
@@ -528,9 +692,15 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     @DisplayName("프로필 나도 탐색중 수는 카드별 수의 합이고, 탈퇴한 사람의 탐색은 빠진다 (A-10)")
     void profileExploringCountExcludesWithdrawnActors() throws Exception {
         String card = "/community/mindmaps/{id}/exploring";
-        for (var pair : List.of(Map.entry(me, wanderer.prague()), Map.entry(foodtrip, wanderer.prague()),
-                Map.entry(me, wanderer.vienna()))) {
-            mvc.perform(patch(card, pair.getValue().getId()).with(as(pair.getKey())).with(json(Map.of("exploring", true))))
+        for (var pair :
+                List.of(
+                        Map.entry(me, wanderer.prague()),
+                        Map.entry(foodtrip, wanderer.prague()),
+                        Map.entry(me, wanderer.vienna()))) {
+            mvc.perform(
+                            patch(card, pair.getValue().getId())
+                                    .with(as(pair.getKey()))
+                                    .with(json(Map.of("exploring", true))))
                     .andExpect(okEnvelope());
         }
         mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me)))
@@ -543,16 +713,32 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("FE 의 태그 선택 저장: 전체 마인드맵의 id 로 상위 태그와 노드 없는 관심 태그를 묶음 · 미니 마인드맵으로 저장한다 (COM-4-3 · 4-4)")
+    @DisplayName(
+            "FE 의 태그 선택 저장: 전체 마인드맵의 id 로 상위 태그와 노드 없는 관심 태그를 묶음 · 미니 마인드맵으로 저장한다 (COM-4-3 · 4-4)")
     void bookmarkSelectedChips() throws Exception {
-        List<Long> chips = List.of(hashtagInGraph(wanderer.member(), "프라하"), hashtagInGraph(wanderer.member(), "카페투어"));
-        Map<String, Object> bundle = new HashMap<>(Map.of("targetType", "HASHTAG", "targetIds", chips,
-                "saveType", "HASHTAG_BUNDLE", "sourceMindmapId", wanderer.id(), "name", "여행 묶음"));
+        List<Long> chips =
+                List.of(
+                        hashtagInGraph(wanderer.member(), "프라하"),
+                        hashtagInGraph(wanderer.member(), "카페투어"));
+        Map<String, Object> bundle =
+                new HashMap<>(
+                        Map.of(
+                                "targetType",
+                                "HASHTAG",
+                                "targetIds",
+                                chips,
+                                "saveType",
+                                "HASHTAG_BUNDLE",
+                                "sourceMindmapId",
+                                wanderer.id(),
+                                "name",
+                                "여행 묶음"));
 
         mvc.perform(post("/community/bookmarks").with(as(me)).with(json(bundle)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.name").value("여행 묶음"));
-        bookmark(me, "HASHTAG", chips, "MINI_MINDMAP", wanderer.id()).andExpect(status().isCreated());
+        bookmark(me, "HASHTAG", chips, "MINI_MINDMAP", wanderer.id())
+                .andExpect(status().isCreated());
 
         mvc.perform(get("/community/me/bookmarks/hashtag-bundles").with(as(me)))
                 .andExpect(jsonPath("$.data.bundles[0].name").value("여행 묶음"))
@@ -570,9 +756,15 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
         Long cafe = hashtagId(wanderer.member(), "카페");
         Long prague = hashtagId(wanderer.member(), "프라하");
 
-        mvc.perform(patch("/community/profiles/{id}/like", me.getId()).with(as(me)).with(json(Map.of("liked", true))))
+        mvc.perform(
+                        patch("/community/profiles/{id}/like", me.getId())
+                                .with(as(me))
+                                .with(json(Map.of("liked", true))))
                 .andExpect(jsonPath("$.message").value(matchesPattern(korean)));
-        mvc.perform(get("/community/profiles/{id}/mindmap", wanderer.id()).param("hashtagId", cafe.toString()).with(as(me)))
+        mvc.perform(
+                        get("/community/profiles/{id}/mindmap", wanderer.id())
+                                .param("hashtagId", cafe.toString())
+                                .with(as(me)))
                 .andExpect(jsonPath("$.message").value(matchesPattern(korean)));
         bookmark(me, "HASHTAG", List.of(prague, prague), "HASHTAG_BUNDLE", null)
                 .andExpect(jsonPath("$.message").value(matchesPattern(korean)));

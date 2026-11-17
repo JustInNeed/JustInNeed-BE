@@ -4,8 +4,8 @@ import com.justinneed.auth.domain.RefreshToken;
 import com.justinneed.auth.dto.TokenResponse;
 import com.justinneed.auth.jwt.JwtTokenProvider;
 import com.justinneed.auth.jwt.TokenDenylist;
-import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.auth.jwt.TokenHashes;
+import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.auth.repository.RefreshTokenRepository;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
@@ -17,8 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * access/refresh 토큰 발급·재발급·로그아웃을 담당.
- * refresh 토큰은 DB 화이트리스트(refresh_tokens)로 관리하고, access 토큰은 무상태 + (로그아웃 · 탈퇴 시) DB denylist(revoked_access_tokens).
+ * access/refresh 토큰 발급·재발급·로그아웃을 담당. refresh 토큰은 DB 화이트리스트(refresh_tokens)로 관리하고, access 토큰은 무상태 +
+ * (로그아웃 · 탈퇴 시) DB denylist(revoked_access_tokens).
  */
 @Service
 public class AuthTokenService {
@@ -32,8 +32,7 @@ public class AuthTokenService {
             JwtTokenProvider jwtTokenProvider,
             RefreshTokenRepository refreshTokenRepository,
             TokenDenylist accessTokenDenylist,
-            MemberRepository memberRepository
-    ) {
+            MemberRepository memberRepository) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.refreshTokenRepository = refreshTokenRepository;
         this.accessTokenDenylist = accessTokenDenylist;
@@ -90,7 +89,8 @@ public class AuthTokenService {
     @Transactional
     public void logout(String accessToken, String refreshToken) {
         if (accessToken != null && jwtTokenProvider.validate(accessToken)) {
-            accessTokenDenylist.deny(accessToken, jwtTokenProvider.getExpiryEpochSecond(accessToken));
+            accessTokenDenylist.deny(
+                    accessToken, jwtTokenProvider.getExpiryEpochSecond(accessToken));
         }
         if (refreshToken != null && jwtTokenProvider.validate(refreshToken)) {
             String tokenHash = hash(refreshToken);
@@ -108,16 +108,19 @@ public class AuthTokenService {
     @Transactional
     public void revokeAll(Long memberId, String accessToken) {
         if (accessToken != null && jwtTokenProvider.validate(accessToken)) {
-            accessTokenDenylist.deny(accessToken, jwtTokenProvider.getExpiryEpochSecond(accessToken));
+            accessTokenDenylist.deny(
+                    accessToken, jwtTokenProvider.getExpiryEpochSecond(accessToken));
         }
         refreshTokenRepository.deleteByMemberId(memberId);
     }
 
     private void saveRefreshToken(Long memberId, String refreshToken, String groupId) {
-        LocalDateTime expiresAt = Instant.ofEpochSecond(jwtTokenProvider.getExpiryEpochSecond(refreshToken))
-                .atZone(ZoneId.systemDefault())
-                .toLocalDateTime();
-        refreshTokenRepository.save(new RefreshToken(memberId, hash(refreshToken), expiresAt, groupId));
+        LocalDateTime expiresAt =
+                Instant.ofEpochSecond(jwtTokenProvider.getExpiryEpochSecond(refreshToken))
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDateTime();
+        refreshTokenRepository.save(
+                new RefreshToken(memberId, hash(refreshToken), expiresAt, groupId));
     }
 
     // refresh 토큰 원문 대신 SHA-256 해시를 저장/조회 (DB 유출 시 토큰 노출 방지)

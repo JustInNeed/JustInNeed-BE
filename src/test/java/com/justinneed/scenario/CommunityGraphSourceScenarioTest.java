@@ -36,7 +36,8 @@ class CommunityGraphSourceScenarioTest extends ScenarioTestSupport {
 
     private static final String LINK = "https://x.example.com/y";
     private static final String UNIT = LINK + "#pid1";
-    private static final String MINDMAP = """
+    private static final String MINDMAP =
+            """
             {"structureSource": "llm",
              "nodes": [
                {"id": "root:1", "type": "root", "keyword": "로마", "score": 1.0, "childCount": 1},
@@ -49,7 +50,8 @@ class CommunityGraphSourceScenarioTest extends ScenarioTestSupport {
                {"from": "root:1", "to": "https://x.example.com/y#pid1", "type": "related"},
                {"from": "root:1", "to": "bad", "type": "hierarchy"}]}
             """;
-    private static final String SELECTED = """
+    private static final String SELECTED =
+            """
             [{"unitKey": "https://x.example.com/y#pid1", "pageTitle": "글 제목", "pageUrl": "https://x.example.com/y",
               "text": "원문 문단", "score": 0.5, "firstSeenAt": "2026-10-04T09:40:00+00:00"}]
             """;
@@ -66,23 +68,44 @@ class CommunityGraphSourceScenarioTest extends ScenarioTestSupport {
     void seed() {
         owner = member("owner");
         viewer = member("viewer");
-        rome = session(owner, "로마", "2026-04-26T21:00:00", "2026-04-26T22:00:00", 1, false, false,
-                List.of("로마", "비밀"), List.of(new Source("글 제목", LINK, "발췌")), "본문");
+        rome =
+                session(
+                        owner,
+                        "로마",
+                        "2026-04-26T21:00:00",
+                        "2026-04-26T22:00:00",
+                        1,
+                        false,
+                        false,
+                        List.of("로마", "비밀"),
+                        List.of(new Source("글 제목", LINK, "발췌")),
+                        "본문");
     }
 
     private void saveResult(String mindmap, String selected) {
         results.saveAndFlush(new SessionResult(rome.getId(), owner.getId()));
-        jdbc.update("update session_results set mindmap = JSON '" + mindmap + "', selected_units = JSON '" + selected
-                + "' where session_id = ?", rome.getId());
+        jdbc.update(
+                "update session_results set mindmap = JSON '"
+                        + mindmap
+                        + "', selected_units = JSON '"
+                        + selected
+                        + "' where session_id = ?",
+                rome.getId());
     }
 
     private void setPublic() throws Exception {
-        mvc.perform(patch("/sessions/{id}", rome.getId()).with(as(owner)).with(json(Map.of("isPublic", true))))
+        mvc.perform(
+                        patch("/sessions/{id}", rome.getId())
+                                .with(as(owner))
+                                .with(json(Map.of("isPublic", true))))
                 .andExpect(okEnvelope());
     }
 
     private void showContent() throws Exception {
-        mvc.perform(patch("/community/me/visibility").with(as(owner)).with(json(Map.of("visibility", "CONTENT"))))
+        mvc.perform(
+                        patch("/community/me/visibility")
+                                .with(as(owner))
+                                .with(json(Map.of("visibility", "CONTENT"))))
                 .andExpect(okEnvelope());
     }
 
@@ -91,9 +114,13 @@ class CommunityGraphSourceScenarioTest extends ScenarioTestSupport {
     }
 
     private Long nodeId(String keyword) throws Exception {
-        String body = mvc.perform(get(mindmap()).with(as(viewer))).andReturn().getResponse()
-                .getContentAsString(StandardCharsets.UTF_8);
-        List<Number> found = JsonPath.read(body, "$.data.nodes[?(@.label == '" + keyword + "')].nodeId");
+        String body =
+                mvc.perform(get(mindmap()).with(as(viewer)))
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString(StandardCharsets.UTF_8);
+        List<Number> found =
+                JsonPath.read(body, "$.data.nodes[?(@.label == '" + keyword + "')].nodeId");
         return found.get(0).longValue();
     }
 
@@ -123,16 +150,28 @@ class CommunityGraphSourceScenarioTest extends ScenarioTestSupport {
         Long unit = nodeId("입장권");
         mvc.perform(get(mindmap()).with(as(viewer)))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.nodes[*].label").value(containsInAnyOrder("로마", "콜로세움", "입장권")))
-                .andExpect(jsonPath("$.data.nodes[?(@.label == '입장권')].sourceUrl").value(contains(LINK)))
-                .andExpect(jsonPath("$.data.nodes[?(@.label == '입장권')].content").value(contains("원문 문단")))
-                .andExpect(jsonPath("$.data.nodes[*].visibilityScope", everyItem(org.hamcrest.Matchers.is("CONTENT"))))
-                .andExpect(jsonPath("$.data.edges[?(@.from =~ /node:.*/)].from").value(contains(
-                        "node:" + root, "node:" + topic)))
-                .andExpect(jsonPath("$.data.edges[?(@.from =~ /node:.*/)].to").value(contains(
-                        "node:" + topic, "node:" + unit)))
-                .andExpect(jsonPath("$.data.edges[?(@.from =~ /tag:.*/)].to").value(contains(
-                        "node:" + root, "node:" + root)))
+                .andExpect(
+                        jsonPath("$.data.nodes[*].label")
+                                .value(containsInAnyOrder("로마", "콜로세움", "입장권")))
+                .andExpect(
+                        jsonPath("$.data.nodes[?(@.label == '입장권')].sourceUrl")
+                                .value(contains(LINK)))
+                .andExpect(
+                        jsonPath("$.data.nodes[?(@.label == '입장권')].content")
+                                .value(contains("원문 문단")))
+                .andExpect(
+                        jsonPath(
+                                "$.data.nodes[*].visibilityScope",
+                                everyItem(org.hamcrest.Matchers.is("CONTENT"))))
+                .andExpect(
+                        jsonPath("$.data.edges[?(@.from =~ /node:.*/)].from")
+                                .value(contains("node:" + root, "node:" + topic)))
+                .andExpect(
+                        jsonPath("$.data.edges[?(@.from =~ /node:.*/)].to")
+                                .value(contains("node:" + topic, "node:" + unit)))
+                .andExpect(
+                        jsonPath("$.data.edges[?(@.from =~ /tag:.*/)].to")
+                                .value(contains("node:" + root, "node:" + root)))
                 .andExpect(jsonPath("$.data.topHashtags[0].nodeCount").value(3));
         mvc.perform(get("/community/profiles/{id}", owner.getId()).with(as(viewer)))
                 .andExpect(jsonPath("$.data.totalNodeCount").value(3));
@@ -143,23 +182,30 @@ class CommunityGraphSourceScenarioTest extends ScenarioTestSupport {
     void visibilityFlipNeedsNoSync() throws Exception {
         saveResult(MINDMAP, SELECTED);
         setPublic();
-        Long urlNode = readLong(mvc.perform(get(mindmap()).with(as(viewer))), "$.data.nodes[0].nodeId");
+        Long urlNode =
+                readLong(mvc.perform(get(mindmap()).with(as(viewer))), "$.data.nodes[0].nodeId");
 
         showContent();
-        mvc.perform(get(mindmap()).with(as(viewer))).andExpect(jsonPath("$.data.nodes", hasSize(3)));
+        mvc.perform(get(mindmap()).with(as(viewer)))
+                .andExpect(jsonPath("$.data.nodes", hasSize(3)));
 
-        mvc.perform(patch("/community/me/visibility").with(as(owner)).with(json(Map.of("visibility", "URL_ONLY"))))
+        mvc.perform(
+                        patch("/community/me/visibility")
+                                .with(as(owner))
+                                .with(json(Map.of("visibility", "URL_ONLY"))))
                 .andExpect(okEnvelope());
-        assertThat(readLong(mvc.perform(get(mindmap()).with(as(viewer))), "$.data.nodes[0].nodeId")).isEqualTo(urlNode);
+        assertThat(readLong(mvc.perform(get(mindmap()).with(as(viewer))), "$.data.nodes[0].nodeId"))
+                .isEqualTo(urlNode);
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {
-            "[1, 2, 3]",
-            "\"문자열\"",
-            "{\"nodes\": \"노드 아님\", \"edges\": 3}",
-            "{\"nodes\": [null, 3, {\"id\": 5}], \"edges\": [null, {\"from\": 1}]}"
-    })
+    @ValueSource(
+            strings = {
+                "[1, 2, 3]",
+                "\"문자열\"",
+                "{\"nodes\": \"노드 아님\", \"edges\": 3}",
+                "{\"nodes\": [null, 3, {\"id\": 5}], \"edges\": [null, {\"from\": 1}]}"
+            })
     @DisplayName("저장된 AI JSON 모양이 어긋나면 그 세션의 AI 노드만 건너뛴다 (쓰기 · 읽기 모두 500 이 아니다)")
     void malformedMindmapIsSkipped(String malformed) throws Exception {
         saveResult(malformed, "[]");
@@ -171,7 +217,8 @@ class CommunityGraphSourceScenarioTest extends ScenarioTestSupport {
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.nodes", hasSize(0)))
                 .andExpect(jsonPath("$.data.edges", hasSize(0)));
-        mvc.perform(get("/community/profiles/{id}", owner.getId()).with(as(viewer))).andExpect(okEnvelope());
+        mvc.perform(get("/community/profiles/{id}", owner.getId()).with(as(viewer)))
+                .andExpect(okEnvelope());
     }
 
     @Test
@@ -182,17 +229,40 @@ class CommunityGraphSourceScenarioTest extends ScenarioTestSupport {
         showContent();
         Long unit = nodeId("입장권");
 
-        mvc.perform(patch("/community/exploring").with(as(viewer))
-                        .with(json(Map.of("targetType", "NODE", "targetId", unit, "exploring", true))))
+        mvc.perform(
+                        patch("/community/exploring")
+                                .with(as(viewer))
+                                .with(
+                                        json(
+                                                Map.of(
+                                                        "targetType",
+                                                        "NODE",
+                                                        "targetId",
+                                                        unit,
+                                                        "exploring",
+                                                        true))))
                 .andExpect(okEnvelope());
-        mvc.perform(post("/community/bookmarks").with(as(viewer)).with(json(Map.of(
-                        "targetType", "NODE", "targetIds", List.of(unit), "saveType", "MINI_MINDMAP",
-                        "sourceMindmapId", owner.getId()))))
+        mvc.perform(
+                        post("/community/bookmarks")
+                                .with(as(viewer))
+                                .with(
+                                        json(
+                                                Map.of(
+                                                        "targetType",
+                                                        "NODE",
+                                                        "targetIds",
+                                                        List.of(unit),
+                                                        "saveType",
+                                                        "MINI_MINDMAP",
+                                                        "sourceMindmapId",
+                                                        owner.getId()))))
                 .andExpect(status().isCreated());
 
         mvc.perform(get("/community/me/bookmarks/mindmaps").with(as(viewer)))
                 .andExpect(jsonPath("$.data.mindmaps[0].nodes[*].label").value(contains("입장권")))
-                .andExpect(jsonPath("$.data.mindmaps[0].hashtags[*].name").value(containsInAnyOrder("로마", "비밀")))
+                .andExpect(
+                        jsonPath("$.data.mindmaps[0].hashtags[*].name")
+                                .value(containsInAnyOrder("로마", "비밀")))
                 .andExpect(jsonPath("$.data.mindmaps[0].edges", hasSize(2)));
     }
 
@@ -201,18 +271,47 @@ class CommunityGraphSourceScenarioTest extends ScenarioTestSupport {
     void urlNodeIdsKeepWorkingAfterContent() throws Exception {
         saveResult(MINDMAP, SELECTED);
         setPublic();
-        Long urlNode = readLong(mvc.perform(get(mindmap()).with(as(viewer))), "$.data.nodes[0].nodeId");
-        mvc.perform(patch("/community/exploring").with(as(viewer))
-                        .with(json(Map.of("targetType", "NODE", "targetId", urlNode, "exploring", true))))
+        Long urlNode =
+                readLong(mvc.perform(get(mindmap()).with(as(viewer))), "$.data.nodes[0].nodeId");
+        mvc.perform(
+                        patch("/community/exploring")
+                                .with(as(viewer))
+                                .with(
+                                        json(
+                                                Map.of(
+                                                        "targetType",
+                                                        "NODE",
+                                                        "targetId",
+                                                        urlNode,
+                                                        "exploring",
+                                                        true))))
                 .andExpect(okEnvelope());
-        Long bookmark = readLong(mvc.perform(post("/community/bookmarks").with(as(viewer)).with(json(Map.of(
-                "targetType", "NODE", "targetIds", List.of(urlNode), "saveType", "MINI_MINDMAP",
-                "sourceMindmapId", owner.getId())))).andExpect(status().isCreated()), "$.data.bookmarkId");
+        Long bookmark =
+                readLong(
+                        mvc.perform(
+                                        post("/community/bookmarks")
+                                                .with(as(viewer))
+                                                .with(
+                                                        json(
+                                                                Map.of(
+                                                                        "targetType",
+                                                                        "NODE",
+                                                                        "targetIds",
+                                                                        List.of(urlNode),
+                                                                        "saveType",
+                                                                        "MINI_MINDMAP",
+                                                                        "sourceMindmapId",
+                                                                        owner.getId()))))
+                                .andExpect(status().isCreated()),
+                        "$.data.bookmarkId");
 
         showContent();
 
-        mvc.perform(get("/community/exploring").param("targetType", "NODE").param("targetId", urlNode.toString())
-                        .with(as(viewer)))
+        mvc.perform(
+                        get("/community/exploring")
+                                .param("targetType", "NODE")
+                                .param("targetId", urlNode.toString())
+                                .with(as(viewer)))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.exploring").value(true))
                 .andExpect(jsonPath("$.data.exploringCount").value(1));
@@ -220,6 +319,7 @@ class CommunityGraphSourceScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.mindmaps[*].nodes[*].sourceUrl").value(contains(LINK)));
         mvc.perform(get("/community/me/bookmarks/{id}/original", bookmark).with(as(viewer)))
                 .andExpect(jsonPath("$.data.sourceAvailable").value(true))
-                .andExpect(jsonPath("$.data.highlightedNodeIds").value(contains(urlNode.intValue())));
+                .andExpect(
+                        jsonPath("$.data.highlightedNodeIds").value(contains(urlNode.intValue())));
     }
 }

@@ -44,12 +44,11 @@ import org.springframework.transaction.support.TransactionTemplate;
  *   BROKEN 이면 FAILED (AnalysisFailures). 원본이 없어 재분석은 "원본 없음"
  * </pre>
  *
- * 확장은 크롬 밖 30분이면 스스로 정지하므로 살아 있는 세션이 1시간 동안 조용할 일은 없다. final 이 안 온 것 = 브라우저를 끄거나 덮은 경우.
- * 끝난 뒤 늦게 온 청크는 받아만 두고(SessionChunkService) 다시 합치지 않는다.
- * 합친 뒤 저장 전에 수집 제외 URL 의 페이지를 뺀다 (ExcludedPageFilter). 확장이 거르지 못한 것까지 AI 로 가지 않게.
- * 합칠 때 stop 기록이 없으면 끝 시각 = 마지막 기록 시각, 종료 사유 = timeout 으로 채운다. 시작 기록이 없으면(1번 청크 유실) 시작 시각 = 세션 행 값.
- * 합치기가 예외로 실패하면 롤백해 청크를 남기고 횟수를 센다. 정해진 횟수가 차면 FAILED.
- * 세션 행을 잠그고 COLLECTING 인지 다시 보므로 청크 수신과 정리 스케줄러가 겹쳐도 한 번만 합친다.
+ * 확장은 크롬 밖 30분이면 스스로 정지하므로 살아 있는 세션이 1시간 동안 조용할 일은 없다. final 이 안 온 것 = 브라우저를 끄거나 덮은 경우. 끝난 뒤 늦게 온
+ * 청크는 받아만 두고(SessionChunkService) 다시 합치지 않는다. 합친 뒤 저장 전에 수집 제외 URL 의 페이지를 뺀다 (ExcludedPageFilter).
+ * 확장이 거르지 못한 것까지 AI 로 가지 않게. 합칠 때 stop 기록이 없으면 끝 시각 = 마지막 기록 시각, 종료 사유 = timeout 으로 채운다. 시작 기록이
+ * 없으면(1번 청크 유실) 시작 시각 = 세션 행 값. 합치기가 예외로 실패하면 롤백해 청크를 남기고 횟수를 센다. 정해진 횟수가 차면 FAILED. 세션 행을 잠그고
+ * COLLECTING 인지 다시 보므로 청크 수신과 정리 스케줄러가 겹쳐도 한 번만 합친다.
  */
 @Service
 public class ChunkSessionService {
@@ -57,8 +56,8 @@ public class ChunkSessionService {
     public static final String STOP_REASON_TIMEOUT = "timeout";
     private static final ZoneId KST = ZoneId.of(JustInNeedApplication.TIME_ZONE);
     // ChunkAssembler 의 시각 꼴과 같다 (JS toISOString)
-    private static final DateTimeFormatter ISO = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-            .withZone(ZoneOffset.UTC);
+    private static final DateTimeFormatter ISO =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC);
     private static final Logger log = LoggerFactory.getLogger(ChunkSessionService.class);
 
     private final BrowsingSessionRepository sessionRepository;
@@ -71,7 +70,8 @@ public class ChunkSessionService {
     private final ExcludedUrlService excludedUrlService;
     private final TransactionTemplate transactionTemplate;
 
-    public ChunkSessionService(BrowsingSessionRepository sessionRepository,
+    public ChunkSessionService(
+            BrowsingSessionRepository sessionRepository,
             SessionCollectionRepository collectionRepository,
             SessionRawChunkRepository chunkRepository,
             SessionRawPayloadRepository rawPayloadRepository,
@@ -121,10 +121,16 @@ public class ChunkSessionService {
         if (!allArrived(chunkRepository.findHeads(userId, collectorSessionId))) {
             return null;
         }
-        var chunks = chunkRepository.findByUserIdAndCollectorSessionIdOrderByNAsc(userId, collectorSessionId);
+        var chunks =
+                chunkRepository.findByUserIdAndCollectorSessionIdOrderByNAsc(
+                        userId, collectorSessionId);
         var result = ChunkCompleteness.check(chunks);
         if (result.state() == State.BROKEN) {
-            log.warn("[chunk] 세션 {} (수집기 {}) 청크가 맞지 않아 합치지 않음: {}", sessionId, collectorSessionId, result.problems());
+            log.warn(
+                    "[chunk] 세션 {} (수집기 {}) 청크가 맞지 않아 합치지 않음: {}",
+                    sessionId,
+                    collectorSessionId,
+                    result.problems());
             return null;
         }
         if (result.state() == State.WAITING) {
@@ -144,19 +150,32 @@ public class ChunkSessionService {
         if (lastActivity.plus(settings.autoEndAfter()).isAfter(now)) {
             return null;
         }
-        var chunks = chunkRepository.findByUserIdAndCollectorSessionIdOrderByNAsc(
-                session.getUserId(), session.getCollectorSessionId());
+        var chunks =
+                chunkRepository.findByUserIdAndCollectorSessionIdOrderByNAsc(
+                        session.getUserId(), session.getCollectorSessionId());
         var result = ChunkCompleteness.check(chunks);
         if (chunks.isEmpty() || result.state() == State.BROKEN) {
-            log.warn("[chunk] 세션 {} (수집기 {}) 마지막 청크 뒤 {} 동안 조용함 — 합칠 수 없어 FAILED: {} {}",
-                    sessionId, session.getCollectorSessionId(), settings.autoEndAfter(), result.state(), result.problems());
+            log.warn(
+                    "[chunk] 세션 {} (수집기 {}) 마지막 청크 뒤 {} 동안 조용함 — 합칠 수 없어 FAILED: {} {}",
+                    sessionId,
+                    session.getCollectorSessionId(),
+                    settings.autoEndAfter(),
+                    result.state(),
+                    result.problems());
             failures.fail(session);
             return SessionStatus.FAILED;
         }
         if (!result.missing().isEmpty()) {
-            log.warn("[chunk] 세션 {} (수집기 {}) 빈 번호 {} — 받은 만큼 합침", sessionId, session.getCollectorSessionId(), result.missing());
+            log.warn(
+                    "[chunk] 세션 {} (수집기 {}) 빈 번호 {} — 받은 만큼 합침",
+                    sessionId,
+                    session.getCollectorSessionId(),
+                    result.missing());
         } else if (result.state() == State.WAITING) {
-            log.info("[chunk] 세션 {} (수집기 {}) final 없이 온 것까지 합침", sessionId, session.getCollectorSessionId());
+            log.info(
+                    "[chunk] 세션 {} (수집기 {}) final 없이 온 것까지 합침",
+                    sessionId,
+                    session.getCollectorSessionId());
         }
         finish(session, chunks);
         return SessionStatus.READY;
@@ -164,7 +183,9 @@ public class ChunkSessionService {
 
     private BrowsingSession lockCollecting(Long sessionId) {
         BrowsingSession session = sessionRepository.lockById(sessionId).orElse(null);
-        if (session == null || session.isDeleted() || session.getStatus() != SessionStatus.COLLECTING
+        if (session == null
+                || session.isDeleted()
+                || session.getStatus() != SessionStatus.COLLECTING
                 || session.getCollectorSessionId() == null) {
             return null;
         }
@@ -178,29 +199,50 @@ public class ChunkSessionService {
             logRecords.addAll(records(c.getPayload()));
         }
         Map<String, Object> bundle = ChunkAssembler.assemble(logRecords);
-        fillMissingSessionValues(bundle, session, logRecords, chunks.get(chunks.size() - 1).getReceivedAt());
-        int excluded = ExcludedPageFilter.apply(bundle, excludedUrlService.findActiveUrls(session.getUserId()));
+        fillMissingSessionValues(
+                bundle, session, logRecords, chunks.get(chunks.size() - 1).getReceivedAt());
+        int excluded =
+                ExcludedPageFilter.apply(
+                        bundle, excludedUrlService.findActiveUrls(session.getUserId()));
         if (excluded > 0) {
-            log.info("[chunk] 세션 {} (수집기 {}) 수집 제외 URL 페이지 {}개를 뺌", session.getId(), session.getCollectorSessionId(), excluded);
+            log.info(
+                    "[chunk] 세션 {} (수집기 {}) 수집 제외 URL 페이지 {}개를 뺌",
+                    session.getId(),
+                    session.getCollectorSessionId(),
+                    excluded);
         }
         if (!rawPayloadRepository.existsById(session.getId())) {
-            rawPayloadRepository.save(new SessionRawPayload(session.getId(), session.getUserId(), bundle, LocalDateTime.now()));
+            rawPayloadRepository.save(
+                    new SessionRawPayload(
+                            session.getId(), session.getUserId(), bundle, LocalDateTime.now()));
         }
         analysisRequestService.finishCollection(session.getId());
-        log.info("[chunk] 세션 {} (수집기 {}) 청크 {}개를 합쳐 분석 대기로", session.getId(), session.getCollectorSessionId(), chunks.size());
+        log.info(
+                "[chunk] 세션 {} (수집기 {}) 청크 {}개를 합쳐 분석 대기로",
+                session.getId(),
+                session.getCollectorSessionId(),
+                chunks.size());
     }
 
     // 시작 · stop 기록이 없을 때의 값. stop 기록이 없으면 마지막 기록 시각 · timeout (자동 종료), 시작 기록이 없으면 세션 행의 시작 시각
     @SuppressWarnings("unchecked")
-    static void fillMissingSessionValues(Map<String, Object> bundle, BrowsingSession session,
-            List<Map<String, Object>> logRecords, LocalDateTime lastReceivedAt) {
+    static void fillMissingSessionValues(
+            Map<String, Object> bundle,
+            BrowsingSession session,
+            List<Map<String, Object>> logRecords,
+            LocalDateTime lastReceivedAt) {
         if (!(bundle.get("session") instanceof Map<?, ?> raw)) {
             return;
         }
         var s = (Map<String, Object>) raw;
-        String startedAt = s.get("startedAt") instanceof String v ? v
-                : ISO.format(session.getStartedAt().atZone(KST).toInstant());
-        String endedAt = s.get("endedAt") instanceof String v ? v : lastRecordTime(logRecords, lastReceivedAt);
+        String startedAt =
+                s.get("startedAt") instanceof String v
+                        ? v
+                        : ISO.format(session.getStartedAt().atZone(KST).toInstant());
+        String endedAt =
+                s.get("endedAt") instanceof String v
+                        ? v
+                        : lastRecordTime(logRecords, lastReceivedAt);
         if (s.get("endedAt") == null) {
             s.put("stopReason", STOP_REASON_TIMEOUT);
         }
@@ -222,14 +264,18 @@ public class ChunkSessionService {
         }
     }
 
-    private static String lastRecordTime(List<Map<String, Object>> logRecords, LocalDateTime lastReceivedAt) {
+    private static String lastRecordTime(
+            List<Map<String, Object>> logRecords, LocalDateTime lastReceivedAt) {
         long last = Long.MIN_VALUE;
         for (var r : logRecords) {
             if (r.get("ts") instanceof Number ts) {
                 last = Math.max(last, ts.longValue());
             }
         }
-        Instant at = last != Long.MIN_VALUE ? Instant.ofEpochMilli(last) : lastReceivedAt.atZone(KST).toInstant();
+        Instant at =
+                last != Long.MIN_VALUE
+                        ? Instant.ofEpochMilli(last)
+                        : lastReceivedAt.atZone(KST).toInstant();
         return ISO.format(at);
     }
 
@@ -239,7 +285,13 @@ public class ChunkSessionService {
             return;
         }
         int attempts = collectionRepository.getOrCreate(sessionId).increaseMergeAttempts();
-        log.warn("[chunk] 세션 {} 합치기 실패 {}/{}회: {}", sessionId, attempts, settings.mergeMaxAttempts(), e.getMessage(), e);
+        log.warn(
+                "[chunk] 세션 {} 합치기 실패 {}/{}회: {}",
+                sessionId,
+                attempts,
+                settings.mergeMaxAttempts(),
+                e.getMessage(),
+                e);
         if (attempts >= settings.mergeMaxAttempts()) {
             failures.fail(session);
         }
@@ -271,12 +323,18 @@ public class ChunkSessionService {
         return records(payload).stream()
                 .filter(r -> "start".equals(r.get("k")) && r.get("ts") instanceof Number)
                 .findFirst()
-                .map(r -> LocalDateTime.ofInstant(Instant.ofEpochMilli(((Number) r.get("ts")).longValue()), KST))
+                .map(
+                        r ->
+                                LocalDateTime.ofInstant(
+                                        Instant.ofEpochMilli(((Number) r.get("ts")).longValue()),
+                                        KST))
                 .orElse(null);
     }
 
     @SuppressWarnings("unchecked")
     private static List<Map<String, Object>> records(Map<String, Object> payload) {
-        return payload.get("records") instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
+        return payload.get("records") instanceof List<?> l
+                ? (List<Map<String, Object>>) l
+                : List.of();
     }
 }

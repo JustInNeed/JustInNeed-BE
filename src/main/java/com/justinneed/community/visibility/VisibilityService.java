@@ -3,9 +3,9 @@ package com.justinneed.community.visibility;
 import com.justinneed.community.domain.CommunityProfile;
 import com.justinneed.community.domain.NodeVisibility;
 import com.justinneed.community.dto.SharedSessionView;
+import com.justinneed.community.repository.CommunityProfileRepository;
 import com.justinneed.community.service.CommunityProfiles;
 import com.justinneed.community.service.CommunitySharing;
-import com.justinneed.community.repository.CommunityProfileRepository;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -22,7 +22,10 @@ public class VisibilityService {
     private final CommunitySharing sharing;
     private final CommunityProfileRepository repository;
 
-    public VisibilityService(CommunityProfiles profiles, CommunitySharing sharing, CommunityProfileRepository repository) {
+    public VisibilityService(
+            CommunityProfiles profiles,
+            CommunitySharing sharing,
+            CommunityProfileRepository repository) {
         this.profiles = profiles;
         this.sharing = sharing;
         this.repository = repository;
@@ -54,9 +57,12 @@ public class VisibilityService {
             }
         }
         return sessionsByTag.entrySet().stream()
-                .map(entry -> new NodeResponse(labels.get(entry.getKey()), entry.getValue())).toList();
+                .map(entry -> new NodeResponse(labels.get(entry.getKey()), entry.getValue()))
+                .toList();
     }
 
-    public record VisibilityResponse(int code, NodeVisibility visibilityScope, LocalDateTime updatedAt) { }
-    public record NodeResponse(String hashtag, List<SharedSessionView> sessions) { }
+    public record VisibilityResponse(
+            int code, NodeVisibility visibilityScope, LocalDateTime updatedAt) {}
+
+    public record NodeResponse(String hashtag, List<SharedSessionView> sessions) {}
 }

@@ -19,11 +19,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ExcludedUrlServiceTest {
 
-    @Mock
-    private ExcludedUrlRepository repository;
+    @Mock private ExcludedUrlRepository repository;
 
-    @Mock
-    private MemberRepository memberRepository;
+    @Mock private MemberRepository memberRepository;
 
     private ExcludedUrlService service;
 

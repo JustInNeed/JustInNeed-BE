@@ -5,12 +5,16 @@ import com.justinneed.community.repository.CommunityMemberRepository;
 import java.util.Collection;
 import java.util.TreeSet;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.*;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class InteractionLocks {
     private final CommunityMemberRepository members;
-    public InteractionLocks(CommunityMemberRepository members) { this.members = members; }
+
+    public InteractionLocks(CommunityMemberRepository members) {
+        this.members = members;
+    }
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void acquire(Long actorId, Collection<Long> owners) {

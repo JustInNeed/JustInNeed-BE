@@ -28,14 +28,14 @@ import java.util.Set;
  */
 public final class SessionMindmapBuilder {
 
-    private static final Set<String> NODE_TYPES = Set.of(
-            AiMindmapNode.TYPE_ROOT, AiMindmapNode.TYPE_TOPIC, AiMindmapNode.TYPE_UNIT);
+    private static final Set<String> NODE_TYPES =
+            Set.of(AiMindmapNode.TYPE_ROOT, AiMindmapNode.TYPE_TOPIC, AiMindmapNode.TYPE_UNIT);
     private static final Set<String> EDGE_TYPES = Set.of("hierarchy", "related");
 
-    private SessionMindmapBuilder() {
-    }
+    private SessionMindmapBuilder() {}
 
-    public static SessionMindmapResponse build(Object storedMindmap, Object selectedUnits, List<Source> sources) {
+    public static SessionMindmapResponse build(
+            Object storedMindmap, Object selectedUnits, List<Source> sources) {
         if (!(storedMindmap instanceof Map<?, ?> mindmap)) {
             return SessionMindmapResponse.EMPTY;
         }
@@ -43,20 +43,33 @@ public final class SessionMindmapBuilder {
         Map<String, Node> nodes = new LinkedHashMap<>();
         for (Object item : list(mindmap.get("nodes"))) {
             if (item instanceof Map<?, ?> node
-                    && node.get("id") instanceof String id && !id.isBlank()
-                    && node.get("type") instanceof String type && NODE_TYPES.contains(type)
-                    && node.get("keyword") instanceof String keyword && !keyword.isBlank()) {
-                nodes.putIfAbsent(id, new Node(id, type, keyword, number(node.get("score")), childCount(node),
-                        AiMindmapNode.TYPE_UNIT.equals(type) ? citations.get(id) : null));
+                    && node.get("id") instanceof String id
+                    && !id.isBlank()
+                    && node.get("type") instanceof String type
+                    && NODE_TYPES.contains(type)
+                    && node.get("keyword") instanceof String keyword
+                    && !keyword.isBlank()) {
+                nodes.putIfAbsent(
+                        id,
+                        new Node(
+                                id,
+                                type,
+                                keyword,
+                                number(node.get("score")),
+                                childCount(node),
+                                AiMindmapNode.TYPE_UNIT.equals(type) ? citations.get(id) : null));
             }
         }
 
         List<Edge> edges = new ArrayList<>();
         for (Object item : list(mindmap.get("edges"))) {
             if (item instanceof Map<?, ?> edge
-                    && edge.get("from") instanceof String from && nodes.containsKey(from)
-                    && edge.get("to") instanceof String to && nodes.containsKey(to)
-                    && edge.get("type") instanceof String type && EDGE_TYPES.contains(type)) {
+                    && edge.get("from") instanceof String from
+                    && nodes.containsKey(from)
+                    && edge.get("to") instanceof String to
+                    && nodes.containsKey(to)
+                    && edge.get("type") instanceof String type
+                    && EDGE_TYPES.contains(type)) {
                 edges.add(new Edge(from, to, type, Boolean.TRUE.equals(edge.get("primary"))));
             }
         }
@@ -75,12 +88,19 @@ public final class SessionMindmapBuilder {
         for (Object item : list(selectedUnits)) {
             if (item instanceof Map<?, ?> unit
                     && unit.get("unitKey") instanceof String unitKey
-                    && unit.get("pageUrl") instanceof String url && !url.isBlank()) {
-                LocalDateTime visitedAt = visitedAtByLink.containsKey(url)
-                        ? visitedAtByLink.get(url)
-                        : RawLinkVisits.toKst(unit.get("firstSeenAt"));
-                citations.putIfAbsent(unitKey,
-                        new Citation(text(unit.get("pageTitle")), url, text(unit.get("text")), visitedAt));
+                    && unit.get("pageUrl") instanceof String url
+                    && !url.isBlank()) {
+                LocalDateTime visitedAt =
+                        visitedAtByLink.containsKey(url)
+                                ? visitedAtByLink.get(url)
+                                : RawLinkVisits.toKst(unit.get("firstSeenAt"));
+                citations.putIfAbsent(
+                        unitKey,
+                        new Citation(
+                                text(unit.get("pageTitle")),
+                                url,
+                                text(unit.get("text")),
+                                visitedAt));
             }
         }
         return citations;

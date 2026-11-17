@@ -29,8 +29,8 @@ import org.springframework.test.web.servlet.ResultActions;
 import tools.jackson.core.type.TypeReference;
 
 /**
- * GET /sessions/{id}/mindmap: 세션 마인드맵과 유닛 노드 인용. 접근 규칙은 GET /sessions/{id} 와 같다.
- * AI JSON 은 저장된 값이라 형식이 어긋나도 500 없이 그 항목만 건너뛴다.
+ * GET /sessions/{id}/mindmap: 세션 마인드맵과 유닛 노드 인용. 접근 규칙은 GET /sessions/{id} 와 같다. AI JSON 은 저장된 값이라
+ * 형식이 어긋나도 500 없이 그 항목만 건너뛴다.
  */
 @DisplayName("세션 마인드맵")
 class SessionMindmapScenarioTest extends ScenarioTestSupport {
@@ -39,7 +39,8 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
     private static final String LINK = "https://x.example.com/y";
 
     // AI 출력(pipeline/output.py)과 같은 모양
-    private static final String MINDMAP = """
+    private static final String MINDMAP =
+            """
             {"structureSource": "llm", "rootSource": "query", "repairs": [],
              "nodes": [
                {"id": "root:1", "type": "root", "unitRef": null, "mergedFrom": [], "score": 3.9, "keyword": "로마", "childCount": 2},
@@ -53,7 +54,8 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
                {"from": "https://x.example.com/y#pid1", "to": "https://x.example.com/y#pid2", "type": "related"}]}
             """;
 
-    private static final String SELECTED = """
+    private static final String SELECTED =
+            """
             [{"unitKey": "https://x.example.com/y#pid1", "pageId": "https://x.example.com/y", "pid": "pid1",
               "pageTitle": "글 제목", "pageUrl": "https://x.example.com/y", "text": "원문 문단", "score": 3.5,
               "firstSeenAt": "2026-10-04T09:40:00+00:00", "mergedFrom": []}]
@@ -61,11 +63,9 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
 
     private static final LocalDateTime VISITED_AT = LocalDateTime.of(2026, 10, 4, 18, 32, 52);
 
-    @Autowired
-    private SessionResultRepository results;
+    @Autowired private SessionResultRepository results;
 
-    @Autowired
-    private JdbcTemplate jdbc;
+    @Autowired private JdbcTemplate jdbc;
 
     private Member me;
     private BrowsingSession mine;
@@ -73,30 +73,62 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
     @BeforeEach
     void seed() {
         me = member("sprout");
-        mine = session(me, "내 세션", "2026-10-04T18:00:00", "2026-10-04T19:00:00", 1, false, false,
-                List.of("로마"), List.of(new Source("글 제목", LINK, "대표 발췌", VISITED_AT)), "## 본문");
+        mine =
+                session(
+                        me,
+                        "내 세션",
+                        "2026-10-04T18:00:00",
+                        "2026-10-04T19:00:00",
+                        1,
+                        false,
+                        false,
+                        List.of("로마"),
+                        List.of(new Source("글 제목", LINK, "대표 발췌", VISITED_AT)),
+                        "## 본문");
     }
 
     private void saveResult(BrowsingSession session, String mindmap, String selected) {
         SessionResult result = new SessionResult(session.getId(), session.getUserId());
-        result.replace(mindmap == null ? null : objectMapper.readValue(mindmap, new TypeReference<Map<String, Object>>() {
-                }),
-                objectMapper.readValue(selected, new TypeReference<List<Map<String, Object>>>() {
-                }), List.of(), Map.of(), List.of(), List.of(), "global", "C");
+        result.replace(
+                mindmap == null
+                        ? null
+                        : objectMapper.readValue(
+                                mindmap, new TypeReference<Map<String, Object>>() {}),
+                objectMapper.readValue(selected, new TypeReference<List<Map<String, Object>>>() {}),
+                List.of(),
+                Map.of(),
+                List.of(),
+                List.of(),
+                "global",
+                "C");
         results.saveAndFlush(result);
     }
 
-    private ResultActions mindmap(BrowsingSession session, Member viewer)
-            throws Exception {
+    private ResultActions mindmap(BrowsingSession session, Member viewer) throws Exception {
         return mvc.perform(get("/sessions/{id}/mindmap", session.getId()).with(as(viewer)));
     }
 
     @Test
     @DisplayName("다른 사용자의 인용에는 http(s) 링크만 온다: 화면이 href 로 그대로 쓴다. 소유자에게는 그대로다")
     void viewerSeesOnlyWebCitations() throws Exception {
-        BrowsingSession open = session(me, "공개 세션", "2026-10-04T18:00:00", "2026-10-04T19:00:00", 1, false, true,
-                List.of("로마"), List.of(new Source("글 제목", LINK, "대표 발췌", VISITED_AT)), "## 본문");
-        saveResult(open, MINDMAP, SELECTED.replace("\"pageUrl\": \"https://x.example.com/y\"", "\"pageUrl\": \"javascript:alert(1)\""));
+        BrowsingSession open =
+                session(
+                        me,
+                        "공개 세션",
+                        "2026-10-04T18:00:00",
+                        "2026-10-04T19:00:00",
+                        1,
+                        false,
+                        true,
+                        List.of("로마"),
+                        List.of(new Source("글 제목", LINK, "대표 발췌", VISITED_AT)),
+                        "## 본문");
+        saveResult(
+                open,
+                MINDMAP,
+                SELECTED.replace(
+                        "\"pageUrl\": \"https://x.example.com/y\"",
+                        "\"pageUrl\": \"javascript:alert(1)\""));
         cardSync.sync(open);
         CommunityProfile profile = new CommunityProfile(me.getId());
         profile.changeVisibility(NodeVisibility.CONTENT);
@@ -106,9 +138,15 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.nodes[2].keyword").value("입장권"))
                 .andExpect(jsonPath("$.data.nodes[2].citation").value(nullValue()));
-        mindmap(open, me).andExpect(jsonPath("$.data.nodes[2].citation.url").value("javascript:alert(1)"));
-        mvc.perform(get("/community/profiles/{id}/mindmap", me.getId()).with(as(member("visitor2"))))
-                .andExpect(jsonPath("$.data.nodes[?(@.label == '입장권')].sourceUrl", contains(nullValue())));
+        mindmap(open, me)
+                .andExpect(jsonPath("$.data.nodes[2].citation.url").value("javascript:alert(1)"));
+        mvc.perform(
+                        get("/community/profiles/{id}/mindmap", me.getId())
+                                .with(as(member("visitor2"))))
+                .andExpect(
+                        jsonPath(
+                                "$.data.nodes[?(@.label == '입장권')].sourceUrl",
+                                contains(nullValue())));
     }
 
     @Test
@@ -131,7 +169,8 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.nodes[2].citation.title").value("글 제목"))
                 .andExpect(jsonPath("$.data.nodes[2].citation.url").value(LINK))
                 .andExpect(jsonPath("$.data.nodes[2].citation.excerpt").value("원문 문단"))
-                .andExpect(jsonPath("$.data.nodes[2].citation.visitedAt").value("2026-10-04T18:32:52"))
+                .andExpect(
+                        jsonPath("$.data.nodes[2].citation.visitedAt").value("2026-10-04T18:32:52"))
                 // 컷오프에 없는 유닛 노드는 인용이 없고, 점수가 없으면 null
                 .andExpect(jsonPath("$.data.nodes[3].citation").value(nullValue()))
                 .andExpect(jsonPath("$.data.nodes[3].score").value(nullValue()))
@@ -150,19 +189,33 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("출처에 없는 링크의 인용은 유닛을 처음 본 시각(KST)을 쓴다")
     void citationFallsBackToFirstSeenAt() throws Exception {
-        BrowsingSession bare = session(me, "출처 없음", "2026-10-04T18:00:00", "2026-10-04T19:00:00", 1, false, false,
-                List.of(), List.of(), null);
+        BrowsingSession bare =
+                session(
+                        me,
+                        "출처 없음",
+                        "2026-10-04T18:00:00",
+                        "2026-10-04T19:00:00",
+                        1,
+                        false,
+                        false,
+                        List.of(),
+                        List.of(),
+                        null);
         saveResult(bare, MINDMAP, SELECTED);
 
         mindmap(bare, me)
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.nodes[2].citation.visitedAt").value("2026-10-04T18:40:00"));
+                .andExpect(
+                        jsonPath("$.data.nodes[2].citation.visitedAt")
+                                .value("2026-10-04T18:40:00"));
     }
 
     @Test
     @DisplayName("모르는 type · 형식이 깨진 노드와 없는 노드를 가리키는 엣지는 500 없이 건너뛴다")
     void malformedItemsAreSkipped() throws Exception {
-        saveResult(mine, """
+        saveResult(
+                mine,
+                """
                 {"nodes": [
                    "문자열 노드", 7, null,
                    {"id": "root:1", "type": "root", "keyword": "남는 노드", "score": "숫자 아님", "childCount": "많음"},
@@ -182,7 +235,8 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
                    {"from": "root:1", "type": "hierarchy"},
                    {"from": "root:1", "to": "topic:0", "type": "다른 관계"},
                    {"from": "root:1", "to": "topic:0"}]}
-                """, """
+                """,
+                """
                 [{"pageUrl": "https://a"}, {"unitKey": 1, "pageUrl": "https://a"}, {"unitKey": "root:1"},
                  {"unitKey": "topic:0", "pageUrl": "https://a", "pageTitle": "유닛이 아닌 노드", "text": "인용 없음"}]
                 """);
@@ -201,9 +255,12 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("nodes · edges 가 배열이 아니거나 마인드맵이 비어 있어도 빈 그래프다")
     void malformedTopLevelIsEmpty() throws Exception {
-        saveResult(mine, """
+        saveResult(
+                mine,
+                """
                 {"nodes": "없음", "edges": {"a": 1}}
-                """, "[]");
+                """,
+                "[]");
         mindmap(mine, me)
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.nodes", hasSize(0)))
@@ -215,13 +272,17 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
     void wrongColumnShapeIsNot500() throws Exception {
         saveResult(mine, MINDMAP, SELECTED);
 
-        jdbc.update("update session_results set selected_units = JSON '[1, \"x\", null]' where session_id = ?", mine.getId());
+        jdbc.update(
+                "update session_results set selected_units = JSON '[1, \"x\", null]' where session_id = ?",
+                mine.getId());
         mindmap(mine, me)
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.nodes", hasSize(4)))
                 .andExpect(jsonPath("$.data.nodes[2].citation").value(nullValue()));
 
-        jdbc.update("update session_results set mindmap = JSON '[]' where session_id = ?", mine.getId());
+        jdbc.update(
+                "update session_results set mindmap = JSON '[]' where session_id = ?",
+                mine.getId());
         mindmap(mine, me)
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.nodes", hasSize(0)))
@@ -242,16 +303,15 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
     void nullMindmap() throws Exception {
         saveResult(mine, null, "[]");
 
-        mindmap(mine, me)
-                .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.nodes", hasSize(0)));
+        mindmap(mine, me).andExpect(okEnvelope()).andExpect(jsonPath("$.data.nodes", hasSize(0)));
     }
 
     @ParameterizedTest
     @EnumSource(value = SessionStatus.class, names = "COMPLETED", mode = EnumSource.Mode.EXCLUDE)
     @DisplayName("분석이 끝나지 않은 세션은 결과 행이 있어도 소유자에게 빈 그래프다")
     void unfinishedSession(SessionStatus status) throws Exception {
-        BrowsingSession unfinished = sessionWithStatus(me, "진행 중", "2026-10-30T09:00:00", null, status, List.of());
+        BrowsingSession unfinished =
+                sessionWithStatus(me, "진행 중", "2026-10-30T09:00:00", null, status, List.of());
         saveResult(unfinished, MINDMAP, SELECTED);
 
         mindmap(unfinished, me)
@@ -273,8 +333,7 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
 
         mine.delete();
         sessions.saveAndFlush(mine);
-        mindmap(mine, me)
-                .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, "세션을 찾을 수 없습니다."));
+        mindmap(mine, me).andExpect(errorEnvelope(HttpStatus.NOT_FOUND, "세션을 찾을 수 없습니다."));
     }
 
     @Test

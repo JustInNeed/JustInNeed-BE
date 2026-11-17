@@ -24,12 +24,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.TestPropertySource;
 
 /** 마이프로필 조회의 SQL 수가 세션 수와 상관없이 같은지 센다. Hibernate 통계 설정 · DB 는 HomeQueryCountTest 와 같다. */
-@TestPropertySource(properties = {
-        "spring.datasource.url=jdbc:h2:mem:query-count;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;"
-                + "DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1",
-        "spring.jpa.properties.hibernate.generate_statistics=true",
-        "logging.level.org.hibernate.engine.internal.StatisticalLoggingSessionEventListener=WARN"
-})
+@TestPropertySource(
+        properties = {
+            "spring.datasource.url=jdbc:h2:mem:query-count;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;"
+                    + "DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1",
+            "spring.jpa.properties.hibernate.generate_statistics=true",
+            "logging.level.org.hibernate.engine.internal.StatisticalLoggingSessionEventListener=WARN"
+        })
 @DisplayName("마이프로필 조회 쿼리 수")
 class MyProfileQueryCountTest extends ScenarioTestSupport {
 
@@ -38,13 +39,23 @@ class MyProfileQueryCountTest extends ScenarioTestSupport {
     @Autowired private SessionResultRepository results;
 
     @ParameterizedTest
-    @ValueSource(strings = {"/community/me/profile", "/community/me/hashtags", "/community/me/sessions",
-            "/community/me/mindmaps", "/community/me/mindmap", "/community/me/mindmaps/{id}/sessions"})
+    @ValueSource(
+            strings = {
+                "/community/me/profile",
+                "/community/me/hashtags",
+                "/community/me/sessions",
+                "/community/me/mindmaps",
+                "/community/me/mindmap",
+                "/community/me/mindmaps/{id}/sessions"
+            })
     @DisplayName("세션이 1개든 30개든 SQL 수가 같다")
     void queryCountDoesNotGrowWithSessions(String path) throws Exception {
         Member me = member("sprout");
         BrowsingSession first = seedAnalyzedSessions(me, 0, 1);
-        mvc.perform(post("/community/me/pinned-sessions").with(as(me)).with(json(Map.of("sessionId", first.getId()))))
+        mvc.perform(
+                        post("/community/me/pinned-sessions")
+                                .with(as(me))
+                                .with(json(Map.of("sessionId", first.getId()))))
                 .andExpect(status().isCreated());
         String url = path.replace("{id}", first.getId().toString());
         long one = statementsFor(me, url);
@@ -70,14 +81,41 @@ class MyProfileQueryCountTest extends ScenarioTestSupport {
         LocalDateTime base = LocalDateTime.parse("2026-04-01T10:00:00");
         BrowsingSession first = null;
         for (int i = from; i < to; i++) {
-            BrowsingSession session = session(owner, "세션 " + i, base.plusDays(i), base.plusDays(i).plusMinutes(30), 3,
-                    false, true, List.of("로마"), List.of(), "# 세션 " + i);
+            BrowsingSession session =
+                    session(
+                            owner,
+                            "세션 " + i,
+                            base.plusDays(i),
+                            base.plusDays(i).plusMinutes(30),
+                            3,
+                            false,
+                            true,
+                            List.of("로마"),
+                            List.of(),
+                            "# 세션 " + i);
             SessionResult result = new SessionResult(session.getId(), owner.getId());
-            result.replace(Map.of("nodes", List.of(Map.of("id", "root:1", "type", "root", "keyword", "로마 " + i)),
-                    "edges", List.of()), List.of(), List.of(), Map.of(), List.of(), List.of(), "user", "A");
+            result.replace(
+                    Map.of(
+                            "nodes",
+                            List.of(Map.of("id", "root:1", "type", "root", "keyword", "로마 " + i)),
+                            "edges",
+                            List.of()),
+                    List.of(),
+                    List.of(),
+                    Map.of(),
+                    List.of(),
+                    List.of(),
+                    "user",
+                    "A");
             results.saveAndFlush(result);
             // 태그 목록(CommunityTags.owned)은 완료되지 않은 세션도 읽는다
-            sessionWithStatus(owner, "실패 " + i, base.plusDays(i).toString(), null, SessionStatus.FAILED, List.of("로마"));
+            sessionWithStatus(
+                    owner,
+                    "실패 " + i,
+                    base.plusDays(i).toString(),
+                    null,
+                    SessionStatus.FAILED,
+                    List.of("로마"));
             first = first == null ? session : first;
         }
         return first;

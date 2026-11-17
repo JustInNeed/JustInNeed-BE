@@ -31,8 +31,7 @@ public class ExternalIntegrationController {
     @GetMapping
     public ApiResponse<IntegrationStatusResponse> getStatuses(
             @AuthenticationPrincipal Long memberId,
-            @RequestParam(required = false) String provider
-    ) {
+            @RequestParam(required = false) String provider) {
         return ApiResponse.ok(externalIntegrationService.getStatuses(memberId, provider));
     }
 
@@ -45,10 +44,9 @@ public class ExternalIntegrationController {
     public ResponseEntity<ApiResponse<IntegrationEmailRegisterResponse>> registerEmail(
             @AuthenticationPrincipal Long memberId,
             @PathVariable String provider,
-            @Valid @RequestBody IntegrationEmailRegisterRequest request
-    ) {
-        IntegrationEmailRegisterResponse response = externalIntegrationService
-                .registerEmail(memberId, provider, request.email());
+            @Valid @RequestBody IntegrationEmailRegisterRequest request) {
+        IntegrationEmailRegisterResponse response =
+                externalIntegrationService.registerEmail(memberId, provider, request.email());
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response));
     }
 }

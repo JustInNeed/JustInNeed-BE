@@ -40,20 +40,15 @@ class SessionControllerTest {
 
     private static final Long OTHER_USER_ID = Long.MAX_VALUE;
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @Autowired private ObjectMapper objectMapper;
 
-    @Autowired
-    private BrowsingSessionRepository sessionRepository;
+    @Autowired private BrowsingSessionRepository sessionRepository;
 
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
+    @Autowired private JwtTokenProvider jwtTokenProvider;
 
-    @Autowired
-    private MemberRepository memberRepository;
+    @Autowired private MemberRepository memberRepository;
 
     private Long userId;
     private BrowsingSession session;
@@ -63,22 +58,29 @@ class SessionControllerTest {
     void setUp() {
         sessionRepository.deleteAll();
         // 공개 여부를 바꾸면 회원 행을 잠그므로 실제 회원이 있어야 한다
-        userId = memberRepository.save(new Member(SocialProvider.KAKAO, "session-" + System.nanoTime(), null, null)).getId();
+        userId =
+                memberRepository
+                        .save(
+                                new Member(
+                                        SocialProvider.KAKAO,
+                                        "session-" + System.nanoTime(),
+                                        null,
+                                        null))
+                        .getId();
         bearer = "Bearer " + jwtTokenProvider.createAccessToken(userId);
 
         session = new BrowsingSession(userId, "Spring 조사", LocalDateTime.of(2026, 6, 1, 10, 0));
         session.complete(LocalDateTime.of(2026, 6, 1, 10, 30), 3);
         session.update(null, null, false, true, List.of("Spring", "JPA"));
-        session.replaceSources(List.of(new Source("Spring Docs", "https://spring.io", "Spring reference")));
+        session.replaceSources(
+                List.of(new Source("Spring Docs", "https://spring.io", "Spring reference")));
         new Summary(session, "## Spring\n본문");
         sessionRepository.save(session);
     }
 
-
     @Test
     void getSessionsRequiresAuthentication() throws Exception {
-        mockMvc.perform(get("/sessions"))
-                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/sessions")).andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -105,23 +107,32 @@ class SessionControllerTest {
     @Test
     @DisplayName("진행 중 세션은 맨 위, 종료 시각 없는 끝난 세션은 맨 뒤 — 이 DB(H2 기본 NULL 정렬)에서도 운영 Postgres 와 같은 순서")
     void getSessionsOrdersInProgressFirstAndMissingEndedAtLast() throws Exception {
-        BrowsingSession analyzing = new BrowsingSession(userId, "분석 중", LocalDateTime.of(2026, 5, 1, 9, 0));
+        BrowsingSession analyzing =
+                new BrowsingSession(userId, "분석 중", LocalDateTime.of(2026, 5, 1, 9, 0));
         ReflectionTestUtils.setField(analyzing, "status", SessionStatus.ANALYZING);
         sessionRepository.save(analyzing);
-        BrowsingSession failedWithoutEnd = new BrowsingSession(userId, "실패", LocalDateTime.of(2026, 6, 2, 9, 0));
+        BrowsingSession failedWithoutEnd =
+                new BrowsingSession(userId, "실패", LocalDateTime.of(2026, 6, 2, 9, 0));
         ReflectionTestUtils.setField(failedWithoutEnd, "status", SessionStatus.FAILED);
         sessionRepository.save(failedWithoutEnd);
 
         mockMvc.perform(get("/sessions").header(HttpHeaders.AUTHORIZATION, bearer))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.sessions[*].id").value(contains(
-                        analyzing.getId().intValue(), session.getId().intValue(), failedWithoutEnd.getId().intValue())));
+                .andExpect(
+                        jsonPath("$.data.sessions[*].id")
+                                .value(
+                                        contains(
+                                                analyzing.getId().intValue(),
+                                                session.getId().intValue(),
+                                                failedWithoutEnd.getId().intValue())));
     }
 
     @Test
-    @DisplayName("GET /sessions/hashtags 는 /sessions/{id} 가 아니라 해시태그 후보로 매칭되고, 대소문자 무시 중복 없이 목록 순서로 준다")
+    @DisplayName(
+            "GET /sessions/hashtags 는 /sessions/{id} 가 아니라 해시태그 후보로 매칭되고, 대소문자 무시 중복 없이 목록 순서로 준다")
     void getHashtagsReturnsDistinctTagsInListOrder() throws Exception {
-        BrowsingSession newer = new BrowsingSession(userId, "JPA 심화", LocalDateTime.of(2026, 6, 2, 10, 0));
+        BrowsingSession newer =
+                new BrowsingSession(userId, "JPA 심화", LocalDateTime.of(2026, 6, 2, 10, 0));
         newer.complete(LocalDateTime.of(2026, 6, 2, 11, 0), 2);
         newer.update(null, null, false, false, List.of("jpa", "Hibernate"));
         sessionRepository.save(newer);
@@ -134,7 +145,9 @@ class SessionControllerTest {
 
     @Test
     void getSessionReturnsSummaryAndSources() throws Exception {
-        mockMvc.perform(get("/sessions/{id}", session.getId()).header(HttpHeaders.AUTHORIZATION, bearer))
+        mockMvc.perform(
+                        get("/sessions/{id}", session.getId())
+                                .header(HttpHeaders.AUTHORIZATION, bearer))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.summary.markdown").value("## Spring\n본문"))
                 .andExpect(jsonPath("$.data.sources[0].url").value("https://spring.io"));
@@ -142,19 +155,14 @@ class SessionControllerTest {
 
     @Test
     void updateSessionUpdatesEditableFields() throws Exception {
-        SessionUpdateRequest request = new SessionUpdateRequest(
-                "수정된 제목",
-                "수정된 본문",
-                true,
-                false,
-                List.of("Java"),
-                null
-        );
+        SessionUpdateRequest request =
+                new SessionUpdateRequest("수정된 제목", "수정된 본문", true, false, List.of("Java"), null);
 
-        mockMvc.perform(patch("/sessions/{id}", session.getId())
-                        .header(HttpHeaders.AUTHORIZATION, bearer)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(
+                        patch("/sessions/{id}", session.getId())
+                                .header(HttpHeaders.AUTHORIZATION, bearer)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.title").value("수정된 제목"))
                 .andExpect(jsonPath("$.data.isPublic").value(true))
@@ -165,22 +173,28 @@ class SessionControllerTest {
 
     @Test
     void updateSessionRejectsBlankTitle() throws Exception {
-        SessionUpdateRequest request = new SessionUpdateRequest("   ", null, null, null, null, null);
+        SessionUpdateRequest request =
+                new SessionUpdateRequest("   ", null, null, null, null, null);
 
-        mockMvc.perform(patch("/sessions/{id}", session.getId())
-                        .header(HttpHeaders.AUTHORIZATION, bearer)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(
+                        patch("/sessions/{id}", session.getId())
+                                .header(HttpHeaders.AUTHORIZATION, bearer)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false));
     }
 
     @Test
     void deleteSessionSoftDeletes() throws Exception {
-        mockMvc.perform(delete("/sessions/{id}", session.getId()).header(HttpHeaders.AUTHORIZATION, bearer))
+        mockMvc.perform(
+                        delete("/sessions/{id}", session.getId())
+                                .header(HttpHeaders.AUTHORIZATION, bearer))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/sessions/{id}", session.getId()).header(HttpHeaders.AUTHORIZATION, bearer))
+        mockMvc.perform(
+                        get("/sessions/{id}", session.getId())
+                                .header(HttpHeaders.AUTHORIZATION, bearer))
                 .andExpect(status().isNotFound());
     }
 }

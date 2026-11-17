@@ -1,5 +1,6 @@
 package com.justinneed.community.edit;
 
+import com.justinneed.auth.repository.MemberRepository;
 import com.justinneed.community.api.CommunityErrors;
 import com.justinneed.community.card.TagNodeCounts;
 import com.justinneed.community.catalog.CommunityTags;
@@ -12,7 +13,6 @@ import com.justinneed.community.service.CommunityProfiles;
 import com.justinneed.community.unpin.UnpinService;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.repository.BrowsingSessionRepository;
-import com.justinneed.auth.repository.MemberRepository;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,12 +31,26 @@ public class ProfileEditService {
     private final MemberRepository members;
     private final TagNodeCounts nodeCounts;
 
-    public ProfileEditService(CommunityTags tags, CommunityProfiles profiles, HashtagVisibilityService visibility,
-            InterestService interests, InterestDeleteService interestDelete, SharedSessionService pins,
-            UnpinService unpin, BrowsingSessionRepository sessions, MemberRepository members, TagNodeCounts nodeCounts) {
-        this.tags = tags; this.profiles = profiles; this.visibility = visibility;
-        this.interests = interests; this.interestDelete = interestDelete; this.pins = pins;
-        this.unpin = unpin; this.sessions = sessions; this.members = members;
+    public ProfileEditService(
+            CommunityTags tags,
+            CommunityProfiles profiles,
+            HashtagVisibilityService visibility,
+            InterestService interests,
+            InterestDeleteService interestDelete,
+            SharedSessionService pins,
+            UnpinService unpin,
+            BrowsingSessionRepository sessions,
+            MemberRepository members,
+            TagNodeCounts nodeCounts) {
+        this.tags = tags;
+        this.profiles = profiles;
+        this.visibility = visibility;
+        this.interests = interests;
+        this.interestDelete = interestDelete;
+        this.pins = pins;
+        this.unpin = unpin;
+        this.sessions = sessions;
+        this.members = members;
         this.nodeCounts = nodeCounts;
     }
 
@@ -49,67 +63,128 @@ public class ProfileEditService {
     public List<TagView> hashtags(Long userId) {
         var profile = profiles.read(userId);
         var counts = nodeCounts.byTag(userId);
-        return tags.owned(userId).stream().map(t -> new TagView(200, t.getId(), t.getName(),
-                counts.getOrDefault(t.getNormalizedName(), 0L),
-                profile.getHiddenHashtags().stream().noneMatch(h -> h.equalsIgnoreCase(t.getName())))).toList();
+        return tags.owned(userId).stream()
+                .map(
+                        t ->
+                                new TagView(
+                                        200,
+                                        t.getId(),
+                                        t.getName(),
+                                        counts.getOrDefault(t.getNormalizedName(), 0L),
+                                        profile.getHiddenHashtags().stream()
+                                                .noneMatch(h -> h.equalsIgnoreCase(t.getName()))))
+                .toList();
     }
 
     public TagView visibility(Long userId, Long id, boolean isPublic) {
-        var tag = tags.owned(userId).stream().filter(t -> t.getId().equals(id))
-                .findFirst().orElseThrow(CommunityErrors::missing);
+        var tag =
+                tags.owned(userId).stream()
+                        .filter(t -> t.getId().equals(id))
+                        .findFirst()
+                        .orElseThrow(CommunityErrors::missing);
         visibility.update(userId, tag.getName(), isPublic);
-        return new TagView(200, id, tag.getName(), nodeCounts.byTag(userId).getOrDefault(tag.getNormalizedName(), 0L), isPublic);
+        return new TagView(
+                200,
+                id,
+                tag.getName(),
+                nodeCounts.byTag(userId).getOrDefault(tag.getNormalizedName(), 0L),
+                isPublic);
     }
 
     public InterestView addInterest(Long userId, String hashtag) {
         var values = interests.add(userId, hashtag);
-        var tag = tags.owned(userId).stream().filter(t -> t.getName().equalsIgnoreCase(hashtag))
-                .findFirst().orElseThrow();
+        var tag =
+                tags.owned(userId).stream()
+                        .filter(t -> t.getName().equalsIgnoreCase(hashtag))
+                        .findFirst()
+                        .orElseThrow();
         return new InterestView(201, tag.getId(), tag.getName(), values.size());
     }
 
     @Transactional(readOnly = true)
     public List<InterestView> myInterests(Long userId) {
         var values = interests.get(userId, userId);
-        return tags.owned(userId).stream().filter(t -> values.stream().anyMatch(v -> v.equalsIgnoreCase(t.getName())))
-                .map(t -> new InterestView(200, t.getId(), t.getName(), values.size())).toList();
+        return tags.owned(userId).stream()
+                .filter(t -> values.stream().anyMatch(v -> v.equalsIgnoreCase(t.getName())))
+                .map(t -> new InterestView(200, t.getId(), t.getName(), values.size()))
+                .toList();
     }
 
     public DeletedInterest deleteInterest(Long userId, Long id) {
-        var tag = tags.owned(userId).stream().filter(t -> t.getId().equals(id))
-                .findFirst().orElseThrow(CommunityErrors::missing);
+        var tag =
+                tags.owned(userId).stream()
+                        .filter(t -> t.getId().equals(id))
+                        .findFirst()
+                        .orElseThrow(CommunityErrors::missing);
         interestDelete.delete(userId, tag.getName());
         return new DeletedInterest(200, id);
     }
 
     public PinView pin(Long userId, Long id) {
         pins.pin(userId, id);
-        return new PinView(201, id, true, true, profiles.read(userId).getPinnedSessionIds().indexOf(id));
+        return new PinView(
+                201, id, true, true, profiles.read(userId).getPinnedSessionIds().indexOf(id));
     }
+
     public PinView unpin(Long userId, Long id) {
         unpin.unpin(userId, id);
-        return new PinView(200, id, sessions.findById(id).filter(s -> !s.isDeleted())
-                .map(BrowsingSession::isPublicSession).orElse(false), false, null);
+        return new PinView(
+                200,
+                id,
+                sessions.findById(id)
+                        .filter(s -> !s.isDeleted())
+                        .map(BrowsingSession::isPublicSession)
+                        .orElse(false),
+                false,
+                null);
     }
+
     public OrderView reorder(Long userId, List<Long> ids) {
         pins.reorder(userId, ids);
         return new OrderView(200, ids);
     }
+
     @Transactional(readOnly = true)
     public SessionView session(Long viewerId, Long id) {
         var session = sessions.findById(id).orElseThrow(CommunityErrors::missing);
         var view = pins.detail(session.getUserId(), viewerId, id);
-        var member = members.findByIdAndWithdrawnAtIsNull(session.getUserId()).orElseThrow(CommunityErrors::missing);
-        return new SessionView(200, id, view.title(), member.getId(), member.getNickname(),
-                view.tags(), view.urls(), view.markdown(), profiles.read(member.getId()).getVisibility());
+        var member =
+                members.findByIdAndWithdrawnAtIsNull(session.getUserId())
+                        .orElseThrow(CommunityErrors::missing);
+        return new SessionView(
+                200,
+                id,
+                view.title(),
+                member.getId(),
+                member.getNickname(),
+                view.tags(),
+                view.urls(),
+                view.markdown(),
+                profiles.read(member.getId()).getVisibility());
     }
 
-    public record BioView(String bio) { }
-    public record TagView(int code, Long hashtagId, String hashtag, long nodeCount, boolean isPublic) { }
-    public record InterestView(int code, Long interestId, String hashtag, int interestCount) { }
-    public record DeletedInterest(int code, Long interestId) { }
-    public record PinView(int code, Long sessionId, boolean isPublic, boolean isPinned, Integer order) { }
-    public record OrderView(int code, List<Long> sessionIds) { }
-    public record SessionView(int code, Long sessionId, String title, Long ownerId, String nickname,
-            List<String> hashtags, List<String> urls, String summary, NodeVisibility visibilityScope) { }
+    public record BioView(String bio) {}
+
+    public record TagView(
+            int code, Long hashtagId, String hashtag, long nodeCount, boolean isPublic) {}
+
+    public record InterestView(int code, Long interestId, String hashtag, int interestCount) {}
+
+    public record DeletedInterest(int code, Long interestId) {}
+
+    public record PinView(
+            int code, Long sessionId, boolean isPublic, boolean isPinned, Integer order) {}
+
+    public record OrderView(int code, List<Long> sessionIds) {}
+
+    public record SessionView(
+            int code,
+            Long sessionId,
+            String title,
+            Long ownerId,
+            String nickname,
+            List<String> hashtags,
+            List<String> urls,
+            String summary,
+            NodeVisibility visibilityScope) {}
 }

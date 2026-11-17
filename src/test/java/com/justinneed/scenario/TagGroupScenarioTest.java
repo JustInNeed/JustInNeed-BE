@@ -24,9 +24,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 
 /**
- * 세션 목록 화면의 해시태그 그룹 보기 (REC-10-2, REC-7-4, REC-7-5).
- * FE: SessionsView.saveGroup — 만들 때 이름을 앞 3개 태그로 지어 보내고, 수정할 땐 hashtags 만 보낸다. GroupEditor 최대 10개.
- * 시드 그룹은 FE 목 GRAPH_TAG_GROUPS 와 같다.
+ * 세션 목록 화면의 해시태그 그룹 보기 (REC-10-2, REC-7-4, REC-7-5). FE: SessionsView.saveGroup — 만들 때 이름을 앞 3개 태그로
+ * 지어 보내고, 수정할 땐 hashtags 만 보낸다. GroupEditor 최대 10개. 시드 그룹은 FE 목 GRAPH_TAG_GROUPS 와 같다.
  */
 @DisplayName("해시태그 그룹 화면")
 class TagGroupScenarioTest extends ScenarioTestSupport {
@@ -39,8 +38,7 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     private static final String FLIGHT = "유럽 항공권 비교 (인천→로마 IN, 프라하→인천 OUT)";
     private static final String PARIS = "파리 미술관 4곳 비교 (루브르/오르세/오랑주리/퐁피두)";
 
-    @Autowired
-    private TagGroupRepository tagGroups;
+    @Autowired private TagGroupRepository tagGroups;
 
     private TagGroup group(Member owner, List<String> hashtags, int position) {
         return tagGroups.saveAndFlush(new TagGroup(owner.getId(), hashtags, position));
@@ -58,61 +56,122 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data", hasSize(2)))
                 .andExpect(jsonPath("$.data[0].position").value(0))
-                .andExpect(jsonPath("$.data[0].hashtags").value(contains("로마", "파리", "콜로세움", "항공권", "숙소")))
-                .andExpect(jsonPath("$.data[0].sessions[*].title").value(contains(ROME, FLIGHT, PARIS)))
+                .andExpect(
+                        jsonPath("$.data[0].hashtags")
+                                .value(contains("로마", "파리", "콜로세움", "항공권", "숙소")))
+                .andExpect(
+                        jsonPath("$.data[0].sessions[*].title")
+                                .value(contains(ROME, FLIGHT, PARIS)))
                 // 그룹 안 세션도 목록 카드와 같은 필드
                 .andExpect(jsonPath("$.data[0].sessions[0].pageCount").value(18))
-                .andExpect(jsonPath("$.data[0].sessions[0].tags").value(contains("로마", "콜로세움", "바티칸", "먹거리")))
+                .andExpect(
+                        jsonPath("$.data[0].sessions[0].tags")
+                                .value(contains("로마", "콜로세움", "바티칸", "먹거리")))
                 .andExpect(jsonPath("$.data[1].sessions", hasSize(0)));
     }
 
     @Test
-    @DisplayName("그룹 안 세션도 목록과 같은 순서: 진행 중 세션이 맨 위, 나머지는 실패 세션을 포함해 종료 시각 최신순, 종료 시각이 없으면 맨 뒤 — 조회 · 생성 · 수정 · 순서 변경 응답 모두")
+    @DisplayName(
+            "그룹 안 세션도 목록과 같은 순서: 진행 중 세션이 맨 위, 나머지는 실패 세션을 포함해 종료 시각 최신순, 종료 시각이 없으면 맨 뒤 — 조회 · 생성 · 수정 · 순서 변경 응답 모두")
     void groupSessionsFollowListOrder() throws Exception {
         Member me = member("sprout");
         seedMockSessions(me);
-        sessionWithStatus(me, "로마 근교 당일치기", "2026-04-10T09:00:00", null, SessionStatus.ANALYZING, List.of("로마"));
+        sessionWithStatus(
+                me,
+                "로마 근교 당일치기",
+                "2026-04-10T09:00:00",
+                null,
+                SessionStatus.ANALYZING,
+                List.of("로마"));
         // 로마(04-26 22:48 종료)와 항공권(04-25 15:21 종료) 사이
-        sessionWithStatus(me, "파리 숙소 비교", "2026-04-25T20:00:00", "2026-04-25T21:00:00", SessionStatus.FAILED,
+        sessionWithStatus(
+                me,
+                "파리 숙소 비교",
+                "2026-04-25T20:00:00",
+                "2026-04-25T21:00:00",
+                SessionStatus.FAILED,
                 List.of("파리"));
-        sessionWithStatus(me, "항공권 마일리지", "2026-04-27T09:00:00", null, SessionStatus.FAILED, List.of("항공권"));
+        sessionWithStatus(
+                me, "항공권 마일리지", "2026-04-27T09:00:00", null, SessionStatus.FAILED, List.of("항공권"));
         TagGroup europe = group(me, List.of("로마", "파리", "항공권"), 0);
         String[] expected = {"로마 근교 당일치기", ROME, "파리 숙소 비교", FLIGHT, PARIS, "항공권 마일리지"};
 
         mvc.perform(get("/tag-groups").with(as(me)))
                 .andExpect(jsonPath("$.data[0].sessions[*].title").value(contains(expected)));
-        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me))
-                        .with(json(Map.of("hashtags", List.of("항공권", "파리", "로마")))))
+        mvc.perform(
+                        patch("/tag-groups/{id}", europe.getId())
+                                .with(as(me))
+                                .with(json(Map.of("hashtags", List.of("항공권", "파리", "로마")))))
                 .andExpect(jsonPath("$.data.sessions[*].title").value(contains(expected)));
-        Long copyId = readLong(mvc.perform(post("/tag-groups").with(as(me))
-                        .with(json(Map.of("hashtags", List.of("로마", "파리", "항공권")))))
-                .andExpect(jsonPath("$.data.sessions[*].title").value(contains(expected))), "$.data.id");
-        mvc.perform(patch("/tag-groups/order").with(as(me))
-                        .with(json(Map.of("groupIds", List.of(copyId, europe.getId())))))
+        Long copyId =
+                readLong(
+                        mvc.perform(
+                                        post("/tag-groups")
+                                                .with(as(me))
+                                                .with(
+                                                        json(
+                                                                Map.of(
+                                                                        "hashtags",
+                                                                        List.of(
+                                                                                "로마", "파리",
+                                                                                "항공권")))))
+                                .andExpect(
+                                        jsonPath("$.data.sessions[*].title")
+                                                .value(contains(expected))),
+                        "$.data.id");
+        mvc.perform(
+                        patch("/tag-groups/order")
+                                .with(as(me))
+                                .with(json(Map.of("groupIds", List.of(copyId, europe.getId())))))
                 .andExpect(jsonPath("$.data[0].sessions[*].title").value(contains(expected)))
                 .andExpect(jsonPath("$.data[1].sessions[*].title").value(contains(expected)));
     }
 
     @Test
-    @DisplayName("그룹 만들기 해시태그 후보(GET /sessions/hashtags): 내 세션 전체 태그를 목록 순서대로 처음 나온 순서로, 대소문자 무시 중복 없이 준다")
+    @DisplayName(
+            "그룹 만들기 해시태그 후보(GET /sessions/hashtags): 내 세션 전체 태그를 목록 순서대로 처음 나온 순서로, 대소문자 무시 중복 없이 준다")
     void hashtagCandidatesFollowListOrder() throws Exception {
         Member me = member("sprout");
         seedMockSessions(me);
         // 진행 중 세션이 목록 맨 위라 이 세션 태그가 먼저 나오고, 표기도 처음 나온 'etias' 가 남는다 (비자 세션의 'ETIAS' 는 빠짐)
-        sessionWithStatus(me, "분석 중", "2026-04-01T09:00:00", null, SessionStatus.ANALYZING, List.of("etias", "Spring"));
+        sessionWithStatus(
+                me,
+                "분석 중",
+                "2026-04-01T09:00:00",
+                null,
+                SessionStatus.ANALYZING,
+                List.of("etias", "Spring"));
 
         mvc.perform(get("/sessions/hashtags").with(as(me)))
                 .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data").value(contains(
-                        "etias", "Spring",
-                        "로마", "콜로세움", "바티칸", "먹거리",
-                        "항공권", "스카이스캐너", "예산",
-                        "파리", "미술관", "루브르", "오르세",
-                        // 유레일 세션의 '예산' 은 이미 나왔으므로 빠진다
-                        "유레일", "기차",
-                        "바르셀로나", "가우디", "사그라다파밀리아",
-                        "비자", "쉥겐",
-                        "프라하", "카를교", "체코")));
+                .andExpect(
+                        jsonPath("$.data")
+                                .value(
+                                        contains(
+                                                "etias",
+                                                "Spring",
+                                                "로마",
+                                                "콜로세움",
+                                                "바티칸",
+                                                "먹거리",
+                                                "항공권",
+                                                "스카이스캐너",
+                                                "예산",
+                                                "파리",
+                                                "미술관",
+                                                "루브르",
+                                                "오르세",
+                                                // 유레일 세션의 '예산' 은 이미 나왔으므로 빠진다
+                                                "유레일",
+                                                "기차",
+                                                "바르셀로나",
+                                                "가우디",
+                                                "사그라다파밀리아",
+                                                "비자",
+                                                "쉥겐",
+                                                "프라하",
+                                                "카를교",
+                                                "체코")));
     }
 
     @Test
@@ -120,9 +179,19 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     void hashtagCandidatesExcludeDeletedAndForeign() throws Exception {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
-        session(member("wanderer"), "동유럽 3주 살이", "2026-04-27T09:00:00", "2026-04-27T10:00:00", 30, false, true,
-                List.of("동유럽", "프라하"), List.of(), null);
-        mvc.perform(delete("/sessions/{id}", mock.paris().getId()).with(as(me))).andExpect(okEnvelope());
+        session(
+                member("wanderer"),
+                "동유럽 3주 살이",
+                "2026-04-27T09:00:00",
+                "2026-04-27T10:00:00",
+                30,
+                false,
+                true,
+                List.of("동유럽", "프라하"),
+                List.of(),
+                null);
+        mvc.perform(delete("/sessions/{id}", mock.paris().getId()).with(as(me)))
+                .andExpect(okEnvelope());
 
         mvc.perform(get("/sessions/hashtags").with(as(me)))
                 .andExpect(okEnvelope())
@@ -158,7 +227,8 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
         group(me, List.of("etias"), 0);
 
         mvc.perform(get("/tag-groups").with(as(me)))
-                .andExpect(jsonPath("$.data[0].sessions[*].title").value(contains("쉥겐 비자 & 입국 서류")));
+                .andExpect(
+                        jsonPath("$.data[0].sessions[*].title").value(contains("쉥겐 비자 & 입국 서류")));
     }
 
     @Test
@@ -168,12 +238,16 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
         seedMockSessions(me);
         group(me, List.of("React"), 0);
 
-        mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of("hashtags", List.of("로마", "파리", "항공권")))))
+        mvc.perform(
+                        post("/tag-groups")
+                                .with(as(me))
+                                .with(json(Map.of("hashtags", List.of("로마", "파리", "항공권")))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.id").isNumber())
                 .andExpect(jsonPath("$.data.hashtags").value(contains("로마", "파리", "항공권")))
                 .andExpect(jsonPath("$.data.position").value(1))
-                .andExpect(jsonPath("$.data.sessions[*].title").value(contains(ROME, FLIGHT, PARIS)));
+                .andExpect(
+                        jsonPath("$.data.sessions[*].title").value(contains(ROME, FLIGHT, PARIS)));
     }
 
     @Test
@@ -183,8 +257,10 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
         seedMockSessions(me);
         TagGroup europe = group(me, List.of("로마", "파리", "항공권"), 0);
 
-        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me))
-                        .with(json(Map.of("hashtags", List.of("항공권", "로마", "파리")))))
+        mvc.perform(
+                        patch("/tag-groups/{id}", europe.getId())
+                                .with(as(me))
+                                .with(json(Map.of("hashtags", List.of("항공권", "로마", "파리")))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.hashtags").value(contains("항공권", "로마", "파리")))
                 .andExpect(jsonPath("$.data.position").value(0));
@@ -200,7 +276,10 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
         seedMockSessions(me);
         TagGroup europe = group(me, List.of("로마", "파리", "항공권"), 0);
 
-        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me)).with(json(Map.of("hashtags", List.of("로마")))))
+        mvc.perform(
+                        patch("/tag-groups/{id}", europe.getId())
+                                .with(as(me))
+                                .with(json(Map.of("hashtags", List.of("로마")))))
                 .andExpect(jsonPath("$.data.sessions[*].title").value(contains(ROME)));
     }
 
@@ -211,9 +290,13 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
         MockSessions mock = seedMockSessions(me);
         group(me, List.of("로마", "파리"), 0);
 
-        mvc.perform(patch("/sessions/{id}", mock.rome().getId()).with(as(me)).with(json(Map.of("tags", List.of("먹거리")))))
+        mvc.perform(
+                        patch("/sessions/{id}", mock.rome().getId())
+                                .with(as(me))
+                                .with(json(Map.of("tags", List.of("먹거리")))))
                 .andExpect(okEnvelope());
-        mvc.perform(delete("/sessions/{id}", mock.paris().getId()).with(as(me))).andExpect(okEnvelope());
+        mvc.perform(delete("/sessions/{id}", mock.paris().getId()).with(as(me)))
+                .andExpect(okEnvelope());
 
         mvc.perform(get("/tag-groups").with(as(me)))
                 .andExpect(jsonPath("$.data[0].sessions", hasSize(0)));
@@ -232,7 +315,8 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data").value(nullValue()));
 
         mvc.perform(get("/tag-groups").with(as(me)))
-                .andExpect(jsonPath("$.data[*].id").value(contains(ids(first.getId(), last.getId()))))
+                .andExpect(
+                        jsonPath("$.data[*].id").value(contains(ids(first.getId(), last.getId()))))
                 .andExpect(jsonPath("$.data[*].position").value(contains(0, 1)));
     }
 
@@ -244,8 +328,14 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
         TagGroup b = group(me, List.of("React"), 1);
         TagGroup c = group(me, List.of("예산"), 2);
 
-        mvc.perform(patch("/tag-groups/order").with(as(me))
-                        .with(json(Map.of("groupIds", List.of(c.getId(), a.getId(), b.getId())))))
+        mvc.perform(
+                        patch("/tag-groups/order")
+                                .with(as(me))
+                                .with(
+                                        json(
+                                                Map.of(
+                                                        "groupIds",
+                                                        List.of(c.getId(), a.getId(), b.getId())))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data[*].hashtags[0]").value(contains("예산", "로마", "React")))
                 .andExpect(jsonPath("$.data[*].position").value(contains(0, 1, 2)));
@@ -260,19 +350,25 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
         TagGroup c = group(me, List.of("예산"), 2);
         TagGroup foreign = group(member("wanderer"), List.of("프라하"), 0);
 
-        List<List<Long>> invalid = List.of(
-                List.of(b.getId(), a.getId()),
-                List.of(a.getId(), a.getId(), b.getId()),
-                List.of(a.getId(), b.getId(), c.getId(), c.getId()),
-                List.of(a.getId(), b.getId(), foreign.getId()),
-                List.of(a.getId(), b.getId(), c.getId(), 999_999L));
+        List<List<Long>> invalid =
+                List.of(
+                        List.of(b.getId(), a.getId()),
+                        List.of(a.getId(), a.getId(), b.getId()),
+                        List.of(a.getId(), b.getId(), c.getId(), c.getId()),
+                        List.of(a.getId(), b.getId(), foreign.getId()),
+                        List.of(a.getId(), b.getId(), c.getId(), 999_999L));
         for (List<Long> groupIds : invalid) {
-            mvc.perform(patch("/tag-groups/order").with(as(me)).with(json(Map.of("groupIds", groupIds))))
+            mvc.perform(
+                            patch("/tag-groups/order")
+                                    .with(as(me))
+                                    .with(json(Map.of("groupIds", groupIds))))
                     .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, INVALID_ORDER));
         }
 
         mvc.perform(get("/tag-groups").with(as(me)))
-                .andExpect(jsonPath("$.data[*].id").value(contains(ids(a.getId(), b.getId(), c.getId()))));
+                .andExpect(
+                        jsonPath("$.data[*].id")
+                                .value(contains(ids(a.getId(), b.getId(), c.getId()))));
     }
 
     @Test
@@ -281,7 +377,10 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         group(me, List.of("로마"), 0);
 
-        mvc.perform(patch("/tag-groups/order").with(as(me)).with(json(Map.of("groupIds", List.of()))))
+        mvc.perform(
+                        patch("/tag-groups/order")
+                                .with(as(me))
+                                .with(json(Map.of("groupIds", List.of()))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "정렬할 그룹 목록을 입력해 주세요."));
     }
 
@@ -290,15 +389,32 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     void groupHasNoName() throws Exception {
         Member me = member("sprout");
 
-        Long id = readLong(mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of("hashtags", List.of("로마")))))
-                .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.name").doesNotExist())
-                .andExpect(jsonPath("$.data.hashtags").value(contains("로마"))), "$.data.id");
-        mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of("name", "옛 이름", "hashtags", List.of("파리")))))
+        Long id =
+                readLong(
+                        mvc.perform(
+                                        post("/tag-groups")
+                                                .with(as(me))
+                                                .with(json(Map.of("hashtags", List.of("로마")))))
+                                .andExpect(okEnvelope())
+                                .andExpect(jsonPath("$.data.name").doesNotExist())
+                                .andExpect(jsonPath("$.data.hashtags").value(contains("로마"))),
+                        "$.data.id");
+        mvc.perform(
+                        post("/tag-groups")
+                                .with(as(me))
+                                .with(json(Map.of("name", "옛 이름", "hashtags", List.of("파리")))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.name").doesNotExist());
-        mvc.perform(patch("/tag-groups/{id}", id).with(as(me))
-                        .with(json(Map.of("name", "가".repeat(51), "hashtags", List.of("항공권")))))
+        mvc.perform(
+                        patch("/tag-groups/{id}", id)
+                                .with(as(me))
+                                .with(
+                                        json(
+                                                Map.of(
+                                                        "name",
+                                                        "가".repeat(51),
+                                                        "hashtags",
+                                                        List.of("항공권")))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.name").doesNotExist())
                 .andExpect(jsonPath("$.data.hashtags").value(contains("항공권")));
@@ -311,14 +427,20 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     @DisplayName("그룹 해시태그가 10개를 넘거나 · 형식이 틀리거나 · 중복이면 400 이고 그룹은 안 생긴다")
     void groupHashtagValidation() throws Exception {
         Member me = member("sprout");
-        List<String> eleven = List.of("a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "a9", "a10", "a11");
+        List<String> eleven =
+                List.of("a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "a9", "a10", "a11");
 
         mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of("hashtags", eleven))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "해시태그는 최대 10개까지 추가할 수 있습니다."));
         mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of("hashtags", List.of("#로마")))))
-                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST,
-                        "해시태그는 한글, 영문, 숫자만 사용할 수 있으며 최대 10자까지 입력 가능합니다."));
-        mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of("hashtags", List.of("Rome", "rome")))))
+                .andExpect(
+                        errorEnvelope(
+                                HttpStatus.BAD_REQUEST,
+                                "해시태그는 한글, 영문, 숫자만 사용할 수 있으며 최대 10자까지 입력 가능합니다."));
+        mvc.perform(
+                        post("/tag-groups")
+                                .with(as(me))
+                                .with(json(Map.of("hashtags", List.of("Rome", "rome")))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "이미 등록된 해시태그입니다."));
 
         mvc.perform(get("/tag-groups").with(as(me))).andExpect(jsonPath("$.data", hasSize(0)));
@@ -330,13 +452,17 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         TagGroup europe = group(me, List.of("로마"), 0);
 
-        mvc.perform(post("/tag-groups").with(as(me))
-                        .with(json(Map.of("hashtags", List.of(), "position", 0))))
+        mvc.perform(
+                        post("/tag-groups")
+                                .with(as(me))
+                                .with(json(Map.of("hashtags", List.of(), "position", 0))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, HASHTAG_REQUIRED));
         mvc.perform(post("/tag-groups").with(as(me)).with(json(Map.of("position", 0))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, HASHTAG_REQUIRED));
-        mvc.perform(post("/tag-groups").with(as(me))
-                        .with(json("{\"hashtags\": null, \"position\": 0}")))
+        mvc.perform(
+                        post("/tag-groups")
+                                .with(as(me))
+                                .with(json("{\"hashtags\": null, \"position\": 0}")))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, HASHTAG_REQUIRED));
 
         mvc.perform(get("/tag-groups").with(as(me)))
@@ -350,8 +476,10 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
         Member me = member("sprout");
         TagGroup europe = group(me, List.of("로마", "파리"), 0);
 
-        mvc.perform(patch("/tag-groups/{id}", europe.getId()).with(as(me))
-                        .with(json(Map.of("hashtags", List.of()))))
+        mvc.perform(
+                        patch("/tag-groups/{id}", europe.getId())
+                                .with(as(me))
+                                .with(json(Map.of("hashtags", List.of()))))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, HASHTAG_REQUIRED));
 
         mvc.perform(get("/tag-groups").with(as(me)))
@@ -376,7 +504,10 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
         TagGroup foreign = group(member("wanderer"), List.of("프라하"), 0);
 
         mvc.perform(get("/tag-groups").with(as(me))).andExpect(jsonPath("$.data", hasSize(0)));
-        mvc.perform(patch("/tag-groups/{id}", foreign.getId()).with(as(me)).with(json(Map.of("hashtags", List.of("로마")))))
+        mvc.perform(
+                        patch("/tag-groups/{id}", foreign.getId())
+                                .with(as(me))
+                                .with(json(Map.of("hashtags", List.of("로마")))))
                 .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, GROUP_NOT_FOUND));
         mvc.perform(delete("/tag-groups/{id}", foreign.getId()).with(as(me)))
                 .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, GROUP_NOT_FOUND));

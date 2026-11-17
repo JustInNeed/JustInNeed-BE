@@ -13,8 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * AI 컨테이너 → Spring 콜백 (내부 전용, X-Internal-Token 필요).
- * 세션이 ANALYZING 일 때만 받는다. 그 외 상태이거나 지운 세션이면 409.
+ * AI 컨테이너 → Spring 콜백 (내부 전용, X-Internal-Token 필요). 세션이 ANALYZING 일 때만 받는다. 그 외 상태이거나 지운 세션이면 409.
  */
 @RestController
 @RequestMapping("/internal/ai/sessions/{sessionId}")
@@ -23,7 +22,8 @@ public class AiCallbackController {
     private final AiInternalToken internalToken;
     private final AnalysisResultService resultService;
 
-    public AiCallbackController(AiInternalToken internalToken, AnalysisResultService resultService) {
+    public AiCallbackController(
+            AiInternalToken internalToken, AnalysisResultService resultService) {
         this.internalToken = internalToken;
         this.resultService = resultService;
     }
@@ -33,8 +33,7 @@ public class AiCallbackController {
     public ApiResponse<Void> receiveResult(
             @RequestHeader(value = AiInternalToken.HEADER, required = false) String token,
             @PathVariable Long sessionId,
-            @RequestBody AiAnalysisResult result
-    ) {
+            @RequestBody AiAnalysisResult result) {
         internalToken.verify(token);
         resultService.save(sessionId, result);
         return ApiResponse.ok();
@@ -45,8 +44,7 @@ public class AiCallbackController {
     public ApiResponse<Void> receiveFailure(
             @RequestHeader(value = AiInternalToken.HEADER, required = false) String token,
             @PathVariable Long sessionId,
-            @RequestBody AiAnalysisFailure failure
-    ) {
+            @RequestBody AiAnalysisFailure failure) {
         internalToken.verify(token);
         resultService.fail(sessionId, failure.reason());
         return ApiResponse.ok();

@@ -15,15 +15,21 @@ import org.junit.jupiter.api.Test;
 class ExcludedUrlActiveUrlsTest {
 
     private final ExcludedUrlRepository repository = mock(ExcludedUrlRepository.class);
-    private final ExcludedUrlService service = new ExcludedUrlService(repository, mock(MemberRepository.class));
+    private final ExcludedUrlService service =
+            new ExcludedUrlService(repository, mock(MemberRepository.class));
 
     @Test
     @DisplayName("행이 없으면 기본 URL 5개가 모두 적용 중")
     void defaultsApplyWithoutRows() {
         when(repository.findByMemberId(1L)).thenReturn(List.of());
 
-        assertThat(service.findActiveUrls(1L)).containsExactlyInAnyOrder(
-                "instagram.com", "mail.google.com", "youtube.com/shorts", "twitter.com", "tiktok.com");
+        assertThat(service.findActiveUrls(1L))
+                .containsExactlyInAnyOrder(
+                        "instagram.com",
+                        "mail.google.com",
+                        "youtube.com/shorts",
+                        "twitter.com",
+                        "tiktok.com");
     }
 
     @Test
@@ -36,7 +42,12 @@ class ExcludedUrlActiveUrlsTest {
         off.updateExcluded(false);
         when(repository.findByMemberId(1L)).thenReturn(List.of(instagram, naver, off));
 
-        assertThat(service.findActiveUrls(1L)).containsExactlyInAnyOrder(
-                "naver.com/4", "mail.google.com", "youtube.com/shorts", "twitter.com", "tiktok.com");
+        assertThat(service.findActiveUrls(1L))
+                .containsExactlyInAnyOrder(
+                        "naver.com/4",
+                        "mail.google.com",
+                        "youtube.com/shorts",
+                        "twitter.com",
+                        "tiktok.com");
     }
 }

@@ -13,7 +13,8 @@ import org.springframework.data.repository.query.Param;
 public interface MemberRepository extends JpaRepository<Member, Long> {
 
     // 재로그인 시 (프로바이더 + 프로바이더 발급 id)로 기존 회원 조회
-    Optional<Member> findBySocialProviderAndProviderId(SocialProvider socialProvider, String providerId);
+    Optional<Member> findBySocialProviderAndProviderId(
+            SocialProvider socialProvider, String providerId);
 
     Optional<Member> findByIdAndWithdrawnAtIsNull(Long id);
 
@@ -21,7 +22,6 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select m from Member m where m.id = :id and m.withdrawnAt is null")
     Optional<Member> lockActiveById(@Param("id") Long id);
-
 
     boolean existsByIdAndWithdrawnAtIsNull(Long id);
 

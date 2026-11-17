@@ -2,16 +2,23 @@ package com.justinneed.community.follow;
 
 import com.justinneed.global.common.ApiResponse;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/community/recommendations/profiles")
 public class SimilarPeopleController {
     private final SimilarPeopleService similarPeople;
-    public SimilarPeopleController(SimilarPeopleService similarPeople) { this.similarPeople = similarPeople; }
+
+    public SimilarPeopleController(SimilarPeopleService similarPeople) {
+        this.similarPeople = similarPeople;
+    }
+
     @GetMapping("/similar")
-    public ApiResponse<SimilarPeopleService.SimilarPeople> similar(@AuthenticationPrincipal Long actor,
-            @RequestParam(defaultValue = "3") int limit) {
+    public ApiResponse<SimilarPeopleService.SimilarPeople> similar(
+            @AuthenticationPrincipal Long actor, @RequestParam(defaultValue = "3") int limit) {
         return ApiResponse.ok(similarPeople.similar(actor, limit));
     }
 }

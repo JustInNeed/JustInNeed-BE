@@ -32,7 +32,8 @@ class SessionResultScenarioTest extends ScenarioTestSupport {
     private static final String COPY = "https://b.example.com/copy";
 
     // pageId 가 url 과 다른 글도 있어 링크는 원본 meta 에서 찾아야 한다
-    private static final String RAW = """
+    private static final String RAW =
+            """
             {"session": {"endedAt": "2026-10-04T09:33:54Z"},
              "pages": [
                {"meta": {"pageId": "https://a.example.com/news", "url": "https://a.example.com/news", "title": "원문 기사",
@@ -41,7 +42,8 @@ class SessionResultScenarioTest extends ScenarioTestSupport {
                          "enteredAt": "2026-10-04T09:30:00Z"}}]}
             """;
 
-    private static final String RESULT = """
+    private static final String RESULT =
+            """
             {"modelSource": "global", "scoreMethod": "C", "state": {"unitFeatures": []},
              "mindmap": {"structureSource": "llm",
                          "nodes": [{"id": "root:1", "type": "root", "keyword": "로마", "score": 1.0, "childCount": 0}],
@@ -56,11 +58,9 @@ class SessionResultScenarioTest extends ScenarioTestSupport {
              "analysis": {"units": [], "summary": {}}, "pages": []}
             """;
 
-    @Autowired
-    private SessionRawPayloadRepository rawPayloads;
+    @Autowired private SessionRawPayloadRepository rawPayloads;
 
-    @Autowired
-    private AiInternalToken internalToken;
+    @Autowired private AiInternalToken internalToken;
 
     private Member me;
     private BrowsingSession session;
@@ -68,17 +68,27 @@ class SessionResultScenarioTest extends ScenarioTestSupport {
     @BeforeEach
     void seed() {
         me = member("sprout");
-        session = sessionWithStatus(me, "분석 중", "2026-10-04T18:00:00", "2026-10-04T19:00:00",
-                SessionStatus.ANALYZING, List.of());
-        rawPayloads.saveAndFlush(new SessionRawPayload(session.getId(), me.getId(),
-                objectMapper.readValue(RAW, new TypeReference<Map<String, Object>>() {
-                }), LocalDateTime.now()));
+        session =
+                sessionWithStatus(
+                        me,
+                        "분석 중",
+                        "2026-10-04T18:00:00",
+                        "2026-10-04T19:00:00",
+                        SessionStatus.ANALYZING,
+                        List.of());
+        rawPayloads.saveAndFlush(
+                new SessionRawPayload(
+                        session.getId(),
+                        me.getId(),
+                        objectMapper.readValue(RAW, new TypeReference<Map<String, Object>>() {}),
+                        LocalDateTime.now()));
     }
 
     private void callback(String title) throws Exception {
-        mvc.perform(post("/internal/ai/sessions/{id}/result", session.getId())
-                        .header(AiInternalToken.HEADER, internalToken.value())
-                        .with(json(RESULT.formatted(title))))
+        mvc.perform(
+                        post("/internal/ai/sessions/{id}/result", session.getId())
+                                .header(AiInternalToken.HEADER, internalToken.value())
+                                .with(json(RESULT.formatted(title))))
                 .andExpect(okEnvelope());
     }
 
@@ -91,7 +101,9 @@ class SessionResultScenarioTest extends ScenarioTestSupport {
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.title").value("AI 대제목"))
                 .andExpect(jsonPath("$.data.summary.markdown").value(startsWith("## 첫 소제목")))
-                .andExpect(jsonPath("$.data.summary.markdown").value("## 첫 소제목\n\n첫 본문\n\n## 둘째 소제목\n\n둘째 본문"));
+                .andExpect(
+                        jsonPath("$.data.summary.markdown")
+                                .value("## 첫 소제목\n\n첫 본문\n\n## 둘째 소제목\n\n둘째 본문"));
     }
 
     @Test
@@ -99,7 +111,10 @@ class SessionResultScenarioTest extends ScenarioTestSupport {
     void titleEditLeavesNoOldTitle() throws Exception {
         callback("AI 대제목");
 
-        mvc.perform(patch("/sessions/{id}", session.getId()).with(as(me)).with(json(Map.of("title", "내가 고친 제목"))))
+        mvc.perform(
+                        patch("/sessions/{id}", session.getId())
+                                .with(as(me))
+                                .with(json(Map.of("title", "내가 고친 제목"))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.title").value("내가 고친 제목"))
                 .andExpect(jsonPath("$.data.summary.markdown").value(startsWith("## 첫 소제목")));
@@ -126,11 +141,16 @@ class SessionResultScenarioTest extends ScenarioTestSupport {
     void longEmojiTitleCanBeSavedAgain() throws Exception {
         callback("😀".repeat(60));
 
-        String title = read(mvc.perform(get("/sessions/{id}", session.getId()).with(as(me))), "$.data.title");
+        String title =
+                read(
+                        mvc.perform(get("/sessions/{id}", session.getId()).with(as(me))),
+                        "$.data.title");
         assertThat(title.length()).isLessThanOrEqualTo(100);
 
-        mvc.perform(patch("/sessions/{id}", session.getId()).with(as(me))
-                        .with(json(Map.of("title", title, "editedMarkdown", "본문"))))
+        mvc.perform(
+                        patch("/sessions/{id}", session.getId())
+                                .with(as(me))
+                                .with(json(Map.of("title", title, "editedMarkdown", "본문"))))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.title").value(title));
     }

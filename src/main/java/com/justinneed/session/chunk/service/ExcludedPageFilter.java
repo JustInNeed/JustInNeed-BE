@@ -33,11 +33,9 @@ final class ExcludedPageFilter {
     private static final String SCHEME_SEPARATOR = "://";
     private static final String WWW_PREFIX = "www.";
 
-    private ExcludedPageFilter() {
-    }
+    private ExcludedPageFilter() {}
 
-    record Target(String hostPort, String path) {
-    }
+    record Target(String hostPort, String path) {}
 
     // 걸러낸 페이지 수 (pages + droppedPages)
     @SuppressWarnings("unchecked")
@@ -58,10 +56,12 @@ final class ExcludedPageFilter {
         if (bundle.get("pages") instanceof List<?> pages) {
             var it = ((List<Object>) pages).iterator();
             while (it.hasNext()) {
-                if (!(it.next() instanceof Map<?, ?> page) || !(page.get("meta") instanceof Map<?, ?> meta)) {
+                if (!(it.next() instanceof Map<?, ?> page)
+                        || !(page.get("meta") instanceof Map<?, ?> meta)) {
                     continue;
                 }
-                if (matchesAny(meta.get("url"), targets) || segmentsMatch(meta.get("segments"), targets)) {
+                if (matchesAny(meta.get("url"), targets)
+                        || segmentsMatch(meta.get("segments"), targets)) {
                     removedPageIds.add(key(meta.get("pageId")));
                     if (meta.get("focusMs") instanceof Number ms) {
                         removedFocusMs += ms.longValue();
@@ -76,13 +76,16 @@ final class ExcludedPageFilter {
         }
         var session = (Map<String, Object>) rawSession;
         if (session.get("droppedPages") instanceof List<?> dropped) {
-            ((List<Object>) dropped).removeIf(d -> {
-                if (d instanceof Map<?, ?> m && segmentsMatch(m.get("segments"), targets)) {
-                    removedPageIds.add(key(m.get("pageId")));
-                    return true;
-                }
-                return false;
-            });
+            ((List<Object>) dropped)
+                    .removeIf(
+                            d -> {
+                                if (d instanceof Map<?, ?> m
+                                        && segmentsMatch(m.get("segments"), targets)) {
+                                    removedPageIds.add(key(m.get("pageId")));
+                                    return true;
+                                }
+                                return false;
+                            });
         }
         if (removedPageIds.isEmpty()) {
             return 0;
@@ -114,7 +117,7 @@ final class ExcludedPageFilter {
 
     private static boolean matchesAny(Object pageUrl, List<Target> targets) {
         if (!(pageUrl instanceof String s) || !s.contains(SCHEME_SEPARATOR)) {
-            return false;   // 페이지 URL 은 확장이 location.href 로 남겨 항상 프로토콜이 있다
+            return false; // 페이지 URL 은 확장이 location.href 로 남겨 항상 프로토콜이 있다
         }
         Target page = split(s);
         if (page == null) {
@@ -122,7 +125,9 @@ final class ExcludedPageFilter {
         }
         for (Target t : targets) {
             if (page.hostPort().equals(t.hostPort())
-                    && (t.path().isEmpty() || page.path().equals(t.path()) || page.path().startsWith(t.path() + "/"))) {
+                    && (t.path().isEmpty()
+                            || page.path().equals(t.path())
+                            || page.path().startsWith(t.path() + "/"))) {
                 return true;
             }
         }
@@ -146,7 +151,7 @@ final class ExcludedPageFilter {
         int authorityEnd = indexOfAny(rest, "/?#");
         String authority = authorityEnd < 0 ? rest : rest.substring(0, authorityEnd);
         String afterAuthority = authorityEnd < 0 ? "" : rest.substring(authorityEnd);
-        authority = authority.substring(authority.lastIndexOf('@') + 1);   // user:pass@ 제거
+        authority = authority.substring(authority.lastIndexOf('@') + 1); // user:pass@ 제거
 
         String host = authority;
         String port = "";
@@ -159,7 +164,10 @@ final class ExcludedPageFilter {
         if (host.isEmpty()) {
             return null;
         }
-        String hostPort = port.isEmpty() || port.equals("80") || port.equals("443") ? host : host + ":" + port;
+        String hostPort =
+                port.isEmpty() || port.equals("80") || port.equals("443")
+                        ? host
+                        : host + ":" + port;
 
         int pathEnd = indexOfAny(afterAuthority, "?#");
         String path = pathEnd < 0 ? afterAuthority : afterAuthority.substring(0, pathEnd);
@@ -169,7 +177,8 @@ final class ExcludedPageFilter {
 
     // ExcludedUrlParser.withoutWww 와 같다 (www.com 처럼 떼면 도메인이 안 되는 경우는 그대로)
     private static String withoutWww(String host) {
-        boolean removable = host.startsWith(WWW_PREFIX) && host.indexOf('.', WWW_PREFIX.length()) > 0;
+        boolean removable =
+                host.startsWith(WWW_PREFIX) && host.indexOf('.', WWW_PREFIX.length()) > 0;
         return removable ? host.substring(WWW_PREFIX.length()) : host;
     }
 
@@ -196,7 +205,11 @@ final class ExcludedPageFilter {
 
     private static void removeByPageId(Object list, Set<Object> pageIds) {
         if (list instanceof List<?> l) {
-            l.removeIf(e -> e instanceof Map<?, ?> m && m.containsKey("pageId") && pageIds.contains(key(m.get("pageId"))));
+            l.removeIf(
+                    e ->
+                            e instanceof Map<?, ?> m
+                                    && m.containsKey("pageId")
+                                    && pageIds.contains(key(m.get("pageId"))));
         }
     }
 

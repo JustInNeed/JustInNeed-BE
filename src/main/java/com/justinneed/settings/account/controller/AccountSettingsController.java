@@ -28,10 +28,9 @@ public class AccountSettingsController {
     public ApiResponse<AccountWithdrawResponse> withdraw(
             @AuthenticationPrincipal Long memberId,
             @RequestHeader("Authorization") String authorization,
-            @Valid @RequestBody AccountWithdrawRequest request
-    ) {
-        AccountWithdrawResponse response = accountSettingsService.withdraw(
-                memberId, request, resolveBearer(authorization));
+            @Valid @RequestBody AccountWithdrawRequest request) {
+        AccountWithdrawResponse response =
+                accountSettingsService.withdraw(memberId, request, resolveBearer(authorization));
         return new ApiResponse<>(true, response, "계정 탈퇴가 완료되었습니다.");
     }
 

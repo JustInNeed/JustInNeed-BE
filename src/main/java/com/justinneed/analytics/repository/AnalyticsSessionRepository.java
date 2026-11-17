@@ -11,7 +11,8 @@ import org.springframework.data.repository.query.Param;
 /** 대상은 모두 내 완료 · 미삭제 세션이고, 시작 시각이 [from, to) 안에 있는 것만 읽는다 */
 public interface AnalyticsSessionRepository extends Repository<BrowsingSession, Long> {
 
-    @Query("""
+    @Query(
+            """
             select new com.justinneed.session.management.dto.SessionListResponse(
                        session.id,
                        session.title,
@@ -33,11 +34,11 @@ public interface AnalyticsSessionRepository extends Repository<BrowsingSession, 
     List<SessionListResponse> findWeekSessions(
             @Param("userId") Long userId,
             @Param("from") LocalDateTime from,
-            @Param("to") LocalDateTime to
-    );
+            @Param("to") LocalDateTime to);
 
     // 세션 통계에는 분석 결과 행이 없는 세션도 들어가므로 left join 한다. 무거운 analysis_units 는 읽지 않는다
-    @Query("""
+    @Query(
+            """
             select new com.justinneed.analytics.repository.AnalyticsSessionRow(
                        session.startedAt,
                        session.endedAt,
@@ -56,10 +57,10 @@ public interface AnalyticsSessionRepository extends Repository<BrowsingSession, 
     List<AnalyticsSessionRow> findSessions(
             @Param("userId") Long userId,
             @Param("from") LocalDateTime from,
-            @Param("to") LocalDateTime to
-    );
+            @Param("to") LocalDateTime to);
 
-    @Query("""
+    @Query(
+            """
             select new com.justinneed.analytics.repository.AnalyticsUnitsRow(result.analysisUnits)
             from BrowsingSession session
             join SessionResult result on result.sessionId = session.id
@@ -72,6 +73,5 @@ public interface AnalyticsSessionRepository extends Repository<BrowsingSession, 
     List<AnalyticsUnitsRow> findUnits(
             @Param("userId") Long userId,
             @Param("from") LocalDateTime from,
-            @Param("to") LocalDateTime to
-    );
+            @Param("to") LocalDateTime to);
 }

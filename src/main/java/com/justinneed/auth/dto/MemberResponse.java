@@ -9,8 +9,7 @@ public record MemberResponse(
         String nickname,
         SocialProvider socialProvider,
         String email,
-        LocalDateTime joinedAt
-) {
+        LocalDateTime joinedAt) {
 
     public static MemberResponse from(Member member) {
         return new MemberResponse(
@@ -18,7 +17,6 @@ public record MemberResponse(
                 member.getNickname(),
                 member.getSocialProvider(),
                 member.getEmail(),
-                member.getJoinedAt()
-        );
+                member.getJoinedAt());
     }
 }

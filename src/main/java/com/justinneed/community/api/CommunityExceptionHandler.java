@@ -12,8 +12,10 @@ import org.springframework.web.server.ResponseStatusException;
 public class CommunityExceptionHandler {
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiResponse<Void>> status(ResponseStatusException error) {
-        return ResponseEntity.status(error.getStatusCode()).body(ApiResponse.error(error.getReason()));
+        return ResponseEntity.status(error.getStatusCode())
+                .body(ApiResponse.error(error.getReason()));
     }
+
     @ExceptionHandler({ConstraintViolationException.class, HandlerMethodValidationException.class})
     public ResponseEntity<ApiResponse<Void>> validation(Exception error) {
         return ResponseEntity.badRequest().body(ApiResponse.error("요청 값이 올바르지 않습니다."));
