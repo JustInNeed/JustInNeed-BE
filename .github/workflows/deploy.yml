@@ -27,7 +27,8 @@ jobs:
       - name: Test
         run: |
           chmod +x gradlew
-          ./gradlew test --no-daemon
+          # 정책 #13 · #17: check = 테스트 + spotlessCheck(포맷) + checkstyle. 필수 검사 이름(test)은 그대로
+          ./gradlew check --no-daemon
 
       - name: Upload test report
         if: failure()

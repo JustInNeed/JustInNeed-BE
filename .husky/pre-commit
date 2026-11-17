@@ -1,2 +1,6 @@
-# 정책 #9~#12 (Spotless #13 은 규칙 합의 후 추가)
+# 정책 #9~#12
 node scripts/hooks/pre-commit.mjs
+# 정책 #13: Java 파일을 커밋할 때만 포맷 검사 (고치기: ./gradlew spotlessApply)
+if git diff --cached --name-only --diff-filter=ACMR | grep -q '\.java$'; then
+  ./gradlew spotlessCheck -q || { echo "✖ 포맷이 google-java-format(AOSP)과 다릅니다. ./gradlew spotlessApply 후 다시 커밋하세요."; exit 1; }
+fi
