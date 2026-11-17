@@ -17,6 +17,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * 추천 카드. 공개 세션 1개 = 카드 1장이고 내 카드는 뺀다.
@@ -69,5 +70,6 @@ public class RecommendationService {
         if (limit < 1 || limit > 100) throw new CustomException(ErrorCode.INVALID_LIMIT_REQUEST);
     }
     private record Ranked(Long sessionId, long matches, LocalDateTime lastActivityAt) { }
+    @Schema(name = "RecommendationServiceRecommendations")
     public record Recommendations(List<String> basisHashtags, List<CommunityCard> mindmaps) { }
 }

@@ -22,6 +22,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * 커뮤니티 검색. 검색어는 앞 # · 앞뒤 공백을 떼고 대소문자 무시 포함 검색한다.
@@ -184,6 +185,7 @@ public class CommunitySearchService {
     public record ProfileItem(Long userId, String nickname, List<String> hashtags, long mindmapCount) { }
     public record TagCount(String tag, long count) { }
     public record Profiles(List<ProfileItem> profiles, boolean hasNext) { }
+    @Schema(name = "CommunitySearchServiceMindmaps")
     public record Mindmaps(List<CommunityCard> mindmaps, boolean hasNext) { }
     public record Hashtags(List<TagCount> hashtags) { }
 }

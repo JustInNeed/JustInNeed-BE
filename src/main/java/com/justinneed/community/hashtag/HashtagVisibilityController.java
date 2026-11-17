@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 @RestController
 @RequestMapping("/community/me/hashtags")
@@ -31,6 +32,7 @@ public class HashtagVisibilityController {
         return ApiResponse.ok(service.update(userId, request.hashtag(), request.isPublic()));
     }
 
+    @Schema(name = "HashtagVisibilityControllerRequest")
     public record Request(@NotBlank(message = "해시태그를 입력해 주세요.") String hashtag,
             @NotNull(message = "공개 여부를 입력해 주세요.") Boolean isPublic) { }
 }

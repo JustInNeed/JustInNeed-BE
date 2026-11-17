@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * 카드(세션) 단위 좋아요 · 나도 탐색중 · 북마크. 세 동작 모두 지금 공개된 카드에만 되고, 취소도 같다 (아니면 404).
@@ -90,7 +91,9 @@ public class CardReactionService {
         return counts.counts(List.of(sessionId), viewerId).getOrDefault(sessionId, CardCounts.Count.ZERO);
     }
 
+    @Schema(name = "CardReactionServiceLikeView")
     public record LikeView(long likeCount, boolean likedByMe) { }
+    @Schema(name = "CardReactionServiceExploringView")
     public record ExploringView(long exploringCount, boolean exploringByMe) { }
     public record BookmarkView(long bookmarkCount, Long bookmarkId) { }
 }

@@ -3,6 +3,7 @@ package com.justinneed.session.management.dto;
 import com.justinneed.community.api.HttpUrl;
 import java.time.LocalDateTime;
 import java.util.List;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 public record SessionMindmapResponse(
         List<Node> nodes,
@@ -16,6 +17,7 @@ public record SessionMindmapResponse(
         return new SessionMindmapResponse(nodes.stream().map(Node::withWebCitationOnly).toList(), edges);
     }
 
+    @Schema(name = "SessionMindmapResponseNode")
     public record Node(
             String id,
             String type,
@@ -39,6 +41,7 @@ public record SessionMindmapResponse(
     ) {
     }
 
+    @Schema(name = "SessionMindmapResponseEdge")
     public record Edge(
             String from,
             String to,

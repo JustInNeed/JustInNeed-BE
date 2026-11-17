@@ -41,6 +41,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * 홈 대시보드 집계. 대상은 내 완료(COMPLETED) · 미삭제 세션이고, 날짜 기준은 세션 시작 시각(KST)이다.
@@ -313,6 +314,7 @@ public class HomeService {
     private record PageVisit(String domain, long dwellMs) {
     }
 
+    @Schema(name = "HomeServiceTagTally")
     private static final class TagTally {
 
         private final String tag;

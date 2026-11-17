@@ -24,6 +24,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 @Service
 @Transactional(readOnly = true)
@@ -215,7 +216,9 @@ public class PublicGraphService {
 
     private record Built(Graph graph, long nodeCount) { }
     public record GraphPart(List<BookmarkSnapshot.Node> nodes, List<BookmarkSnapshot.Edge> edges, List<Long> entries) { }
+    @Schema(name = "PublicGraphServiceTopTag")
     public record TopTag(Long hashtagId, String name, long nodeCount) { }
+    @Schema(name = "PublicGraphServiceGraph")
     public record Graph(int code, Long mindmapId, Long ownerId, String nickname, String title,
             List<BookmarkSnapshot.Tag> hashtags, List<BookmarkSnapshot.Node> nodes,
             List<BookmarkSnapshot.Edge> edges, List<TopTag> topHashtags) { }

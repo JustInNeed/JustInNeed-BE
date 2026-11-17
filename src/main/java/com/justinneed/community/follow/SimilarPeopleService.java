@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 @Service
 @Transactional(readOnly = true)
@@ -69,6 +70,7 @@ public class SimilarPeopleService {
         }
     }
     private record Match(PublicTags person, List<String> hashtags, LocalDateTime lastActivityAt) { }
+    @Schema(name = "SimilarPeopleServicePerson")
     public record Person(Long userId, String nickname, List<String> matchedHashtags, boolean following) { }
     public record SimilarPeople(List<Person> people) { }
 }
