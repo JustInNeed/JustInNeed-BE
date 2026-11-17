@@ -10,6 +10,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * 떠오르는 해시태그. 직전 기간은 지금 기간과 길이가 같다. 날짜는 KST 기준이다.
@@ -100,6 +101,7 @@ public class TrendingService {
             };
         }
     }
+    @Schema(name = "TrendingServicePerson")
     private record Person(Long actorId, ActivityKind kind, LocalDate day) { }
     private static class Counts {
         final String key;

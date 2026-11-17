@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * 마이프로필. 공개 프로필 API(PublicGraphService · CommunityCardReader · CardSessionsService)는 작성자 본인에게도 방문자 규칙이고,
@@ -172,6 +173,7 @@ public class MyProfileService {
     private record Ordered(List<BrowsingSession> sessions, Set<Long> pinned) {
         boolean isPinned(BrowsingSession session) { return pinned.contains(session.getId()); }
     }
+    @Schema(name = "MyProfileServicePage")
     private record Page<T>(List<T> items, boolean hasNext, int totalPages) { }
 
     public record MyInterest(Long interestId, String hashtag) { }

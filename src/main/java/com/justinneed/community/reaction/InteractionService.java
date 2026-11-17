@@ -8,6 +8,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 @Service
 @Transactional
@@ -56,6 +57,8 @@ public class InteractionService {
                 explorations.findByActorIdAndTargetTypeAndTargetId(actor, type, id).isPresent(),
                 explorations.countByTargetTypeAndTargetId(type, id));
     }
+    @Schema(name = "InteractionServiceLikeView")
     public record LikeView(int code, Long userId, boolean liked, long likeCount) { }
+    @Schema(name = "InteractionServiceExploringView")
     public record ExploringView(int code, TargetType targetType, Long targetId, boolean exploring, long exploringCount) { }
 }

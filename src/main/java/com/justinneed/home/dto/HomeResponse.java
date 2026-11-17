@@ -3,6 +3,7 @@ package com.justinneed.home.dto;
 import com.justinneed.session.management.dto.SessionListResponse;
 import java.util.List;
 import java.util.Map;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * 홈 대시보드 한 화면 데이터 (FE HomeData).
@@ -19,6 +20,7 @@ public record HomeResponse(
 ) {
 
     /** edges 는 [출발 노드 id, 도착 노드 id] 쌍의 목록. */
+    @Schema(name = "HomeResponseGraph")
     public record Graph(
             List<Node> nodes,
             List<List<String>> edges,
@@ -28,6 +30,7 @@ public record HomeResponse(
     ) {
     }
 
+    @Schema(name = "HomeResponseNode")
     public record Node(
             String id,
             String label,
@@ -44,6 +47,7 @@ public record HomeResponse(
     ) {
     }
 
+    @Schema(name = "HomeResponseTagGroup")
     public record TagGroup(
             Long id,
             List<String> tags
@@ -74,6 +78,7 @@ public record HomeResponse(
     ) {
     }
 
+    @Schema(name = "HomeResponseTopTag")
     public record TopTag(
             String tag,
             int count

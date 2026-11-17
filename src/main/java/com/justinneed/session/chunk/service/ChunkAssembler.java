@@ -10,6 +10,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * 기록 로그 → bundle. 확장 recorder-core/bg-core.js 의 assemble() 을 그대로 옮긴 순수 함수.
@@ -33,6 +34,7 @@ public final class ChunkAssembler {
     private ChunkAssembler() {
     }
 
+    @Schema(name = "ChunkAssemblerPage")
     private static final class Page {
         Object meta;
         final Map<Object, Map<String, Object>> paras = new LinkedHashMap<>();

@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 @RestController
 @RequestMapping("/community/mindmaps")
@@ -27,7 +28,9 @@ public class CardReactionController {
             @PathVariable @Positive Long mindmapId, @Valid @RequestBody BookmarkRequest body) {
         return ApiResponse.ok(service.bookmark(actor, mindmapId, body.bookmarked()));
     }
+    @Schema(name = "CardReactionControllerLikeRequest")
     public record LikeRequest(@NotNull(message = "좋아요 상태를 입력해 주세요.") Boolean liked) { }
+    @Schema(name = "CardReactionControllerExploringRequest")
     public record ExploringRequest(@NotNull(message = "나도 탐색중 상태를 입력해 주세요.") Boolean exploring) { }
     public record BookmarkRequest(@NotNull(message = "북마크 상태를 입력해 주세요.") Boolean bookmarked) { }
 }

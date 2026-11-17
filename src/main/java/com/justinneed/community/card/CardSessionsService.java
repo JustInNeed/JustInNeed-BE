@@ -20,6 +20,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /** 카드 상세의 관련 세션과 프로필의 카드 목록. 작성자 본인이 불러도 방문자 규칙이다 (CommunityCardReader 와 같다). */
 @Service
@@ -79,6 +80,7 @@ public class CardSessionsService {
     public record Sessions(List<SessionListResponse> sessions) {
     }
 
+    @Schema(name = "CardSessionsServiceMindmaps")
     public record Mindmaps(List<ProfileCard> mindmaps, boolean hasNext, int totalPages) {
     }
 

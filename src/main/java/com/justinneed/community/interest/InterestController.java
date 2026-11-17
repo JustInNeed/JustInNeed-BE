@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Pattern;
 import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 @RestController
 @RequestMapping("/community")
@@ -38,6 +39,7 @@ public class InterestController {
         return ApiResponse.ok(edit.addInterest(userId, request.hashtag()));
     }
 
+    @Schema(name = "InterestControllerRequest")
     public record Request(
             @NotBlank(message = "해시태그를 입력해 주세요.")
             @Pattern(regexp = "^[가-힣a-zA-Z0-9]{1,10}$",

@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * 한 수집 세션의 청크가 다 왔는지 판정한다 (DB 를 건드리지 않는 순수 함수).
@@ -26,6 +27,7 @@ public final class ChunkCompleteness {
 
     public enum State { COMPLETE, WAITING, BROKEN }
 
+    @Schema(name = "ChunkCompletenessResult")
     public record Result(State state, Integer maxN, List<Integer> missing, List<String> problems) {
 
         public boolean complete() {

@@ -4,6 +4,7 @@ import com.justinneed.analytics.ExplorationType;
 import com.justinneed.session.management.dto.SessionListResponse;
 import java.util.List;
 import java.util.Map;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /** 분석 화면 카드별 응답. 문구의 "**강조**" 는 FE 가 강조 글씨로 보여준다 */
 public final class AnalyticsResponse {
@@ -20,6 +21,7 @@ public final class AnalyticsResponse {
     }
 
     /** 판정할 수 있는 세션이 없으면 type 은 null 이고 avgDwellSec 은 0 */
+    @Schema(name = "AnalyticsResponseExploration")
     public record Exploration(
             int avgUrlsPerSession,
             int avgDwellSec,
@@ -44,6 +46,7 @@ public final class AnalyticsResponse {
     public record TimePatterns(double[][] surfing, double[][] focus, Note note) {
     }
 
+    @Schema(name = "AnalyticsResponseRecommendations")
     public record Recommendations(List<Recommendation> recommendations) {
     }
 

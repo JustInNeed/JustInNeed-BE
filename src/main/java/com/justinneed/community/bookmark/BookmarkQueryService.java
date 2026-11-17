@@ -28,6 +28,7 @@ import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * 북마크 읽기. 미니 마인드맵은 원본의 지금 상태를 보여주고, 저장된 행 · 스냅샷은 그대로 둔 채 읽을 때 맞춘다.
@@ -257,5 +258,6 @@ public class BookmarkQueryService {
             String title, String snippet, List<Hashtag> hashtags, List<BookmarkSnapshot.Node> nodes,
             List<BookmarkSnapshot.Edge> edges, long nodeCount, long likeCount, Instant savedAt, SaveType saveType,
             TargetType targetType, List<Long> targetIds, boolean cardBookmark) { }
+    @Schema(name = "BookmarkQueryServiceMindmaps")
     public record Mindmaps(List<Mindmap> mindmaps, boolean hasNext) { }
 }

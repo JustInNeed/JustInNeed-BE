@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * 세션별 마인드맵(session_results.mindmap)을 합쳐 홈 전체 마인드맵을 만든다. DB · 시계 없이 입력만으로 계산한다.
@@ -217,6 +218,7 @@ public final class HomeGraphBuilder {
      * nodes 는 core 가 맨 앞(남은 노드가 없으면 빈 목록), totalNodes 는 개수 제한 전 합친 노드 수 (core 제외),
      * nodeDelta 는 그중 최근 7일 세션에서 처음 나온 노드 수.
      */
+    @Schema(name = "HomeGraphBuilderResult")
     public record Result(
             List<Node> nodes,
             List<List<String>> edges,
@@ -226,6 +228,7 @@ public final class HomeGraphBuilder {
     ) {
     }
 
+    @Schema(name = "HomeGraphBuilderEdge")
     private record Edge(MergedNode from, MergedNode to) {
     }
 
