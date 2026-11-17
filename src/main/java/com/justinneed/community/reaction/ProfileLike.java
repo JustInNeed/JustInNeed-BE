@@ -1,6 +1,11 @@
 package com.justinneed.community.reaction;
-import jakarta.persistence.*;
-
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 @Entity
 @Table(name = "community_profile_likes", uniqueConstraints = @UniqueConstraint(columnNames = {"actor_id", "profile_id"}))
 public class ProfileLike {

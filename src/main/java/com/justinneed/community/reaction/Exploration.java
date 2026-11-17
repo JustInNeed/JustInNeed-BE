@@ -1,8 +1,15 @@
 package com.justinneed.community.reaction;
 
 import com.justinneed.community.bookmark.TargetType;
-import jakarta.persistence.*;
-
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 @Entity
 @Table(name = "community_explorations", uniqueConstraints =
         @UniqueConstraint(columnNames = {"actor_id", "target_type", "target_id"}))

@@ -1,6 +1,13 @@
 package com.justinneed.community.follow;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
 
 // 행은 CommunityFollowRepository.insertIfAbsent 로만 만든다. 탈퇴해도 지우지 않고 읽을 때 뺀다

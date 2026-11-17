@@ -1,13 +1,19 @@
 package com.justinneed.community.bookmark;
 
-import com.justinneed.community.activity.*;
-import com.justinneed.community.api.*;
+import com.justinneed.community.activity.ActivityKind;
+import com.justinneed.community.activity.ActivityRecorder;
+import com.justinneed.community.api.CommunityErrors;
+import com.justinneed.community.api.SelectionKey;
 import com.justinneed.community.card.CommunityCard;
-import com.justinneed.community.reaction.*;
+import com.justinneed.community.reaction.InteractionLocks;
+import com.justinneed.community.reaction.TargetResolver;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;
 import java.time.Clock;
-import java.util.*;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

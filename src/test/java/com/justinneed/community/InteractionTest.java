@@ -1,12 +1,21 @@
 package com.justinneed.community;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import com.justinneed.community.activity.CommunityActivityRepository;
-import com.justinneed.community.bookmark.*;
+import com.justinneed.community.bookmark.BookmarkCommandService;
+import com.justinneed.community.bookmark.CommunityBookmarkRepository;
+import com.justinneed.community.bookmark.SaveType;
+import com.justinneed.community.bookmark.TargetType;
 import com.justinneed.community.graph.PublicGraphService;
-import com.justinneed.community.reaction.*;
+import com.justinneed.community.reaction.InteractionService;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

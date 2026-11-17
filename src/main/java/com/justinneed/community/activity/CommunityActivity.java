@@ -1,9 +1,18 @@
 package com.justinneed.community.activity;
 
 import com.justinneed.community.bookmark.TargetType;
-import jakarta.persistence.*;
-import java.time.*;
-
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import java.time.Instant;
+import java.time.LocalDate;
 @Entity
 @Table(name = "community_activities", uniqueConstraints = @UniqueConstraint(columnNames =
         {"actor_id", "target_type", "target_id", "tag_id", "kind", "activity_day"}),

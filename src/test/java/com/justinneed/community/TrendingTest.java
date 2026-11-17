@@ -1,25 +1,45 @@
 package com.justinneed.community;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.filter;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import com.jayway.jsonpath.JsonPath;
 import com.justinneed.auth.domain.Member;
 import com.justinneed.auth.domain.SocialProvider;
-import com.justinneed.community.activity.*;
-import com.justinneed.community.bookmark.*;
+import com.justinneed.community.activity.ActivityKind;
+import com.justinneed.community.activity.CommunityActivity;
+import com.justinneed.community.activity.CommunityActivityRepository;
+import com.justinneed.community.bookmark.BookmarkCommandService;
+import com.justinneed.community.bookmark.SaveType;
+import com.justinneed.community.bookmark.TargetType;
 import com.justinneed.community.domain.CommunityProfile;
-import com.justinneed.community.graph.*;
+import com.justinneed.community.graph.CommunityNodeRepository;
+import com.justinneed.community.graph.PublicGraphService;
 import com.justinneed.community.reaction.InteractionService;
 import com.justinneed.session.management.domain.Source;
-import java.time.*;
-import java.util.*;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.*;
-
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 /** 떠오르는 해시태그의 기간 · 증감 · 집계 규칙. 시계를 KST 와 UTC 날짜가 갈리는 시각에 둔다. */
 @Import(TrendingTest.TimeConfig.class)
 class TrendingTest extends CommunityTestSupport {

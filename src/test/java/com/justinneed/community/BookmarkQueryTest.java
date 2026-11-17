@@ -1,11 +1,19 @@
 package com.justinneed.community;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import com.justinneed.community.bookmark.*;
-import com.justinneed.community.catalog.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.justinneed.community.bookmark.BookmarkSnapshot;
+import com.justinneed.community.bookmark.CommunityBookmark;
+import com.justinneed.community.bookmark.CommunityBookmarkRepository;
+import com.justinneed.community.bookmark.SaveType;
+import com.justinneed.community.bookmark.TargetType;
+import com.justinneed.community.catalog.CommunityHashtag;
+import com.justinneed.community.catalog.CommunityHashtagRepository;
 import com.justinneed.community.domain.NodeVisibility;
-import com.justinneed.community.graph.*;
+import com.justinneed.community.graph.CommunityNode;
+import com.justinneed.community.graph.CommunityNodeRepository;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;

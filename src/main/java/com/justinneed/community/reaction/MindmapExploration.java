@@ -1,6 +1,13 @@
 package com.justinneed.community.reaction;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
 
 // 카드(세션) 나도 탐색중. 행은 MindmapExplorationRepository.insertIfAbsent 로만 만든다

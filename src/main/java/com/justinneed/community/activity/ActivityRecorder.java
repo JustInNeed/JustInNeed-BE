@@ -1,11 +1,13 @@
 package com.justinneed.community.activity;
 
-import com.justinneed.community.bookmark.*;
-import java.time.*;
+import com.justinneed.community.bookmark.BookmarkSnapshot;
+import com.justinneed.community.bookmark.TargetType;
+import java.time.Clock;
+import java.time.ZoneId;
 import java.util.List;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.*;
-
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ActivityRecorder {
     public static final ZoneId ZONE = ZoneId.of("Asia/Seoul");

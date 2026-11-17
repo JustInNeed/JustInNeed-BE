@@ -1,12 +1,19 @@
 package com.justinneed.community.reaction;
 
 import com.justinneed.community.api.CommunityErrors;
-import com.justinneed.community.bookmark.*;
+import com.justinneed.community.bookmark.BookmarkSnapshot;
+import com.justinneed.community.bookmark.TargetType;
 import com.justinneed.community.card.CommunityCard;
 import com.justinneed.community.catalog.CommunityHashtagRepository;
 import com.justinneed.community.catalog.CommunityTags;
-import com.justinneed.community.graph.*;
-import java.util.*;
+import com.justinneed.community.graph.CommunityNodeRepository;
+import com.justinneed.community.graph.PublicGraphService;
+import java.util.ArrayDeque;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import org.springframework.stereotype.Service;
 

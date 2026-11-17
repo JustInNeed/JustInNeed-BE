@@ -1,6 +1,7 @@
 package com.justinneed.community.reaction;
 
-import com.justinneed.community.activity.*;
+import com.justinneed.community.activity.ActivityKind;
+import com.justinneed.community.activity.ActivityRecorder;
 import com.justinneed.community.bookmark.TargetType;
 import com.justinneed.global.exception.CustomException;
 import com.justinneed.global.exception.ErrorCode;

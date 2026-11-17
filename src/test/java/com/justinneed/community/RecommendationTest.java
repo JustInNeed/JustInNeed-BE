@@ -1,20 +1,32 @@
 package com.justinneed.community;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import com.justinneed.community.activity.*;
-import com.justinneed.community.bookmark.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.justinneed.community.activity.ActivityKind;
+import com.justinneed.community.activity.ActivityRecorder;
+import com.justinneed.community.activity.CommunityActivity;
+import com.justinneed.community.activity.CommunityActivityRepository;
+import com.justinneed.community.bookmark.BookmarkCommandService;
+import com.justinneed.community.bookmark.SaveType;
+import com.justinneed.community.bookmark.TargetType;
 import com.justinneed.community.domain.CommunityProfile;
 import com.justinneed.community.graph.PublicGraphService;
-import com.justinneed.community.recommend.*;
-import java.time.*;
+import com.justinneed.community.recommend.RecommendationService;
+import com.justinneed.community.recommend.TrendingService;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.Period;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.*;
-
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 @Import(RecommendationTest.TimeConfig.class)
 class RecommendationTest extends CommunityTestSupport {
     static final Instant NOW = Instant.parse("2026-09-30T03:00:00Z");

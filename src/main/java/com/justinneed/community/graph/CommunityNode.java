@@ -1,7 +1,12 @@
 package com.justinneed.community.graph;
 
-import jakarta.persistence.*;
-
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 @Entity
 @Table(name = "community_nodes", uniqueConstraints = @UniqueConstraint(columnNames = {"session_id", "source_key"}))
 public class CommunityNode {
