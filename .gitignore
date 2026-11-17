@@ -107,3 +107,6 @@ docs/
 db/*
 !db/seed-dummy.sql
 !db/migrate-session-collection.sql
+
+### husky (git hook) ###
+node_modules/

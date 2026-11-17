@@ -13,6 +13,17 @@ body:
 
   - type: textarea
     attributes:
+      label: 성공 기준
+      description: 무엇으로 성공을 판정할지 적어 주세요. S = 일어나야 할 일, R = 일어나면 안 되는 일. 요구사항 ID가 있으면 함께 적습니다.
+      placeholder: |
+        요구사항: COM-1-6
+        - S1 상황: … / 행동: … / 결과: …
+        - R1 … 가 일어나지 않는다
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
       label: 작업할 내용
       description: 할 일을 체크박스 형태로 작성해 주세요.
       placeholder: |

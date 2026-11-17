@@ -1,0 +1,2 @@
+# 정책 #15 브랜치 · 이슈 번호 (BE 전체 테스트는 CI 에서)
+node scripts/hooks/pre-push.mjs "$1"

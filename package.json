@@ -1,0 +1,11 @@
+{
+  "name": "justinneed-be-hooks",
+  "private": true,
+  "description": "git hook(husky) 전용. 정책 #5~#15 커밋 · 푸시 검사. 처음 한 번 npm install",
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
+}

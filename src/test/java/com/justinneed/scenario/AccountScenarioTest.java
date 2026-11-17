@@ -122,12 +122,14 @@ class AccountScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.nickname").value(nickname));
     }
 
-    @Test
-    @DisplayName("닉네임 칸을 비우고 저장하면 400 과 '닉네임을 입력해 주세요.' 문구를 받는다")
-    void blankNicknameIsRejected() throws Exception {
+    // 정책 #30 FE vs BE: 빈 값 · 공백만 있는 값은 FE 처럼 BE 도 막는다 (형식 정규식은 통과시키지만 @NotBlank 가 막는다)
+    @ParameterizedTest(name = "\"{0}\"")
+    @ValueSource(strings = {"", "   "})
+    @DisplayName("닉네임 칸을 비우거나 공백만 넣고 저장하면 400 과 '닉네임을 입력해 주세요.' 문구를 받는다")
+    void blankNicknameIsRejected(String nickname) throws Exception {
         Member signedUp = member(null);
 
-        mvc.perform(patch("/members/me/nickname").with(as(signedUp)).with(json(Map.of("nickname", ""))))
+        mvc.perform(patch("/members/me/nickname").with(as(signedUp)).with(json(Map.of("nickname", nickname))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message").value("닉네임을 입력해 주세요."));
