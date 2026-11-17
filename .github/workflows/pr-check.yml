@@ -1,0 +1,56 @@
+name: pr-check
+
+# 정책 #18: PR 제목 형식 · 본문 Closes #N 과 브랜치 이슈 번호 · 변경 사항 칸을 검사한다
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  pr-body:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR title, body and branch
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          HEAD_REF: ${{ github.head_ref }}
+        shell: python
+        run: |
+          import os, re, sys
+
+          title = os.environ.get("PR_TITLE", "")
+          body = os.environ.get("PR_BODY") or ""
+          branch = os.environ.get("HEAD_REF", "")
+          errors = []
+
+          # 1. 제목: 커밋 형식(#5)과 같다
+          if not re.match(r"^(feat|fix|chore|refactor|docs|test) : \S.*", title):
+              errors.append(f"PR 제목이 '타입 : 내용' 형식이 아닙니다 (feat|fix|chore|refactor|docs|test). 지금: {title!r}")
+
+          # 2. Closes #N 과 브랜치 번호
+          closes = re.findall(r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)", body, re.IGNORECASE)
+          if not closes:
+              errors.append("본문에 'Closes #이슈번호' 가 없습니다.")
+          branch_no = re.match(r"^(\d+)-", branch)
+          if branch_no is None:
+              print(f"::warning::브랜치 이름이 '이슈번호-타입-이름' 형식이 아니라 이슈 번호를 대조하지 않습니다: {branch}")
+          elif closes and branch_no.group(1) not in closes:
+              errors.append(f"본문의 Closes #{', #'.join(closes)} 가 브랜치 이슈 번호 #{branch_no.group(1)} 와 다릅니다.")
+
+          # 3. ## 변경 사항 이 비어 있지 않다 (템플릿 안내 '>' 줄과 구분선은 내용으로 치지 않는다)
+          section = re.search(r"^##\s*변경 사항\s*$(.*?)(?=^##\s|\Z)", body, re.MULTILINE | re.DOTALL)
+          if section is None:
+              errors.append("본문에 '## 변경 사항' 이 없습니다.")
+          else:
+              lines = [l.strip() for l in section.group(1).splitlines()]
+              content = [l for l in lines if l and not l.startswith(">") and set(l) != {"-"}]
+              if not content:
+                  errors.append("'## 변경 사항' 이 비어 있습니다.")
+
+          for e in errors:
+              print(f"::error::{e}")
+          sys.exit(1 if errors else 0)
