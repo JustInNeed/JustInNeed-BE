@@ -77,7 +77,7 @@ class SettingsOverHttpTest {
     }
 
     @Test
-    @DisplayName("설정 화면을 동시에 처음 열어도 모두 200 이고 기본 URL 은 5개다")
+    @DisplayName("[MEM-5-1 R2] 설정 화면을 동시에 처음 열어도 모두 200 이고 기본 URL 은 5개다")
     void concurrentFirstOpen() throws Exception {
         for (int round = 0; round < ROUNDS; round++) {
             Member member = newMember();
@@ -91,7 +91,7 @@ class SettingsOverHttpTest {
     }
 
     @Test
-    @DisplayName("같은 URL 을 동시에 추가하면 하나만 201, 나머지는 409 다")
+    @DisplayName("[MEM-5-3 R2] 같은 URL 을 동시에 추가하면 하나만 201, 나머지는 409 다")
     void concurrentSameUrl() throws Exception {
         for (int round = 0; round < ROUNDS; round++) {
             Member member = newMember();
@@ -104,7 +104,7 @@ class SettingsOverHttpTest {
     }
 
     @Test
-    @DisplayName("99개인 회원이 서로 다른 URL 을 동시에 추가해도 100개를 넘지 않는다")
+    @DisplayName("[MEM-5-3 R2] 99개인 회원이 서로 다른 URL 을 동시에 추가해도 100개를 넘지 않는다")
     void concurrentAddKeepsLimit() throws Exception {
         for (int round = 0; round < ROUNDS; round++) {
             Member member = newMember();
@@ -131,7 +131,7 @@ class SettingsOverHttpTest {
     }
 
     @Test
-    @DisplayName("확장 토글 3개를 동시에 처음 저장해도 모두 200 이고 세 값 모두 남는다")
+    @DisplayName("[MEM-6 R1] 확장 토글 3개를 동시에 처음 저장해도 모두 200 이고 세 값 모두 남는다")
     void concurrentToggles() throws Exception {
         for (int round = 0; round < ROUNDS; round++) {
             Member member = newMember();

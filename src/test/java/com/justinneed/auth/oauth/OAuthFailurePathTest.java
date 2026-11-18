@@ -42,7 +42,7 @@ class OAuthFailurePathTest {
     @Mock private LoginCodeService loginCodes;
 
     @Test
-    @DisplayName("회원 조회 중 DB 오류는 인증 실패로 바뀌어 실패 핸들러가 로그인 화면으로 보낸다")
+    @DisplayName("[MEM-1-1@3 S1] 회원 조회 중 DB 오류는 인증 실패로 바뀌어 실패 핸들러가 로그인 화면으로 보낸다")
     void databaseErrorBecomesAuthenticationFailure() {
         when(members.findBySocialProviderAndProviderId(any(), any()))
                 .thenThrow(new QueryTimeoutException("timeout"));
@@ -71,7 +71,7 @@ class OAuthFailurePathTest {
     }
 
     @Test
-    @DisplayName("로그인 코드 저장이 실패하면 500 이 아니라 로그인 화면(?error=oauth)으로 돌아간다")
+    @DisplayName("[MEM-1-1@3 S1] 로그인 코드 저장이 실패하면 500 이 아니라 로그인 화면(?error=oauth)으로 돌아간다")
     void codeIssueFailureRedirectsToLogin() throws Exception {
         when(loginCodes.issue(anyLong(), anyBoolean()))
                 .thenThrow(new QueryTimeoutException("timeout"));

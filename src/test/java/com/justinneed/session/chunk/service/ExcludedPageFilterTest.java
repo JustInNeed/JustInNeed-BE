@@ -15,6 +15,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 class ExcludedPageFilterTest {
 
     @ParameterizedTest(name = "{0} ~ {1} → {2}")
+    @DisplayName(
+            "[X-SET-02 S2·S3·R2] 호스트는 정확히 일치(하위 도메인은 다른 사이트), 경로는 / 단위 앞부분 일치, http(s) 아닌 페이지는 안 걸린다")
     @CsvSource(
             delimiter = '|',
             value = {
@@ -51,7 +53,7 @@ class ExcludedPageFilterTest {
     }
 
     @Test
-    @DisplayName("걸린 페이지와 그 pageId 의 visits · flushReport 를 빼고 focusMs 를 줄인다")
+    @DisplayName("[X-SET-02 S5] 걸린 페이지와 그 pageId 의 visits · flushReport 를 빼고 focusMs 를 줄인다")
     @SuppressWarnings("unchecked")
     void removesExcludedPagesFromBundle() {
         var bundle =

@@ -141,7 +141,8 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("소개 · 관심사 · 공개 범위 · 해시태그 공개 · 고정 세션이 한 번에 저장돼 기존 조회 API 로 보이고, 응답 data 는 없다")
+    @DisplayName(
+            "[COM-1-1 S2] [COM-1-2 S2] 소개 · 관심사 · 공개 범위 · 해시태그 공개 · 고정 세션이 한 번에 저장돼 기존 조회 API 로 보이고, 응답 data 는 없다")
     void savesEverything() throws Exception {
         Member me = member("sprout");
         Member viewer = member("foodtrip");
@@ -177,7 +178,8 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("마지막 칸(고정 세션)에서 실패하면 앞서 처리한 소개 · 관심사 · 공개 범위 · 해시태그 공개가 모두 저장되지 않는다")
+    @DisplayName(
+            "[X-PRF-06 S2·R1] 마지막 칸(고정 세션)에서 실패하면 앞서 처리한 소개 · 관심사 · 공개 범위 · 해시태그 공개가 모두 저장되지 않는다")
     void badPinRollsEverythingBack() throws Exception {
         Member me = member("sprout");
         Member viewer = member("foodtrip");
@@ -224,7 +226,7 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("관심사가 11개면 400 이고 기존 관심사는 그대로다")
+    @DisplayName("[COM-1-7 R1] 관심사가 11개면 400 이고 기존 관심사는 그대로다")
     void tooManyInterests() throws Exception {
         Member me = member("sprout");
         save(me, body("소개", "URL_ONLY", List.of("HCI"), List.of(), List.of()))
@@ -244,7 +246,7 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("관심사 형식이 틀리면 400, 대소문자만 다른 중복이면 400")
+    @DisplayName("[COM-1-7 R1] 관심사 형식이 틀리면 400, 대소문자만 다른 중복이면 400")
     void interestValidation() throws Exception {
         Member me = member("sprout");
 
@@ -338,7 +340,7 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("태그 행이 없는 옛 비공개 항목은 id 가 없어 화면이 못 보내므로 저장해도 지워지지 않는다")
+    @DisplayName("[COM-1-2 R1] 태그 행이 없는 옛 비공개 항목은 id 가 없어 화면이 못 보내므로 저장해도 지워지지 않는다")
     void legacyHiddenEntryIsKept() throws Exception {
         Member me = member("sprout");
         session(me, "로마", true, "로마");
@@ -351,7 +353,7 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("비공개 세션을 고정하면 400, 저장해도 세션을 공개로 바꾸지 않는다")
+    @DisplayName("[COM-1-3@2 R1·R2] 비공개 세션을 고정하면 400, 저장해도 세션을 공개로 바꾸지 않는다")
     void privateSessionRejected() throws Exception {
         Member me = member("sprout");
         BrowsingSession secret = session(me, "비밀", false, "비밀");
@@ -363,7 +365,7 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("남의 세션 · 지운 세션 · 없는 세션을 고정하면 404, 분석이 안 끝난 세션이면 409")
+    @DisplayName("[COM-1-3@2 R1] 남의 세션 · 지운 세션 · 없는 세션을 고정하면 404, 분석이 안 끝난 세션이면 409")
     void pinErrors() throws Exception {
         Member me = member("sprout");
         Member other = member("foodtrip");
@@ -388,7 +390,7 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("고정 세션은 보낸 순서로 저장되고 다시 보내면 그 순서로 바뀐다")
+    @DisplayName("[COM-1-3@2 S2] [COM-1-5 S2] 고정 세션은 보낸 순서로 저장되고 다시 보내면 그 순서로 바뀐다")
     void pinOrder() throws Exception {
         Member me = member("sprout");
         Member viewer = member("foodtrip");
@@ -422,7 +424,7 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("같은 세션 id 가 두 번 오면 400 이고 고정 목록은 그대로다")
+    @DisplayName("[COM-1-3@2 R1] 같은 세션 id 가 두 번 오면 400 이고 고정 목록은 그대로다")
     void duplicatePin() throws Exception {
         Member me = member("sprout");
         BrowsingSession a = session(me, "가", true, "가");
@@ -438,7 +440,8 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("저장은 세션 공개 상태를 바꾸지 않는다: 고정에서 빠진 공개 세션은 공개로 남고, 빈 목록이면 고정이 모두 풀린다")
+    @DisplayName(
+            "[COM-1-4 S2·R1] [COM-1-3@2 R2] 저장은 세션 공개 상태를 바꾸지 않는다: 고정에서 빠진 공개 세션은 공개로 남고, 빈 목록이면 고정이 모두 풀린다")
     void sessionPublicStateUnchanged() throws Exception {
         Member me = member("sprout");
         BrowsingSession a = session(me, "가", true, "가");
@@ -484,7 +487,7 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
         "hiddenHashtagIds, 비공개 해시태그 목록을 입력해 주세요.",
         "pinnedSessionIds, 고정할 세션 목록을 입력해 주세요."
     })
-    @DisplayName("필드가 빠지면 400")
+    @DisplayName("[COM-1-1 R1] 필드가 빠지면 400")
     void missingField(String field, String message) throws Exception {
         Member me = member("sprout");
         Map<String, Object> body = valid();
@@ -532,7 +535,7 @@ class ProfileSaveScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("소개는 120자까지 저장되고 비워도 되며, 121자면 400 이다 (앞뒤 공백을 지우기 전 길이로 잰다)")
+    @DisplayName("[X-PRF-05 R1] 소개는 120자까지 저장되고 비워도 되며, 121자면 400 이다 (앞뒤 공백을 지우기 전 길이로 잰다)")
     void bioLength() throws Exception {
         Member me = member("sprout");
         Map<String, Object> full = valid();

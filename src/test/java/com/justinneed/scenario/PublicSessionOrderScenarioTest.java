@@ -85,7 +85,7 @@ class PublicSessionOrderScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("고정이 없으면 최신 활동순이고, 같은 시각이면 나중 세션이 먼저다. 비공개는 빠진다")
+    @DisplayName("[COM-1-6 S2·R1] 고정이 없으면 최신 활동순이고, 같은 시각이면 나중 세션이 먼저다. 비공개는 빠진다")
     void newestFirstWithoutPins() throws Exception {
         mvc.perform(get(SESSIONS, owner.getId()).with(as(viewer)))
                 .andExpect(okEnvelope())
@@ -123,7 +123,7 @@ class PublicSessionOrderScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("세션 탭: 고정이 고정 순서로 먼저 오고, 고정 안 한 공개 세션이 그 뒤에 isPinned=false 로 온다")
+    @DisplayName("[COM-1-6 S2] 세션 탭: 고정이 고정 순서로 먼저 오고, 고정 안 한 공개 세션이 그 뒤에 isPinned=false 로 온다")
     void pinnedFirstThenPublic() throws Exception {
         pin(older);
         pin(middle);
@@ -200,7 +200,7 @@ class PublicSessionOrderScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("마인드맵 탭도 같은 순서고, 프로필 카드에만 isPinned 가 있다")
+    @DisplayName("[X-OPRF-02 S1] 마인드맵 탭도 같은 순서고, 프로필 카드에만 isPinned 가 있다")
     void cardsFollowTheSameOrder() throws Exception {
         pin(older);
         pin(middle);

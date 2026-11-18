@@ -16,13 +16,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.justinneed.auth.domain.Member;
 import com.justinneed.session.management.domain.BrowsingSession;
+import com.justinneed.session.management.domain.SessionStatus;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.util.ReflectionTestUtils;
 
 /**
  * 세션 상세 화면 (/sessions/{id}). FE: src/features/sessions/SessionDetail.tsx (404 · 403 을 따로 보여줌),
@@ -93,7 +96,7 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("없는 세션 id 로 열면 404 '세션을 찾을 수 없습니다.' → FE '세션을 찾을 수 없어요'")
+    @DisplayName("[REC-1 R1] [X-SDT-01 R2] 없는 세션 id 로 열면 404 '세션을 찾을 수 없습니다.' → FE '세션을 찾을 수 없어요'")
     void unknownSessionIs404() throws Exception {
         Member me = member("sprout");
 
@@ -111,7 +114,8 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("다른 사람의 비공개 세션을 열면 403 을 받아 FE 가 '비공개 세션이라 볼 수 없어요'를 보여주고 내용은 새지 않는다")
+    @DisplayName(
+            "[X-SDT-01 S1] 다른 사람의 비공개 세션을 열면 403 을 받아 FE 가 '비공개 세션이라 볼 수 없어요'를 보여주고 내용은 새지 않는다")
     void foreignPrivateSessionIs403() throws Exception {
         Member me = member("sprout");
         Wanderer wanderer = seedWanderer();
@@ -121,7 +125,7 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("다른 사람 세션을 수정 · 삭제하려 하면 404 이고 원본은 그대로다")
+    @DisplayName("[X-SDT-01 R1] [REC-6 R2] 다른 사람 세션을 수정 · 삭제하려 하면 404 이고 원본은 그대로다")
     void foreignSessionCannotBeChanged() throws Exception {
         Member me = member("sprout");
         Wanderer wanderer = seedWanderer();
@@ -155,7 +159,7 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("해시태그를 드래그로 옮기면(REC-7-4) 보낸 순서 그대로 저장된다")
+    @DisplayName("[REC-7-4 S2] 해시태그를 드래그로 옮기면(REC-7-4) 보낸 순서 그대로 저장된다")
     void reorderTags() throws Exception {
         Member me = member("sprout");
         BrowsingSession rome = seedMockSessions(me).rome();
@@ -188,7 +192,7 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("해시태그가 10개를 넘으면 400 '해시태그는 최대 10개까지 추가할 수 있습니다.' 이고 기존 태그는 그대로다")
+    @DisplayName("[REC-7-2 R2] 해시태그가 10개를 넘으면 400 '해시태그는 최대 10개까지 추가할 수 있습니다.' 이고 기존 태그는 그대로다")
     void moreThanTenTagsIsRejected() throws Exception {
         Member me = member("sprout");
         BrowsingSession rome = seedMockSessions(me).rome();
@@ -207,7 +211,8 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
 
     @ParameterizedTest(name = "\"{0}\"")
     @ValueSource(strings = {"#로마", "콜로세움 투어", "가나다라마바사아자차카", "rome!", ""})
-    @DisplayName("형식이 틀린 해시태그('#' · 공백 · 특수문자 · 11자 이상 · 빈 값)는 400 — FE hashtag.ts 와 같은 규칙")
+    @DisplayName(
+            "[REC-7-2 R2] 형식이 틀린 해시태그('#' · 공백 · 특수문자 · 11자 이상 · 빈 값)는 400 — FE hashtag.ts 와 같은 규칙")
     void invalidTagIsRejected(String tag) throws Exception {
         Member me = member("sprout");
         BrowsingSession rome = seedMockSessions(me).rome();
@@ -220,7 +225,7 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("대소문자만 다른 같은 태그를 넣으면 400 '이미 등록된 해시태그입니다.'")
+    @DisplayName("[REC-7-2 R2] 대소문자만 다른 같은 태그를 넣으면 400 '이미 등록된 해시태그입니다.'")
     void duplicateTagIgnoringCaseIsRejected() throws Exception {
         Member me = member("sprout");
         BrowsingSession rome = seedMockSessions(me).rome();
@@ -298,7 +303,7 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("요약이 없던 세션에 본문을 저장하면 summary 가 새로 생긴다")
+    @DisplayName("[REC-5-2 R3] 요약이 없던 세션에 본문을 저장하면 summary 가 새로 생긴다")
     void markdownCreatesSummary() throws Exception {
         Member me = member("sprout");
         BrowsingSession bare =
@@ -323,7 +328,8 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("제목을 비우면 400 '제목을 입력해 주세요.', 100자를 넘기면 400 '제목은 최대 100자까지 입력할 수 있습니다.'")
+    @DisplayName(
+            "[REC-5-1 R1] 제목을 비우면 400 '제목을 입력해 주세요.', 100자를 넘기면 400 '제목은 최대 100자까지 입력할 수 있습니다.'")
     void titleValidation() throws Exception {
         Member me = member("sprout");
         BrowsingSession rome = seedMockSessions(me).rome();
@@ -345,8 +351,33 @@ class SessionDetailScenarioTest extends ScenarioTestSupport {
                 .andExpect(okEnvelope());
     }
 
+    @ParameterizedTest
+    @EnumSource(
+            value = SessionStatus.class,
+            names = {"COMPLETED", "FAILED"})
+    @DisplayName("[REC-6 S1] 세션 삭제는 행을 지우지 않고 deletedAt 만 찍는다 (완료 세션 · 실패 상태 화면 모두)")
+    void deleteMarksDeletedAt(SessionStatus status) throws Exception {
+        Member me = member("sprout");
+        BrowsingSession target =
+                sessionWithStatus(
+                        me,
+                        "지울 세션",
+                        "2026-04-27T09:00:00",
+                        "2026-04-27T09:10:00",
+                        status,
+                        List.of("로마"));
+        assertThat(sessions.findById(target.getId()).orElseThrow().isDeleted()).isFalse();
+
+        mvc.perform(delete("/sessions/{id}", target.getId()).with(as(me))).andExpect(okEnvelope());
+
+        BrowsingSession stored = sessions.findById(target.getId()).orElseThrow();
+        assertThat(stored.isDeleted()).isTrue();
+        assertThat(ReflectionTestUtils.getField(stored, "deletedAt")).isNotNull();
+        assertThat(stored.getTitle()).isEqualTo("지울 세션");
+    }
+
     @Test
-    @DisplayName("세션을 삭제(REC-6)하면 상세 · 목록에서 사라지고, 다시 삭제하면 404")
+    @DisplayName("[REC-6 S2] 세션을 삭제(REC-6)하면 상세 · 목록에서 사라지고, 다시 삭제하면 404")
     void deleteSession() throws Exception {
         Member me = member("sprout");
         BrowsingSession rome = seedMockSessions(me).rome();

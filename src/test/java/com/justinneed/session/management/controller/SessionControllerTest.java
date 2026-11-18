@@ -105,7 +105,8 @@ class SessionControllerTest {
     }
 
     @Test
-    @DisplayName("진행 중 세션은 맨 위, 종료 시각 없는 끝난 세션은 맨 뒤 — 이 DB(H2 기본 NULL 정렬)에서도 운영 Postgres 와 같은 순서")
+    @DisplayName(
+            "[REC-10-1 S1] 진행 중 세션은 맨 위, 종료 시각 없는 끝난 세션은 맨 뒤 — 이 DB(H2 기본 NULL 정렬)에서도 운영 Postgres 와 같은 순서")
     void getSessionsOrdersInProgressFirstAndMissingEndedAtLast() throws Exception {
         BrowsingSession analyzing =
                 new BrowsingSession(userId, "분석 중", LocalDateTime.of(2026, 5, 1, 9, 0));
@@ -129,7 +130,7 @@ class SessionControllerTest {
 
     @Test
     @DisplayName(
-            "GET /sessions/hashtags 는 /sessions/{id} 가 아니라 해시태그 후보로 매칭되고, 대소문자 무시 중복 없이 목록 순서로 준다")
+            "[REC-7-5 S1] GET /sessions/hashtags 는 /sessions/{id} 가 아니라 해시태그 후보로 매칭되고, 대소문자 무시 중복 없이 목록 순서로 준다")
     void getHashtagsReturnsDistinctTagsInListOrder() throws Exception {
         BrowsingSession newer =
                 new BrowsingSession(userId, "JPA 심화", LocalDateTime.of(2026, 6, 2, 10, 0));

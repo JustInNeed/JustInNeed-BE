@@ -98,7 +98,8 @@ class SessionStatusScenarioTest extends ScenarioTestSupport {
 
     @ParameterizedTest(name = "{0} {1}")
     @MethodSource("contentChanges")
-    @DisplayName("분석이 끝나기 전 제목 · 본문 · 태그 · 공개 수정은 409 이고 아무것도 바뀌지 않는다 (함께 보낸 즐겨찾기도)")
+    @DisplayName(
+            "[SUR-4 R2] [COM-1-3@1 R1] [REC-5-1 R2] [REC-5-2 R3] 분석이 끝나기 전 제목 · 본문 · 태그 · 공개 수정은 409 이고 아무것도 바뀌지 않는다 (함께 보낸 즐겨찾기도)")
     void contentChangeBeforeCompletion(SessionStatus status, Map<String, Object> body)
             throws Exception {
         BrowsingSession session = unfinished(status);
@@ -116,7 +117,7 @@ class SessionStatusScenarioTest extends ScenarioTestSupport {
 
     @ParameterizedTest
     @EnumSource(value = SessionStatus.class, names = "COMPLETED", mode = EnumSource.Mode.EXCLUDE)
-    @DisplayName("즐겨찾기만 바꾸는 건 분석이 끝나기 전에도 된다")
+    @DisplayName("[REC-11 S2] [SUR-4 R2] 즐겨찾기만 바꾸는 건 분석이 끝나기 전에도 된다")
     void favouriteBeforeCompletion(SessionStatus status) throws Exception {
         BrowsingSession session = unfinished(status);
 
@@ -130,7 +131,7 @@ class SessionStatusScenarioTest extends ScenarioTestSupport {
 
     @ParameterizedTest
     @EnumSource(SessionStatus.class)
-    @DisplayName("세션 삭제는 어떤 상태에서도 된다")
+    @DisplayName("[REC-6 S1] 세션 삭제는 어떤 상태에서도 된다")
     void deleteInEveryStatus(SessionStatus status) throws Exception {
         BrowsingSession session = unfinished(status);
 

@@ -391,7 +391,8 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("CommunityCardReader: URL 만 공개한 작성자의 카드는 제목 · 요약 · URL 제목이 없고 숫자는 고유 URL 수다")
+    @DisplayName(
+            "[X-CMT-01 S3·R1] CommunityCardReader: URL 만 공개한 작성자의 카드는 제목 · 요약 · URL 제목이 없고 숫자는 고유 URL 수다")
     void readerUrlOnly() throws Exception {
         patchSession(Map.of("isPublic", true));
 
@@ -414,7 +415,7 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("CommunityCardReader: 내용까지 공개면 제목 · 요약 · URL 제목이 오고 숫자는 AI 노드 수다")
+    @DisplayName("[X-CMT-01 S2] CommunityCardReader: 내용까지 공개면 제목 · 요약 · URL 제목이 오고 숫자는 AI 노드 수다")
     void readerContent() throws Exception {
         setResult(MINDMAP);
         patchSession(Map.of("isPublic", true));
@@ -429,7 +430,7 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("CommunityCardReader: 비공개 태그는 빠지고 작성자 본인도 방문자 규칙으로 본다")
+    @DisplayName("[X-CMT-01 R2] CommunityCardReader: 비공개 태그는 빠지고 작성자 본인도 방문자 규칙으로 본다")
     void readerHiddenTag() throws Exception {
         patchSession(Map.of("isPublic", true));
         CommunityProfile profile = new CommunityProfile(me.getId());

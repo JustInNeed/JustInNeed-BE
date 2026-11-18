@@ -37,7 +37,7 @@ class SessionListScenarioTest extends ScenarioTestSupport {
     private static final String INVALID_REQUEST = "요청 형식이 올바르지 않습니다.";
 
     @Test
-    @DisplayName("세션 목록은 종료 시각 최신순(REC-10-1)으로 온다 — 저장 순서와 상관없다")
+    @DisplayName("[REC-10-1 S1] 세션 목록은 종료 시각 최신순(REC-10-1)으로 온다 — 저장 순서와 상관없다")
     void listIsNewestFirst() throws Exception {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
@@ -94,7 +94,8 @@ class SessionListScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("즐겨찾기만 보기(REC-10-3): favorite=true 로 부르면 서버가 걸러 로마 · 파리 두 개만 최신순으로 온다")
+    @DisplayName(
+            "[REC-10-3 S1] 즐겨찾기만 보기(REC-10-3): favorite=true 로 부르면 서버가 걸러 로마 · 파리 두 개만 최신순으로 온다")
     void favoritesFilter() throws Exception {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
@@ -138,7 +139,7 @@ class SessionListScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("삭제한 세션과 다른 사람 세션은 내 목록에 나오지 않는다")
+    @DisplayName("[REC-10-1 R2] 삭제한 세션과 다른 사람 세션은 내 목록에 나오지 않는다")
     void deletedAndForeignSessionsAreHidden() throws Exception {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
@@ -181,7 +182,7 @@ class SessionListScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("종료 시각이 같으면 나중에 시작한 세션이 먼저 온다")
+    @DisplayName("[REC-10-1 S1] 종료 시각이 같으면 나중에 시작한 세션이 먼저 온다")
     void sameEndedAtSortsByStartedAt() throws Exception {
         Member me = member("sprout");
         LocalDateTime end = LocalDateTime.parse("2026-04-26T22:00:00");
@@ -215,7 +216,7 @@ class SessionListScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("진행 중(분석 중) 세션은 더 최근에 끝난 완료 세션보다 위에, 진행 중끼리는 시작 시각 최신순으로 온다")
+    @DisplayName("[REC-10-1 S1] 진행 중(분석 중) 세션은 더 최근에 끝난 완료 세션보다 위에, 진행 중끼리는 시작 시각 최신순으로 온다")
     void inProgressSessionsComeFirst() throws Exception {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
@@ -265,7 +266,8 @@ class SessionListScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("실패 세션은 완료 세션과 섞여 종료 시각 최신순, 종료 시각이 없는 끝난 세션은 맨 뒤 (운영 Postgres 와 같은 NULL 정렬에서도)")
+    @DisplayName(
+            "[REC-10-1 S1] 실패 세션은 완료 세션과 섞여 종료 시각 최신순, 종료 시각이 없는 끝난 세션은 맨 뒤 (운영 Postgres 와 같은 NULL 정렬에서도)")
     void failedSessionsSortByEndedAt() throws Exception {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
@@ -308,7 +310,7 @@ class SessionListScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("시작 · 종료 시각이 모두 같아도 id 역순으로 순서가 고정돼 페이지 사이에 빠지거나 겹치는 세션이 없다")
+    @DisplayName("[REC-10-1 S1] 시작 · 종료 시각이 모두 같아도 id 역순으로 순서가 고정돼 페이지 사이에 빠지거나 겹치는 세션이 없다")
     void identicalTimestampsKeepStableOrder() throws Exception {
         Member me = member("sprout");
         LocalDateTime start = LocalDateTime.parse("2026-04-01T10:00:00");
@@ -397,7 +399,7 @@ class SessionListScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("상단 개수(전체 N개 세션 · M개 즐겨찾기)는 즐겨찾기 필터 · 페이지와 상관없이 같다")
+    @DisplayName("[REC-10-1 S6] 상단 개수(전체 N개 세션 · M개 즐겨찾기)는 즐겨찾기 필터 · 페이지와 상관없이 같다")
     void countsIgnoreFilterAndPage() throws Exception {
         Member me = member("sprout");
         List<BrowsingSession> daily = seedDailySessions(me, 12);
@@ -424,7 +426,7 @@ class SessionListScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("즐겨찾기만 보기도 페이지로 나뉜다: favorite=true&size=3 이면 즐겨찾기 4개가 3 + 1 로 온다")
+    @DisplayName("[REC-10-3 S1] 즐겨찾기만 보기도 페이지로 나뉜다: favorite=true&size=3 이면 즐겨찾기 4개가 3 + 1 로 온다")
     void favoriteFilterPaging() throws Exception {
         Member me = member("sprout");
         List<BrowsingSession> daily = seedDailySessions(me, 12);
@@ -452,7 +454,7 @@ class SessionListScenarioTest extends ScenarioTestSupport {
 
     @Test
     @DisplayName(
-            "page 가 음수 · size 가 1~50 밖이면 400 '페이지 값이 올바르지 않습니다.', 숫자가 아니면 400 '요청 형식이 올바르지 않습니다.'")
+            "[REC-10-1 R3] page 가 음수 · size 가 1~50 밖이면 400 '페이지 값이 올바르지 않습니다.', 숫자가 아니면 400 '요청 형식이 올바르지 않습니다.'")
     void invalidPageParams() throws Exception {
         Member me = member("sprout");
         seedDailySessions(me, 2);

@@ -196,7 +196,8 @@ class ProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("해시태그별 공개 설정(COM-1-2): 목록에 hashtagId · 공개 여부가 오고, 비공개로 바꾸면 다른 사람 마인드맵에서 그 태그만 빠진다")
+    @DisplayName(
+            "[COM-1-2 S2] 해시태그별 공개 설정(COM-1-2): 목록에 hashtagId · 공개 여부가 오고, 비공개로 바꾸면 다른 사람 마인드맵에서 그 태그만 빠진다")
     void hashtagVisibility() throws Exception {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
@@ -402,7 +403,7 @@ class ProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("세션 상세에서 공개를 끄면 고정이 풀리고, 다시 공개해도 고정은 돌아오지 않는다")
+    @DisplayName("[COM-1-3@1 S2] [X-PRF-03 R1] 세션 상세에서 공개를 끄면 고정이 풀리고, 다시 공개해도 고정은 돌아오지 않는다")
     void privateToggleRemovesPin() throws Exception {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);

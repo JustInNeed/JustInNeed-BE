@@ -84,7 +84,7 @@ class AccountScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("닉네임을 저장하면 응답과 내 정보에 바로 반영돼 사이드바에 보인다")
+    @DisplayName("[MEM-4 S4] 닉네임을 저장하면 응답과 내 정보에 바로 반영돼 사이드바에 보인다")
     void savedNicknameShowsUpInMe() throws Exception {
         Member signedUp = member(null);
 
@@ -102,7 +102,8 @@ class AccountScenarioTest extends ScenarioTestSupport {
 
     @ParameterizedTest(name = "\"{0}\"")
     @ValueSource(strings = {"ab", "abcdefghijklmnopq", "1abc", "ab_c", "ab c", "sprout.kr", "새싹"})
-    @DisplayName("닉네임 형식(영문 시작 3~16자, 영문·숫자)이 틀리면 400 과 안내 문구를 받고 닉네임은 그대로다")
+    @DisplayName(
+            "[MEM-4 R2] [MEM-1-2 S7] 닉네임 형식(영문 시작 3~16자, 영문·숫자)이 틀리면 400 과 안내 문구를 받고 닉네임은 그대로다")
     void invalidNicknameIsRejected(String nickname) throws Exception {
         Member signedUp = member(null);
 
@@ -133,7 +134,7 @@ class AccountScenarioTest extends ScenarioTestSupport {
     // 정책 #30 FE vs BE: 빈 값 · 공백만 있는 값은 FE 처럼 BE 도 막는다 (형식 정규식은 통과시키지만 @NotBlank 가 막는다)
     @ParameterizedTest(name = "\"{0}\"")
     @ValueSource(strings = {"", "   "})
-    @DisplayName("닉네임 칸을 비우거나 공백만 넣고 저장하면 400 과 '닉네임을 입력해 주세요.' 문구를 받는다")
+    @DisplayName("[MEM-1-2 S7] 닉네임 칸을 비우거나 공백만 넣고 저장하면 400 과 '닉네임을 입력해 주세요.' 문구를 받는다")
     void blankNicknameIsRejected(String nickname) throws Exception {
         Member signedUp = member(null);
 
@@ -147,7 +148,8 @@ class AccountScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("다른 사람이 쓰는 닉네임(대소문자 무시)으로 저장하면 409 와 FE 와 같은 '이미 사용 중인 닉네임입니다.' 를 받는다")
+    @DisplayName(
+            "[MEM-1-2 S6] 다른 사람이 쓰는 닉네임(대소문자 무시)으로 저장하면 409 와 FE 와 같은 '이미 사용 중인 닉네임입니다.' 를 받는다")
     void takenNicknameIsConflict() throws Exception {
         member("wanderer");
         Member me = member(null);
@@ -185,7 +187,8 @@ class AccountScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("access 토큰이 만료되면 refresh 토큰으로 새 토큰 쌍을 받고, 한 번 쓴 refresh 토큰은 다시 못 쓴다")
+    @DisplayName(
+            "[MEM-2-1 S1·S2] access 토큰이 만료되면 refresh 토큰으로 새 토큰 쌍을 받고, 한 번 쓴 refresh 토큰은 다시 못 쓴다")
     void refreshRotatesTokens() throws Exception {
         Member me = member("sprout");
         TokenResponse login = authTokenService.issue(me.getId()); // 소셜 로그인 성공 시 발급되는 토큰
@@ -208,7 +211,7 @@ class AccountScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("기다리지 않고 재발급을 연달아 해도(같은 초) 매번 200 이고 새 토큰으로 이어진다")
+    @DisplayName("[MEM-2-1 R1] 기다리지 않고 재발급을 연달아 해도(같은 초) 매번 200 이고 새 토큰으로 이어진다")
     void consecutiveRefreshesInSameSecond() throws Exception {
         Member me = member("sprout");
         String first = authTokenService.issue(me.getId()).refreshToken();
@@ -230,7 +233,7 @@ class AccountScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("한 회원에게 같은 순간 토큰을 두 번 발급해도 access · refresh 토큰이 모두 다르다")
+    @DisplayName("[MEM-2-1 R1] 한 회원에게 같은 순간 토큰을 두 번 발급해도 access · refresh 토큰이 모두 다르다")
     void tokensIssuedAtSameInstantAreUnique() {
         Member me = member("sprout");
 
@@ -292,7 +295,7 @@ class AccountScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("로그아웃하면 지금 access 토큰과 refresh 토큰이 바로 무효가 된다")
+    @DisplayName("[MEM-3@1 S2] 로그아웃하면 지금 access 토큰과 refresh 토큰이 바로 무효가 된다")
     void logoutRevokesBothTokens() throws Exception {
         Member me = member("sprout");
         TokenResponse login = authTokenService.issue(me.getId());
@@ -312,7 +315,7 @@ class AccountScenarioTest extends ScenarioTestSupport {
 
     @Test
     @DisplayName(
-            "로그아웃한 access 토큰은 DB(revoked_access_tokens)에 해시로 남아, 서버를 다시 띄워도(새 TokenDenylist) 계속 거부된다")
+            "[MEM-3@1 S4] 로그아웃한 access 토큰은 DB(revoked_access_tokens)에 해시로 남아, 서버를 다시 띄워도(새 TokenDenylist) 계속 거부된다")
     void revokedAccessTokenSurvivesRestart() throws Exception {
         Member me = member("sprout");
         TokenResponse login = authTokenService.issue(me.getId());
@@ -379,7 +382,7 @@ class AccountScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("탈퇴 처리와 겹쳐 refresh 토큰 행이 남아 있어도 탈퇴 회원에게는 새 토큰을 주지 않는다")
+    @DisplayName("[MEM-2-1 R2] 탈퇴 처리와 겹쳐 refresh 토큰 행이 남아 있어도 탈퇴 회원에게는 새 토큰을 주지 않는다")
     void withdrawnMemberCannotRefresh() throws Exception {
         Member me = member("sprout");
         TokenResponse login = authTokenService.issue(me.getId());

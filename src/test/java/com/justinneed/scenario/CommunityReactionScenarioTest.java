@@ -156,7 +156,7 @@ class CommunityReactionScenarioTest extends ScenarioTestSupport {
     // ---------- 좋아요 ----------
 
     @Test
-    @DisplayName("좋아요: 수와 내 상태가 바뀌고 같은 값을 다시 보내도 두 번 세지 않는다")
+    @DisplayName("[X-CMT-03 S1] 좋아요: 수와 내 상태가 바뀌고 같은 값을 다시 보내도 두 번 세지 않는다")
     void like() throws Exception {
         like(me, prague, true)
                 .andExpect(okEnvelope())
@@ -182,7 +182,7 @@ class CommunityReactionScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("좋아요: 내 카드에는 누를 수 없다 (프로필 좋아요와 같다). 다른 사람 눈의 숫자는 그대로다")
+    @DisplayName("[X-CMT-03 R1] 좋아요: 내 카드에는 누를 수 없다 (프로필 좋아요와 같다). 다른 사람 눈의 숫자는 그대로다")
     void likeOwnCard() throws Exception {
         like(wanderer.member(), prague, true)
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "내 프로필과 마인드맵에는 좋아요를 누를 수 없습니다."));
@@ -193,7 +193,7 @@ class CommunityReactionScenarioTest extends ScenarioTestSupport {
     // ---------- 공개 조건 ----------
 
     @Test
-    @DisplayName("공개 카드가 아니면 세 API 모두 어느 값을 보내도 404 다")
+    @DisplayName("[COM-4-3@1 R2] [COM-4-2@1 R1] [X-CMT-05 S2] 공개 카드가 아니면 세 API 모두 어느 값을 보내도 404 다")
     void notPublicCard() throws Exception {
         BrowsingSession failed =
                 sessionWithStatus(
@@ -264,7 +264,7 @@ class CommunityReactionScenarioTest extends ScenarioTestSupport {
     // ---------- 나도 탐색중 ----------
 
     @Test
-    @DisplayName("나도 탐색중: 수와 내 상태가 바뀌고, 취소했다 다시 눌러도 같은 날 활동은 한 번이다")
+    @DisplayName("[COM-4-2@1 S3] 나도 탐색중: 수와 내 상태가 바뀌고, 취소했다 다시 눌러도 같은 날 활동은 한 번이다")
     void exploring() throws Exception {
         exploring(me, prague, true)
                 .andExpect(okEnvelope())
@@ -286,7 +286,7 @@ class CommunityReactionScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("나도 탐색중: 내 카드도 누를 수 있고, 활동은 공개 태그만 남긴다. 떠오르는 해시태그에 잡힌다")
+    @DisplayName("[COM-4-2@1 S3] 나도 탐색중: 내 카드도 누를 수 있고, 활동은 공개 태그만 남긴다. 떠오르는 해시태그에 잡힌다")
     void exploringRecordsPublicTags() throws Exception {
         exploring(wanderer.member(), prague, true).andExpect(okEnvelope());
         exploring(me, wanderer.cafe(), true).andExpect(okEnvelope());
@@ -443,7 +443,7 @@ class CommunityReactionScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("북마크: 같은 값을 다시 보내면 같은 id, false 는 지운다. 없는 북마크를 지워도 200 이다")
+    @DisplayName("[COM-4-3@1 S2] 북마크: 같은 값을 다시 보내면 같은 id, false 는 지운다. 없는 북마크를 지워도 200 이다")
     void bookmarkIdempotent() throws Exception {
         Long id = readLong(bookmark(me, prague, true), "$.data.bookmarkId");
         bookmark(me, prague, true)
@@ -524,7 +524,7 @@ class CommunityReactionScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("북마크: 저장할 노드가 없는 카드는 400 이고, 아무것도 남기지 않는다")
+    @DisplayName("[COM-4-3@1 R1] 북마크: 저장할 노드가 없는 카드는 400 이고, 아무것도 남기지 않는다")
     void bookmarkWithoutNodes() throws Exception {
         BrowsingSession empty =
                 session(
@@ -551,7 +551,7 @@ class CommunityReactionScenarioTest extends ScenarioTestSupport {
     // ---------- 숫자 · 입력 ----------
 
     @Test
-    @DisplayName("탈퇴한 사람의 행동은 숫자에서 빠지고 행은 남는다")
+    @DisplayName("[X-CMT-03 R3] [COM-4-2@1 R2] 탈퇴한 사람의 행동은 숫자에서 빠지고 행은 남는다")
     void withdrawnActors() throws Exception {
         like(other, prague, true);
         exploring(other, prague, true);
@@ -574,7 +574,7 @@ class CommunityReactionScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("필수 값이 없으면 400, 로그인하지 않으면 401 이다")
+    @DisplayName("[X-CMT-05 S2] 필수 값이 없으면 400, 로그인하지 않으면 401 이다")
     void validation() throws Exception {
         mvc.perform(patch(LIKE, prague.getId()).with(as(me)).with(json("{}")))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, INVALID));

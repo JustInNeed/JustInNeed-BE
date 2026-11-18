@@ -157,7 +157,7 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("해시태그 묶음 탭(COM-2-1): 저장한 묶음이 최신순으로 해시태그 이름 · 저장 시각(UTC ISO)과 함께 온다")
+    @DisplayName("[COM-2-1@1 S3] 해시태그 묶음 탭(COM-2-1): 저장한 묶음이 최신순으로 해시태그 이름 · 저장 시각(UTC ISO)과 함께 온다")
     void hashtagBundlesNewestFirst() throws Exception {
         Long first = saveBundle("프라하", "야간열차");
         Long second = saveBundle("비엔나");
@@ -229,7 +229,8 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("작성자가 원본 세션을 비공개로 돌리면 저장한 사람에게도 북마크가 안 보이고 원래 마인드맵 보기도 막힌다 (행 · 스냅샷은 그대로)")
+    @DisplayName(
+            "[COM-2-2@1 S3·R3] [COM-2-2@2 R1] 작성자가 원본 세션을 비공개로 돌리면 저장한 사람에게도 북마크가 안 보이고 원래 마인드맵 보기도 막힌다 (행 · 스냅샷은 그대로)")
     void sourceGoingPrivateHidesBookmark() throws Exception {
         Long bookmarkId = saveMiniMindmap(pragueNodes());
         BookmarkSnapshot saved = bookmarkRows.findById(bookmarkId).orElseThrow().getSnapshot();
@@ -245,7 +246,7 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("원본 세션을 다시 공개하면 북마크가 저장했던 그대로 돌아오고 원래 마인드맵 강조도 돌아온다")
+    @DisplayName("[COM-2-2@1 S3] 원본 세션을 다시 공개하면 북마크가 저장했던 그대로 돌아오고 원래 마인드맵 강조도 돌아온다")
     void sourceMadePublicAgainShowsBookmark() throws Exception {
         List<Long> saved = pragueNodes();
         Long bookmarkId = saveMiniMindmap(saved);
@@ -341,7 +342,7 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("태그가 섞인 세션은 태그 하나가 비공개가 돼도 세션이 보이므로 북마크도 남고 그 태그만 빠진다")
+    @DisplayName("[COM-2-2@1 R2] 태그가 섞인 세션은 태그 하나가 비공개가 돼도 세션이 보이므로 북마크도 남고 그 태그만 빠진다")
     void mixedTagSessionKeepsBookmarkWithoutHiddenTag() throws Exception {
         setWandererHashtagPublic("카페", true);
         Long bookmarkId = saveMiniMindmap(List.of(nodeId(me, wanderer.member(), CAFE)));
@@ -388,7 +389,7 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("숨겨진 북마크는 페이지를 차지하지 않는다: 페이지가 짧거나 비지 않고 hasNext 도 보이는 북마크 기준이다")
+    @DisplayName("[COM-2-1@1 S3·R1] 숨겨진 북마크는 페이지를 차지하지 않는다: 페이지가 짧거나 비지 않고 hasNext 도 보이는 북마크 기준이다")
     void hiddenBookmarksDoNotShortenPages() throws Exception {
         Long wien = saveMiniMindmap(List.of(nodeId(me, wanderer.member(), WIEN)));
         saveMiniMindmap(List.of(nodeId(me, wanderer.member(), PRAGUE_CASTLE)));
@@ -416,7 +417,7 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("북마크 스캔 묶음(100개)을 넘어가도 보이는 북마크로 페이지를 채운다")
+    @DisplayName("[COM-2-1@1 R1] 북마크 스캔 묶음(100개)을 넘어가도 보이는 북마크로 페이지를 채운다")
     void pagingCrossesScanBatches() throws Exception {
         Long stored = saveMiniMindmap(List.of(nodeId(me, wanderer.member(), PRAGUE_CASTLE)));
         Long visible = saveMiniMindmap(List.of(nodeId(me, wanderer.member(), WIEN)));
@@ -445,7 +446,7 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("노드로 저장한 해시태그 묶음은 노드의 원본 세션을 따른다: 비공개 · 삭제면 안 보이고 다시 공개하면 돌아온다")
+    @DisplayName("[COM-2-1@2 S3] 노드로 저장한 해시태그 묶음은 노드의 원본 세션을 따른다: 비공개 · 삭제면 안 보이고 다시 공개하면 돌아온다")
     void nodeBundleFollowsSourceSession() throws Exception {
         Long bundle = saveNodeBundle(pragueNodes());
 
@@ -501,7 +502,7 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("최근 저장 기반 추천: 기준은 보이는 북마크 최근 20개까지다")
+    @DisplayName("[COM-6-1 S3] 최근 저장 기반 추천: 기준은 보이는 북마크 최근 20개까지다")
     void recentBasisUsesTwentyBookmarks() throws Exception {
         saveMiniMindmap(List.of(nodeId(me, wanderer.member(), WIEN)));
         Long stored = saveMiniMindmap(List.of(nodeId(me, wanderer.member(), PRAGUE_CASTLE)));
@@ -541,7 +542,7 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("최근 저장 기반 추천: 숨겨진 북마크가 최근 20개 자리를 차지하지 않는다")
+    @DisplayName("[COM-6-1 S3] 최근 저장 기반 추천: 숨겨진 북마크가 최근 20개 자리를 차지하지 않는다")
     void hiddenBookmarksDoNotTakeRecentSlots() throws Exception {
         Long stored = saveMiniMindmap(List.of(nodeId(me, wanderer.member(), PRAGUE_CASTLE)));
         saveMiniMindmap(List.of(nodeId(me, wanderer.member(), WIEN)));
@@ -569,7 +570,8 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("해시태그 묶음 탭: 저장한 뒤 작성자가 비공개로 돌린 해시태그는 묶음에서 빠지고, 태그가 하나도 안 남은 묶음은 목록에서 빠진다")
+    @DisplayName(
+            "[COM-2-1@2 R1] 해시태그 묶음 탭: 저장한 뒤 작성자가 비공개로 돌린 해시태그는 묶음에서 빠지고, 태그가 하나도 안 남은 묶음은 목록에서 빠진다")
     void bundleHidesHashtagsMadePrivateLater() throws Exception {
         Long both = saveBundle("프라하", "야간열차");
         Long vienna = saveBundle("비엔나");
@@ -594,7 +596,8 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("미니 마인드맵 탭: 저장한 뒤 작성자가 비공개로 돌린 해시태그는 그 연결선과 함께 빠지고, 노드는 원본 세션이 공개인 동안 남는다")
+    @DisplayName(
+            "[COM-2-2@1 R2] 미니 마인드맵 탭: 저장한 뒤 작성자가 비공개로 돌린 해시태그는 그 연결선과 함께 빠지고, 노드는 원본 세션이 공개인 동안 남는다")
     void miniMindmapHidesHashtagsMadePrivateLater() throws Exception {
         Long viennaTag = hashtagId(wanderer.member(), "비엔나");
         Long mixed =
@@ -646,7 +649,7 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("해시태그 묶음 북마크는 원래 마인드맵 보기 대상이 아니고(400), 남의 북마크 id 는 404")
+    @DisplayName("[COM-2-2@2 R2] 해시태그 묶음 북마크는 원래 마인드맵 보기 대상이 아니고(400), 남의 북마크 id 는 404")
     void originalErrors() throws Exception {
         Long bundle = saveBundle("프라하");
         Long mini = saveMiniMindmap(pragueNodes());
@@ -660,7 +663,7 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("북마크 해제(COM-4-3): 지우면 목록에서 빠지고, 남의 북마크를 지우거나 다시 지우면 404")
+    @DisplayName("[COM-4-3@2 R2] 북마크 해제(COM-4-3): 지우면 목록에서 빠지고, 남의 북마크를 지우거나 다시 지우면 404")
     void unbookmark() throws Exception {
         Long prague = saveBundle("프라하");
         Long vienna = saveBundle("비엔나");
@@ -697,7 +700,8 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("미니 마인드맵 카드에 작성자와 원본 카드의 제목 · 요약이 온다. URL만이면 제목 자리는 null 이고 FE 가 태그를 보여준다")
+    @DisplayName(
+            "[COM-2-2@1 S2] 미니 마인드맵 카드에 작성자와 원본 카드의 제목 · 요약이 온다. URL만이면 제목 자리는 null 이고 FE 가 태그를 보여준다")
     void miniMindmapCardHasOwnerAndTitle() throws Exception {
         saveMiniMindmap(pragueNodes());
 
@@ -728,7 +732,7 @@ class BookmarkScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("해시태그 묶음을 이름을 붙여 저장하면 목록 카드에 그 이름이 온다")
+    @DisplayName("[COM-2-1@2 S1] 해시태그 묶음을 이름을 붙여 저장하면 목록 카드에 그 이름이 온다")
     void bundleHasName() throws Exception {
         mvc.perform(
                         post("/community/bookmarks")

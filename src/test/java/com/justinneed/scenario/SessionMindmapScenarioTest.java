@@ -109,7 +109,7 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("다른 사용자의 인용에는 http(s) 링크만 온다: 화면이 href 로 그대로 쓴다. 소유자에게는 그대로다")
+    @DisplayName("[REC-3-3 R1] 다른 사용자의 인용에는 http(s) 링크만 온다: 화면이 href 로 그대로 쓴다. 소유자에게는 그대로다")
     void viewerSeesOnlyWebCitations() throws Exception {
         BrowsingSession open =
                 session(
@@ -150,7 +150,7 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("노드와 엣지를 화면에 필요한 값만 내려주고, 컷오프 유닛 노드에는 원문 인용이 붙는다")
+    @DisplayName("[REC-7-1 S1] 노드와 엣지를 화면에 필요한 값만 내려주고, 컷오프 유닛 노드에는 원문 인용이 붙는다")
     void nodesEdgesAndCitation() throws Exception {
         saveResult(mine, MINDMAP, SELECTED);
 
@@ -211,7 +211,7 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("모르는 type · 형식이 깨진 노드와 없는 노드를 가리키는 엣지는 500 없이 건너뛴다")
+    @DisplayName("[REC-2-2 R2] 모르는 type · 형식이 깨진 노드와 없는 노드를 가리키는 엣지는 500 없이 건너뛴다")
     void malformedItemsAreSkipped() throws Exception {
         saveResult(
                 mine,
@@ -253,7 +253,7 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("nodes · edges 가 배열이 아니거나 마인드맵이 비어 있어도 빈 그래프다")
+    @DisplayName("[REC-2-2 R2] nodes · edges 가 배열이 아니거나 마인드맵이 비어 있어도 빈 그래프다")
     void malformedTopLevelIsEmpty() throws Exception {
         saveResult(
                 mine,
@@ -268,7 +268,7 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("저장된 mindmap 이 객체가 아니거나 selected_units 에 객체가 아닌 값이 있어도 500 없이 응답한다")
+    @DisplayName("[REC-2-2 R2] 저장된 mindmap 이 객체가 아니거나 selected_units 에 객체가 아닌 값이 있어도 500 없이 응답한다")
     void wrongColumnShapeIsNot500() throws Exception {
         saveResult(mine, MINDMAP, SELECTED);
 
@@ -308,7 +308,7 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
 
     @ParameterizedTest
     @EnumSource(value = SessionStatus.class, names = "COMPLETED", mode = EnumSource.Mode.EXCLUDE)
-    @DisplayName("분석이 끝나지 않은 세션은 결과 행이 있어도 소유자에게 빈 그래프다")
+    @DisplayName("[REC-2-2 R1] 분석이 끝나지 않은 세션은 결과 행이 있어도 소유자에게 빈 그래프다")
     void unfinishedSession(SessionStatus status) throws Exception {
         BrowsingSession unfinished =
                 sessionWithStatus(me, "진행 중", "2026-10-30T09:00:00", null, status, List.of());
@@ -352,7 +352,8 @@ class SessionMindmapScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("작성자의 노드 공개 범위가 URL 만이면 다른 사용자에게 마인드맵 내용을 주지 않고, 소유자는 그대로 본다")
+    @DisplayName(
+            "[REC-2-2 R1] [X-SDT-01 S3] 작성자의 노드 공개 범위가 URL 만이면 다른 사용자에게 마인드맵 내용을 주지 않고, 소유자는 그대로 본다")
     void urlOnlyProfileHidesMindmap() throws Exception {
         Wanderer wanderer = seedWanderer();
         saveResult(wanderer.prague(), MINDMAP, SELECTED);

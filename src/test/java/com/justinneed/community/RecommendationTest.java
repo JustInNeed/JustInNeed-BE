@@ -20,6 +20,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -73,6 +74,7 @@ class RecommendationTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[COM-6-1 R2] 비공개 태그로는 추천되지 않고 다른 공개 태그가 있는 세션은 남으며 카드 태그에서 빠진다")
     void hiddenTagsDoNotProduceRecommendationsButMixedSessionStays() {
         var owner = new CommunityProfile(ownerId);
         owner.replaceInterests(List.of("Java"));

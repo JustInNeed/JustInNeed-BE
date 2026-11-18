@@ -17,6 +17,7 @@ import com.justinneed.session.summary.domain.Summary;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -95,6 +96,8 @@ class CommunitySearchTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName(
+            "[COM-5-1@1 R4] 제목은 내용까지 공개한 작성자 것만 걸리고 닉네임으로도 찾는다 [COM-5-1@2 S7·R3] 마인드맵 결과는 닉네임과 내용까지 공개한 제목으로도 걸리고, URL만 공개한 제목은 걸리지 않는다")
     void mindmapsMatchNicknameAndOnlyContentOwnersTitle() throws Exception {
         var urlOnly = card(ownerId, "비밀스런 제목", 0, "태그");
         Long contentOwner = member("content", "민수");
@@ -118,6 +121,7 @@ class CommunitySearchTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[COM-5-1@1 R2] 비공개 태그로는 카드 · 사람 · 연관 태그가 걸리지 않고 카드는 다른 태그로 남는다")
     void hiddenTagsNeverMatchButTheCardStaysUnderItsOtherTags() throws Exception {
         var session = card(ownerId, "제목", 0, "Java", "Secret");
         visibility(ownerId, NodeVisibility.URL_ONLY, "secret");
@@ -147,6 +151,7 @@ class CommunitySearchTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[COM-5-1@1 R3] 탈퇴 회원의 카드는 행이 남아도 검색 결과에 나오지 않는다")
     void withdrawnOwnersAreLeftOutEvenIfTheirCardRowsRemain() throws Exception {
         var gone = members.findById(ownerId).orElseThrow();
         card(ownerId, "a", 0, "태그");
@@ -176,6 +181,8 @@ class CommunitySearchTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName(
+            "[COM-5-1@2 S4·S7] [COM-5-2 S1] 마인드맵 결과는 최근 활동 순 → id 큰 순이고 내 카드도 나온다. mindmapId 는 세션 id 다")
     void mindmapsComeByRecencyThenNewestIdAndIncludeMyOwn() throws Exception {
         var older = card(ownerId, "a", 0, "태그");
         var mine = card(viewerId, "b", 5, "태그");
@@ -229,6 +236,7 @@ class CommunitySearchTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[COM-5-1@3 S2·R1] 사용자 결과의 태그는 공개 태그 중 많은 순 상위 5개, 마인드맵 수는 공개 카드 수이고 비공개 태그는 빠진다")
     void profilesShowPublicTopTagsAndCardCount() throws Exception {
         card(ownerId, "a", 0, "하나", "둘", "셋", "넷", "다섯", "여섯", "일곱", "숨김");
         card(ownerId, "b", 1, "일곱", "여섯", "다섯");
@@ -248,6 +256,7 @@ class CommunitySearchTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[COM-5-1@2 R3] 사용자 결과는 카드가 있는 사람만, 태그 · 닉네임으로만 걸리고 제목으로는 걸리지 않는다")
     void profilesNeedACardAndMatchTagsOrNicknameButNotTitles() throws Exception {
         Long contentOwner = member("content", "민수");
         visibility(contentOwner, NodeVisibility.CONTENT);
@@ -270,6 +279,7 @@ class CommunitySearchTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[COM-5-1@2 S7] 사용자 결과는 페이지로 나뉘고 나도 나온다")
     void profilesPageAndIncludeMe() throws Exception {
         card(ownerId, "a", 0, "태그");
         card(ownerId, "b", 1, "태그");
@@ -286,6 +296,8 @@ class CommunitySearchTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName(
+            "[COM-5-1@1 S3] 걸린 카드가 많은 사람이 오래됐어도 먼저 온다 [COM-5-1@2 S4] 사용자 결과는 맞는 카드가 많은 사람이 오래됐어도 먼저 온다")
     void profilesWithMoreMatchingCardsComeFirstEvenIfOlder() throws Exception {
         card(ownerId, "a", 100, "태그");
         card(viewerId, "b", 0, "태그");
@@ -295,6 +307,7 @@ class CommunitySearchTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[COM-5-1@1 S3] 카드 수가 같으면 걸린 카드의 최근 활동 순이다 [COM-5-1@2 S4] 맞는 카드 수가 같으면 최근 활동 순이다")
     void sameCardCountComesByMostRecentMatchingCard() throws Exception {
         card(ownerId, "a", 0, "태그");
         card(ownerId, "b", 5, "태그");
@@ -305,6 +318,7 @@ class CommunitySearchTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[COM-5-1@1 S3] 카드 수 · 최근 활동이 같으면 id 순이다")
     void sameCountAndRecencyComeByIdAscending() throws Exception {
         // 카드는 id 큰 회원이 먼저 만든다. 읽은 순서가 아니라 id 로 갈려야 한다
         card(viewerId, "a", 0, "태그");
@@ -389,6 +403,7 @@ class CommunitySearchTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[COM-5-1@2 R3] 제목으로만 맞는 사람은 사용자 결과에 없고 페이지 자리도 차지하지 않는다")
     void titleOnlyMatchesStayOutAndTakeNoPageSlot() throws Exception {
         Long titled = member("titled", "가");
         visibility(titled, NodeVisibility.CONTENT);
@@ -488,6 +503,7 @@ class CommunitySearchTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[COM-5-1@1 S2] 연관 해시태그는 검색어가 든 태그와 그 태그를 단 카드 수를 개수 많은 순으로 준다")
     void hashtagsCountCardsAcrossPeople() throws Exception {
         card(ownerId, "a", 0, "Java", "JavaSpring", "숨김자바");
         card(ownerId, "b", 1, "Java");
@@ -512,6 +528,7 @@ class CommunitySearchTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[COM-5-1@1 S2] 연관 해시태그는 개수가 같으면 이름 순이고 기본 5개다")
     void hashtagsBreakTiesByNameAndHonourLimit() throws Exception {
         for (int i = 0; i < 22; i++) {
             card(ownerId, "t" + i, i, "태그" + (char) ('a' + i));
@@ -527,6 +544,8 @@ class CommunitySearchTest extends CommunityTestSupport {
 
     @ParameterizedTest
     @ValueSource(strings = {"", "   ", "#", " # ", "\u0000"})
+    @DisplayName(
+            "[COM-5-1@1 R1] 빈 검색어(# · 공백만)는 400 \"검색어를 입력해 주세요.\" [COM-5-1@2 R1] 빈 검색어는 검색하지 않고 한국어 400 이다")
     void blankSearchIsKorean400(String q) throws Exception {
         for (String path : List.of(MINDMAPS, PROFILES, HASHTAGS)) {
             search(path, q)
@@ -542,5 +561,23 @@ class CommunitySearchTest extends CommunityTestSupport {
         }
         search(PROFILES, "Java", "page", "-1").andExpect(status().isBadRequest());
         search(MINDMAPS, "Java", "size", "101").andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("[COM-5-1@2 R4] 검색 페이지 크기 1~100 밖 · 음수 페이지는 400 \"페이지 값이 올바르지 않습니다.\"")
+    void searchPageOutOfRangeIsKorean400() throws Exception {
+        for (String path : List.of(MINDMAPS, PROFILES)) {
+            for (String[] bad :
+                    List.of(
+                            new String[] {"size", "0"},
+                            new String[] {"size", "101"},
+                            new String[] {"page", "-1"})) {
+                search(path, "Java", bad)
+                        .andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.message").value("페이지 값이 올바르지 않습니다."));
+            }
+            search(path, "Java", "size", "1").andExpect(status().isOk());
+            search(path, "Java", "size", "100").andExpect(status().isOk());
+        }
     }
 }

@@ -274,7 +274,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
     // ---------- 대상 세션 ----------
 
     @Test
-    @DisplayName("다른 회원 · 삭제 · 진행 중 · 실패 세션은 어떤 항목에도 들어가지 않는다")
+    @DisplayName("[X-HOME-01 R1] 다른 회원 · 삭제 · 진행 중 · 실패 세션은 어떤 항목에도 들어가지 않는다")
     void onlyMyCompletedSessions() throws Exception {
         BrowsingSession mine = completed("2026-10-31T09:00:00", "2026-10-31T09:30:00", "내태그");
         analyzed(
@@ -387,7 +387,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
 
     @Test
     @DisplayName(
-            "이번 주 경계: 6일 전 00:00 은 이번 주, 7일 전 23:59 는 지난주, 13일 전 00:00 은 지난주, 14일 전 23:59 는 어디에도 안 든다")
+            "[ANA-2-3 S1] [ANA-2-1 R1] 이번 주 경계: 6일 전 00:00 은 이번 주, 7일 전 23:59 는 지난주, 13일 전 00:00 은 지난주, 14일 전 23:59 는 어디에도 안 든다")
     void weekBoundaries() throws Exception {
         completed("2026-10-25T00:00:00", "2026-10-25T00:30:00");
         completed("2026-10-24T23:59:00", "2026-10-25T00:29:00");
@@ -445,7 +445,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("주간 활동: 일요일 시작 주(일 ~ 토)로 그리고, 오늘 이후 요일은 0분이다. 통계는 최근 7일 그대로")
+    @DisplayName("[X-HOME-06 S1·R1] 주간 활동: 일요일 시작 주(일 ~ 토)로 그리고, 오늘 이후 요일은 0분이다. 통계는 최근 7일 그대로")
     void weekActivityStartsOnSunday() throws Exception {
         // UTC 10-28 01:30 = KST 10-28(수) 10:30
         given(clock.instant()).willReturn(Instant.parse("2026-10-28T01:30:00Z"));
@@ -468,7 +468,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
     // ---------- 세션 길이 ----------
 
     @Test
-    @DisplayName("평균 세션 길이: 종료 시각이 없는 세션은 세션 수에만 들어가고 분 · 평균에는 빠진다. 반올림")
+    @DisplayName("[ANA-2-3 S1·R1] 평균 세션 길이: 종료 시각이 없는 세션은 세션 수에만 들어가고 분 · 평균에는 빠진다. 반올림")
     void averageSkipsSessionsWithoutEnd() throws Exception {
         completed("2026-10-31T09:00:00", "2026-10-31T09:31:00");
         completed("2026-10-31T08:00:00", "2026-10-31T08:30:00");
@@ -490,7 +490,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("주간 활동: 분은 그날 세션 초를 더한 뒤 반올림하고, 자정을 넘긴 세션은 시작일에 들어간다")
+    @DisplayName("[X-HOME-06 S2] 주간 활동: 분은 그날 세션 초를 더한 뒤 반올림하고, 자정을 넘긴 세션은 시작일에 들어간다")
     void weekActivityMinutes() throws Exception {
         completed("2026-10-31T09:00:00", "2026-10-31T09:01:30");
         completed("2026-10-31T10:00:00", "2026-10-31T10:01:30");
@@ -516,7 +516,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
     // ---------- Deep Reading ----------
 
     @Test
-    @DisplayName("Deep Reading: 유닛 수 기준이고 Idle 도 분모에 들어가며, 증감은 지난주 대비 %p")
+    @DisplayName("[ANA-3-1 S2] Deep Reading: 유닛 수 기준이고 Idle 도 분모에 들어가며, 증감은 지난주 대비 %p")
     void deepReadingCountsIdleAndDelta() throws Exception {
         analyzed(
                 completed("2026-10-31T09:00:00", null),
@@ -578,7 +578,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("Deep Reading: 지난주 데이터가 없으면 이번 주 비율만 오고 증감은 0")
+    @DisplayName("[ANA-3-1 S2] Deep Reading: 지난주 데이터가 없으면 이번 주 비율만 오고 증감은 0")
     void deepReadingWithoutLastWeek() throws Exception {
         analyzed(
                 completed("2026-10-31T09:00:00", null),
@@ -603,7 +603,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
     // ---------- 마인드맵 병합 ----------
 
     @Test
-    @DisplayName("키워드 병합: 공백 · 대소문자를 무시해 한 노드로 합치고 이름은 가장 최근 세션의 첫 표기를 쓴다")
+    @DisplayName("[X-HOME-01 S1] 키워드 병합: 공백 · 대소문자를 무시해 한 노드로 합치고 이름은 가장 최근 세션의 첫 표기를 쓴다")
     void keywordsMergeIgnoringSpaceAndCase() throws Exception {
         analyzed(
                 completed("2026-10-31T09:00:00", null),
@@ -693,7 +693,8 @@ class HomeScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("노드 크기: 세션이 하나 늘 때마다 +2, 타입별 상한까지 (city 16~24 · logi 12~18 · sub 7~12)")
+    @DisplayName(
+            "[X-HOME-01 S1] 노드 크기: 세션이 하나 늘 때마다 +2, 타입별 상한까지 (city 16~24 · logi 12~18 · sub 7~12)")
     void sizeGrowsWithSessionsUpToCap() throws Exception {
         LocalDateTime base = TODAY.atTime(9, 0);
         for (int day = 0; day < 6; day++) {
@@ -807,7 +808,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("엣지가 없어 core 에 닿지 않는 노드는 그래프에서 빠지지만 누적 노드 수에는 들어간다")
+    @DisplayName("[X-HOME-01 R2] 엣지가 없어 core 에 닿지 않는 노드는 그래프에서 빠지지만 누적 노드 수에는 들어간다")
     void isolatedNodesAreDroppedButCounted() throws Exception {
         analyzed(
                 completed("2026-10-31T09:00:00", null),
@@ -844,7 +845,8 @@ class HomeScenarioTest extends ScenarioTestSupport {
     // ---------- 150개 제한 ----------
 
     @Test
-    @DisplayName("150개 제한: core 포함 150개, 같은 타입은 세션 많은 순 → 최근 순이고, 끝점이 빠진 엣지 없이 모두 core 에 연결된다")
+    @DisplayName(
+            "[X-HOME-01 S2·R2] 150개 제한: core 포함 150개, 같은 타입은 세션 많은 순 → 최근 순이고, 끝점이 빠진 엣지 없이 모두 core 에 연결된다")
     void capKeepsMostUsedThenRecentAndStaysConnected() throws Exception {
         List<String> shared = keywords("공통", 10);
         List<String> recent = keywords("최근", 200);
@@ -874,7 +876,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("150개 제한: root → topic → unit 순서로 남긴다 (노드 id 는 응답 안에서 n1 부터 빠짐없이)")
+    @DisplayName("[X-HOME-01 S2] 150개 제한: root → topic → unit 순서로 남긴다 (노드 id 는 응답 안에서 n1 부터 빠짐없이)")
     void capPrefersRootThenTopicThenUnit() throws Exception {
         List<Map<String, Object>> nodes = new ArrayList<>();
         List<Map<String, Object>> edges = new ArrayList<>();
@@ -903,7 +905,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("150개 제한: 부모 유닛이 잘려 core 에 못 닿게 된 유닛끼리는 남기지 않는다")
+    @DisplayName("[X-HOME-01 R2] 150개 제한: 부모 유닛이 잘려 core 에 못 닿게 된 유닛끼리는 남기지 않는다")
     void capDropsIslandsCutOffFromCore() throws Exception {
         List<Map<String, Object>> nodes =
                 new ArrayList<>(
@@ -971,7 +973,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
     // ---------- nodeMeta · 누적 노드 ----------
 
     @Test
-    @DisplayName("seen: 가장 최근에 나온 세션 기준 today · week(6일 전까지) · month(29일 전까지) · all")
+    @DisplayName("[X-HOME-03 S1] seen: 가장 최근에 나온 세션 기준 today · week(6일 전까지) · month(29일 전까지) · all")
     void seenPeriods() throws Exception {
         analyzed(completed("2026-10-31T00:00:00", null), roots("오늘"), null, List.of());
         analyzed(completed("2026-10-30T23:59:00", null), roots("어제"), null, List.of());
@@ -991,7 +993,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
 
     @Test
     @DisplayName(
-            "nodeMeta: 태그는 그 노드가 나온 세션들의 합집합(대소문자 무시), sessionId · seen 은 가장 최근 세션, core 는 메타가 없다")
+            "[X-HOME-02 S1] [X-HOME-03 S2] nodeMeta: 태그는 그 노드가 나온 세션들의 합집합(대소문자 무시), sessionId · seen 은 가장 최근 세션, core 는 메타가 없다")
     void nodeMetaUnionsTagsAndPointsToLatestSession() throws Exception {
         BrowsingSession latest = completed("2026-10-30T09:00:00", null, "Spring", "JPA");
         analyzed(latest, roots("공통"), null, List.of());
@@ -1009,7 +1011,50 @@ class HomeScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("nodeDelta: 가장 이른 세션이 최근 7일 안인 노드만 센다. 예전에 나왔다가 다시 나온 노드는 신규가 아니다")
+    @DisplayName(
+            "[X-HOME-02 R1] nodeMeta.sessionId: 같은 키워드가 더 최근의 남의 세션 · 삭제 · 실패 세션에 있어도 내 완료 세션을 가리킨다")
+    void nodeMetaSessionIdIsMyCompletedSession() throws Exception {
+        BrowsingSession mine = completed("2026-10-28T09:00:00", null, "공통");
+        analyzed(mine, roots("공통 키워드"), null, List.of());
+
+        Member other = member("wanderer");
+        BrowsingSession others =
+                session(
+                        other,
+                        "남의 세션",
+                        at("2026-10-31T09:00:00"),
+                        at("2026-10-31T09:30:00"),
+                        1,
+                        false,
+                        true,
+                        List.of("공통"),
+                        List.of(),
+                        null);
+        analyzed(others, roots("공통 키워드"), null, List.of());
+
+        BrowsingSession deleted = completed("2026-10-30T09:00:00", null, "공통");
+        analyzed(deleted, roots("공통 키워드"), null, List.of());
+        deleted.delete();
+        sessions.saveAndFlush(deleted);
+
+        BrowsingSession failed =
+                sessionWithStatus(
+                        me,
+                        "실패",
+                        "2026-10-29T09:00:00",
+                        "2026-10-29T09:30:00",
+                        SessionStatus.FAILED,
+                        List.of("공통"));
+        analyzed(failed, roots("공통 키워드"), null, List.of());
+
+        GraphView graph = graph();
+        assertThat(graph.meta().get(graph.id("공통 키워드")).get("sessionId"))
+                .isEqualTo(mine.getId().intValue());
+        home().andExpect(jsonPath("$.data.sessions[*].id").value(contains(ids(mine))));
+    }
+
+    @Test
+    @DisplayName("[X-HOME-05 S1] nodeDelta: 가장 이른 세션이 최근 7일 안인 노드만 센다. 예전에 나왔다가 다시 나온 노드는 신규가 아니다")
     void nodeDeltaCountsFirstAppearanceThisWeek() throws Exception {
         analyzed(completed("2026-10-31T09:00:00", null), roots("오늘 처음", "다시 나옴"), null, List.of());
         analyzed(completed("2026-10-25T00:00:00", null), roots("육일전 처음"), null, List.of());
@@ -1022,7 +1067,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
     // ---------- 해시태그 ----------
 
     @Test
-    @DisplayName("hashtagCount: 전체 완료 세션의 태그를 대소문자 무시로 센다")
+    @DisplayName("[X-HOME-05 S1] hashtagCount: 전체 완료 세션의 태그를 대소문자 무시로 센다")
     void hashtagCountIsDistinctAcrossAllSessions() throws Exception {
         completed("2026-10-31T09:00:00", null, "Spring", "JPA");
         completed("2026-10-30T09:00:00", null, "spring");
@@ -1032,7 +1077,8 @@ class HomeScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("topTags: 세션 수 많은 순 → 더 최근 세션 → 이름순, 표기는 가장 최근 세션, 한 세션 안 중복은 1번, # 없이 온다")
+    @DisplayName(
+            "[X-HOME-07 S1·R1] topTags: 세션 수 많은 순 → 더 최근 세션 → 이름순, 표기는 가장 최근 세션, 한 세션 안 중복은 1번, # 없이 온다")
     void topTagsOrdering() throws Exception {
         completed("2026-10-31T09:00:00", null, "다", "나", "Spring", "SPRING");
         completed("2026-10-30T09:00:00", null, "가");
@@ -1043,7 +1089,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("topTags 는 최대 10개, filterTags 는 같은 순서로 최대 20개")
+    @DisplayName("[X-HOME-07 S1] [X-HOME-03 S4] topTags 는 최대 10개, filterTags 는 같은 순서로 최대 20개")
     void topTagsAndFilterTagsLimits() throws Exception {
         LocalDateTime base = TODAY.atTime(9, 0);
         List<String> tags = keywords("태그", 25);
@@ -1063,7 +1109,8 @@ class HomeScenarioTest extends ScenarioTestSupport {
     // ---------- 오늘 타임라인 ----------
 
     @Test
-    @DisplayName("오늘 타임라인: 오늘 시작한 세션마다 슬롯 하나, 오래된 순. 종료 시각이 없으면 endTime 은 null, 어제 세션은 없다")
+    @DisplayName(
+            "[ANA-2-1 S1] 오늘 타임라인: 오늘 시작한 세션마다 슬롯 하나, 오래된 순. 종료 시각이 없으면 endTime 은 null, 어제 세션은 없다")
     void todayTimelineOrdering() throws Exception {
         completed("2026-10-31T10:00:00", null, "늦은세션");
         completed("2026-10-31T00:00:00", "2026-10-31T00:30:00", "이른세션");
@@ -1079,7 +1126,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("오늘 타임라인 사이트: 같은 도메인의 체류시간을 합쳐 긴 순으로 최대 3개, 같으면 이름순")
+    @DisplayName("[ANA-2-1 S1] 오늘 타임라인 사이트: 같은 도메인의 체류시간을 합쳐 긴 순으로 최대 3개, 같으면 이름순")
     void todayTimelineTopThreeSites() throws Exception {
         analyzed(
                 completed("2026-10-31T09:00:00", null),
@@ -1100,7 +1147,7 @@ class HomeScenarioTest extends ScenarioTestSupport {
     // ---------- 이번 주 세션 ----------
 
     @Test
-    @DisplayName("이번 주 세션: 오래된 순으로 오고, 페이지 한 건마다 방문 하나 (같은 도메인이어도 합치지 않는다), 초는 반올림")
+    @DisplayName("[ANA-2-1 R1] 이번 주 세션: 오래된 순으로 오고, 페이지 한 건마다 방문 하나 (같은 도메인이어도 합치지 않는다), 초는 반올림")
     void weekSessionsVisits() throws Exception {
         analyzed(
                 completed("2026-10-31T09:00:00", null, "오늘"),
