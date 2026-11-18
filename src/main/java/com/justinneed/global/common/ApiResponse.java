@@ -1,6 +1,8 @@
 package com.justinneed.global.common;
 
-public record ApiResponse<T>(boolean success, T data, String message) {
+import org.jspecify.annotations.Nullable;
+
+public record ApiResponse<T>(boolean success, @Nullable T data, @Nullable String message) {
 
     public static <T> ApiResponse<T> ok(T data) {
         return new ApiResponse<>(true, data, null);

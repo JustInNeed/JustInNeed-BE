@@ -4,6 +4,7 @@ import com.justinneed.session.management.dto.SessionListResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 
 /** 홈 대시보드 한 화면 데이터 (FE HomeData). 해시태그는 모두 # 없는 원문이고, 사이트는 도메인만 준다 (글자 · 색은 FE). */
 public record HomeResponse(
@@ -25,10 +26,17 @@ public record HomeResponse(
             List<String> filterTags) {}
 
     @Schema(name = "HomeResponseNode")
-    public record Node(String id, String label, int size, String group) {}
+    public record Node(
+            String id,
+            String label,
+            int size,
+            @Schema(allowableValues = {"core", "city", "logi", "sub"}) String group) {}
 
     /** seen 은 today / week / month / all, sessionId 는 이 노드가 나온 가장 최근 세션. */
-    public record NodeMeta(String seen, List<String> tags, Long sessionId) {}
+    public record NodeMeta(
+            @Schema(allowableValues = {"today", "week", "month", "all"}) String seen,
+            List<String> tags,
+            Long sessionId) {}
 
     @Schema(name = "HomeResponseTagGroup")
     public record TagGroup(Long id, List<String> tags) {}
@@ -52,7 +60,7 @@ public record HomeResponse(
 
     /** endTime 은 종료 시각이 없는 세션이면 null. */
     public record TimelineSlot(
-            String startTime, String endTime, List<String> tags, List<String> sites) {}
+            String startTime, @Nullable String endTime, List<String> tags, List<String> sites) {}
 
     /** dayOffset 은 오늘이 0, 가장 오래된 날이 -6. */
     public record WeekSession(

@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -124,5 +125,5 @@ public class CardReactionService {
     @Schema(name = "CardReactionServiceExploringView")
     public record ExploringView(long exploringCount, boolean exploringByMe) {}
 
-    public record BookmarkView(long bookmarkCount, Long bookmarkId) {}
+    public record BookmarkView(long bookmarkCount, @Nullable Long bookmarkId) {}
 }

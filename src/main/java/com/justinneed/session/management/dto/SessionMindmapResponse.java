@@ -4,6 +4,7 @@ import com.justinneed.community.api.HttpUrl;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 public record SessionMindmapResponse(List<Node> nodes, List<Edge> edges) {
 
@@ -21,9 +22,9 @@ public record SessionMindmapResponse(List<Node> nodes, List<Edge> edges) {
             String id,
             String type,
             String keyword,
-            Double score,
+            @Nullable Double score,
             int childCount,
-            Citation citation) {
+            @Nullable Citation citation) {
         private Node withWebCitationOnly() {
             return citation == null || HttpUrl.isValid(citation.url())
                     ? this
@@ -32,7 +33,8 @@ public record SessionMindmapResponse(List<Node> nodes, List<Edge> edges) {
     }
 
     // 유닛 노드의 원문 인용
-    public record Citation(String title, String url, String excerpt, LocalDateTime visitedAt) {}
+    public record Citation(
+            String title, String url, String excerpt, @Nullable LocalDateTime visitedAt) {}
 
     @Schema(name = "SessionMindmapResponseEdge")
     public record Edge(String from, String to, String type, boolean primary) {}

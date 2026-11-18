@@ -2,6 +2,7 @@ package com.justinneed.community.card;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 /**
  * 커뮤니티 카드 응답. 공개 세션 1개 = 카드 1장, mindmapId = sessions.id. URL 만 공개한 작성자의 카드는 title · snippet ·
@@ -10,20 +11,20 @@ import java.util.List;
 public record CommunityCard(
         Long mindmapId,
         Owner owner,
-        String title,
-        String snippet,
+        @Nullable String title,
+        @Nullable String snippet,
         List<String> hashtags,
         long nodeCount,
         long likeCount,
         boolean likedByMe,
         long bookmarkCount,
-        Long bookmarkId,
+        @Nullable Long bookmarkId,
         long exploringCount,
         boolean exploringByMe,
         LocalDateTime lastActivityAt,
         List<RelatedUrl> relatedUrls) {
 
-    public record Owner(Long userId, String nickname) {}
+    public record Owner(Long userId, @Nullable String nickname) {}
 
-    public record RelatedUrl(String title, String url) {}
+    public record RelatedUrl(@Nullable String title, String url) {}
 }

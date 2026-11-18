@@ -14,6 +14,7 @@ import com.justinneed.community.unpin.UnpinService;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.repository.BrowsingSessionRepository;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -173,18 +174,22 @@ public class ProfileEditService {
     public record DeletedInterest(int code, Long interestId) {}
 
     public record PinView(
-            int code, Long sessionId, boolean isPublic, boolean isPinned, Integer order) {}
+            int code,
+            Long sessionId,
+            boolean isPublic,
+            boolean isPinned,
+            @Nullable Integer order) {}
 
     public record OrderView(int code, List<Long> sessionIds) {}
 
     public record SessionView(
             int code,
             Long sessionId,
-            String title,
+            @Nullable String title,
             Long ownerId,
-            String nickname,
+            @Nullable String nickname,
             List<String> hashtags,
             List<String> urls,
-            String summary,
+            @Nullable String summary,
             NodeVisibility visibilityScope) {}
 }

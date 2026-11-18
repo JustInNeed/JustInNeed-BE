@@ -14,6 +14,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -180,5 +181,9 @@ public class BookmarkCommandService {
     }
 
     public record Saved(
-            int code, Long bookmarkId, List<Long> targetIds, SaveType saveType, String name) {}
+            int code,
+            Long bookmarkId,
+            List<Long> targetIds,
+            SaveType saveType,
+            @Nullable String name) {}
 }

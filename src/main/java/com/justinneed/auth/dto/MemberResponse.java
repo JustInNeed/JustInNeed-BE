@@ -3,12 +3,13 @@ package com.justinneed.auth.dto;
 import com.justinneed.auth.domain.Member;
 import com.justinneed.auth.domain.SocialProvider;
 import java.time.LocalDateTime;
+import org.jspecify.annotations.Nullable;
 
 public record MemberResponse(
         Long id,
-        String nickname,
+        @Nullable String nickname,
         SocialProvider socialProvider,
-        String email,
+        @Nullable String email,
         LocalDateTime joinedAt) {
 
     public static MemberResponse from(Member member) {

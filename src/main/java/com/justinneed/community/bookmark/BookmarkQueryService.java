@@ -30,6 +30,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import org.jspecify.annotations.Nullable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -435,13 +436,13 @@ public class BookmarkQueryService {
 
     public record Bundle(
             Long bookmarkId,
-            String name,
+            @Nullable String name,
             List<String> hashtags,
             Instant savedAt,
             SaveType saveType,
             TargetType targetType,
             List<Long> targetIds,
-            Long sourceMindmapId) {}
+            @Nullable Long sourceMindmapId) {}
 
     public record Bundles(int code, List<Bundle> bundles, boolean hasNext) {}
 
@@ -453,11 +454,11 @@ public class BookmarkQueryService {
      */
     public record Mindmap(
             Long bookmarkId,
-            Long sessionId,
-            Long sourceMindmapId,
+            @Nullable Long sessionId,
+            @Nullable Long sourceMindmapId,
             CommunityCard.Owner owner,
-            String title,
-            String snippet,
+            @Nullable String title,
+            @Nullable String snippet,
             List<Hashtag> hashtags,
             List<BookmarkSnapshot.Node> nodes,
             List<BookmarkSnapshot.Edge> edges,

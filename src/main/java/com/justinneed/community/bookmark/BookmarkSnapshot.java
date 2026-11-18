@@ -3,6 +3,7 @@ package com.justinneed.community.bookmark;
 import com.justinneed.community.domain.NodeVisibility;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 public record BookmarkSnapshot(
         String title, List<Tag> hashtags, List<Node> nodes, List<Edge> edges) {
@@ -18,8 +19,8 @@ public record BookmarkSnapshot(
     public record Node(
             Long nodeId,
             String label,
-            String sourceUrl,
-            String content,
+            @Nullable String sourceUrl,
+            @Nullable String content,
             NodeVisibility visibilityScope) {}
 
     @Schema(name = "BookmarkSnapshotEdge")
