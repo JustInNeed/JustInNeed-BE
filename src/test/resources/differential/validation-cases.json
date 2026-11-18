@@ -1,0 +1,389 @@
+{
+  "_about": "정책 #30 차등 테스트. 같은 입력을 FE 검증과 BE 검증에 넣는다. 기대값(valid/value)은 BE 기준 정답이다. 한쪽만 다르게 동작해도 되는 경우는 fe 또는 be 칸에 그 쪽 결과를 적고 reason 에 이유를 쓴다 (승인된 차이). 이유 없는 차이는 테스트가 실패한다. 원본은 BE 레포 src/test/resources/differential/validation-cases.json 이고, FE 레포는 같은 내용의 사본을 둔다.",
+  "nickname": [
+    {
+      "input": "",
+      "valid": false
+    },
+    {
+      "input": "   ",
+      "valid": false
+    },
+    {
+      "input": "abc",
+      "valid": true
+    },
+    {
+      "input": "ab",
+      "valid": false
+    },
+    {
+      "input": "abcdefghijklmnop",
+      "valid": true
+    },
+    {
+      "input": "abcdefghijklmnopq",
+      "valid": false
+    },
+    {
+      "input": "1abc",
+      "valid": false
+    },
+    {
+      "input": "ab_c",
+      "valid": false
+    },
+    {
+      "input": "ab c",
+      "valid": false
+    },
+    {
+      "input": " abc",
+      "valid": false
+    },
+    {
+      "input": "abc ",
+      "valid": false
+    },
+    {
+      "input": "Abc1",
+      "valid": true
+    },
+    {
+      "input": "ABC",
+      "valid": true
+    },
+    {
+      "input": "a1b2c3",
+      "valid": true
+    },
+    {
+      "input": "새싹",
+      "valid": false
+    },
+    {
+      "input": "abc한",
+      "valid": false
+    },
+    {
+      "input": "abc\n",
+      "valid": false
+    },
+    {
+      "input": "ａｂｃ",
+      "valid": false
+    },
+    {
+      "input": "abcé",
+      "valid": false
+    },
+    {
+      "input": "Sprout27",
+      "valid": true
+    }
+  ],
+  "hashtag": [
+    {
+      "input": "여행",
+      "value": "여행"
+    },
+    {
+      "input": "#여행",
+      "value": null,
+      "fe": "여행",
+      "reason": "FE 입력칸은 앞의 '#' 과 공백을 지운 값을 보낸다 (AddHashtagPopover · ProfileEdit 의 validateHashtag). BE 는 정리된 값만 받으므로 원본 입력은 거절해도 된다"
+    },
+    {
+      "input": "##여행",
+      "value": null,
+      "fe": "여행",
+      "reason": "FE 입력칸은 앞의 '#' 과 공백을 지운 값을 보낸다 (AddHashtagPopover · ProfileEdit 의 validateHashtag). BE 는 정리된 값만 받으므로 원본 입력은 거절해도 된다"
+    },
+    {
+      "input": " 여행 ",
+      "value": "여행"
+    },
+    {
+      "input": "여 행",
+      "value": null,
+      "fe": "여행",
+      "reason": "FE 입력칸은 앞의 '#' 과 공백을 지운 값을 보낸다 (AddHashtagPopover · ProfileEdit 의 validateHashtag). BE 는 정리된 값만 받으므로 원본 입력은 거절해도 된다"
+    },
+    {
+      "input": "",
+      "value": null
+    },
+    {
+      "input": "   ",
+      "value": null
+    },
+    {
+      "input": "#",
+      "value": null
+    },
+    {
+      "input": "abcdefghij",
+      "value": "abcdefghij"
+    },
+    {
+      "input": "abcdefghijk",
+      "value": null
+    },
+    {
+      "input": "가나다라마바사아자차",
+      "value": "가나다라마바사아자차"
+    },
+    {
+      "input": "가나다라마바사아자차카",
+      "value": null
+    },
+    {
+      "input": "Travel2",
+      "value": "Travel2"
+    },
+    {
+      "input": "여행!",
+      "value": null
+    },
+    {
+      "input": "c++",
+      "value": null
+    },
+    {
+      "input": "ㅋㅋ",
+      "value": null
+    },
+    {
+      "input": "여행\t",
+      "value": "여행"
+    },
+    {
+      "input": "１２",
+      "value": null
+    },
+    {
+      "input": "# 여행",
+      "value": null,
+      "fe": "여행",
+      "reason": "FE 입력칸은 앞의 '#' 과 공백을 지운 값을 보낸다 (AddHashtagPopover · ProfileEdit 의 validateHashtag). BE 는 정리된 값만 받으므로 원본 입력은 거절해도 된다"
+    },
+    {
+      "input": "여행#",
+      "value": null
+    }
+  ],
+  "excludedUrl": [
+    {
+      "input": "HTTPS://Example.COM/private/",
+      "value": "example.com/private"
+    },
+    {
+      "input": "example.com",
+      "value": "example.com"
+    },
+    {
+      "input": "http://example.com",
+      "value": "example.com"
+    },
+    {
+      "input": "https://www.example.com/a",
+      "value": "example.com/a"
+    },
+    {
+      "input": "www.example.com",
+      "value": "example.com"
+    },
+    {
+      "input": "https://example.com/",
+      "value": "example.com"
+    },
+    {
+      "input": "https://example.com//",
+      "value": "example.com"
+    },
+    {
+      "input": "www.com",
+      "value": "www.com"
+    },
+    {
+      "input": "https://example.com:8080/a",
+      "value": "example.com:8080/a"
+    },
+    {
+      "input": "https://example.com:443/a",
+      "value": "example.com/a"
+    },
+    {
+      "input": "http://example.com:80",
+      "value": "example.com"
+    },
+    {
+      "input": "example.com:80",
+      "value": "example.com"
+    },
+    {
+      "input": "https://example.com/s?q=1",
+      "value": "example.com/s?q=1"
+    },
+    {
+      "input": "https://example.com/a?",
+      "value": "example.com/a"
+    },
+    {
+      "input": "https://example.com/a#top",
+      "value": "example.com/a"
+    },
+    {
+      "input": "https://example.com/%EA%B0%80",
+      "value": "example.com/%EA%B0%80"
+    },
+    {
+      "input": "https://example.com/가나",
+      "value": "example.com/가나"
+    },
+    {
+      "input": "  example.com  ",
+      "value": "example.com"
+    },
+    {
+      "input": "https://example.com:99999",
+      "value": null
+    },
+    {
+      "input": "https://example.com:0",
+      "value": null
+    },
+    {
+      "input": "example.com:abc",
+      "value": null
+    },
+    {
+      "input": "ftp://example.com",
+      "value": null
+    },
+    {
+      "input": "https://user@example.com",
+      "value": null
+    },
+    {
+      "input": "https://user:pw@example.com/a",
+      "value": null
+    },
+    {
+      "input": "https://localhost/path",
+      "value": null
+    },
+    {
+      "input": "https://example",
+      "value": null
+    },
+    {
+      "input": "https://-a.com",
+      "value": null
+    },
+    {
+      "input": "https://a_b.com",
+      "value": null
+    },
+    {
+      "input": "https://192.168.0.1",
+      "value": null
+    },
+    {
+      "input": "https://xn--hj2bx4s.com",
+      "value": "xn--hj2bx4s.com"
+    },
+    {
+      "input": "https://한글.com",
+      "value": null
+    },
+    {
+      "input": "https://example.com/a b",
+      "value": null
+    },
+    {
+      "input": "https://example.com/<x>",
+      "value": null
+    },
+    {
+      "input": "https://example.com/%zz",
+      "value": null
+    },
+    {
+      "input": "https://example.com/a?b=%",
+      "value": null
+    },
+    {
+      "input": "https://example.com/a|b",
+      "value": null
+    },
+    {
+      "input": "https://exa mple.com",
+      "value": null
+    },
+    {
+      "input": "https:/example.com",
+      "value": null
+    },
+    {
+      "input": "//example.com",
+      "value": null
+    },
+    {
+      "input": "https://example.com#",
+      "value": "example.com"
+    },
+    {
+      "input": "https://example.com/?",
+      "value": "example.com"
+    },
+    {
+      "input": "https://example.com/a/?b=1",
+      "value": "example.com/a?b=1"
+    },
+    {
+      "input": "HTTP://EXAMPLE.COM:80/",
+      "value": "example.com"
+    },
+    {
+      "input": "https://example.com/a{b}",
+      "value": null
+    },
+    {
+      "input": "https://example.com/a^b",
+      "value": null
+    },
+    {
+      "input": "javascript:alert(1)",
+      "value": null
+    },
+    {
+      "input": "https://example.com.",
+      "value": null
+    },
+    {
+      "input": "https://sub.example.co.kr/path?x=1#y",
+      "value": "sub.example.co.kr/path?x=1"
+    },
+    {
+      "input": "https://EXAMPLE.com/A/B/",
+      "value": "example.com/A/B"
+    },
+    {
+      "input": "https://example.com:",
+      "value": null
+    },
+    {
+      "input": "https://example.com:65536",
+      "value": null
+    },
+    {
+      "input": "https://example.com:65535/a",
+      "value": "example.com:65535/a"
+    },
+    {
+      "input": "example.com:1",
+      "value": "example.com:1"
+    }
+  ]
+}

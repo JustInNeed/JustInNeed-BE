@@ -49,7 +49,8 @@ final class ExcludedUrlParser {
             String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
             if (!(scheme.equals("http") || scheme.equals("https"))
                     || !DOMAIN_PATTERN.matcher(host).matches()
-                    || uri.getUserInfo() != null) {
+                    || uri.getUserInfo() != null
+                    || !validPort(uri)) {
                 throw new CustomException(ErrorCode.INVALID_URL);
             }
             String domain = withoutWww(host);
@@ -72,6 +73,16 @@ final class ExcludedUrlParser {
         boolean removable =
                 host.startsWith(WWW_PREFIX) && host.indexOf('.', WWW_PREFIX.length()) > 0;
         return removable ? host.substring(WWW_PREFIX.length()) : host;
+    }
+
+    // 포트는 1~65535. "example.com:" 처럼 콜론 뒤가 비어 있으면 URI 는 포트 없음(-1)으로 읽지만 잘못된 입력으로 본다
+    private static boolean validPort(URI uri) {
+        String authority = uri.getRawAuthority();
+        if (authority != null && authority.endsWith(":")) {
+            return false;
+        }
+        int port = uri.getPort();
+        return port == -1 || (port >= 1 && port <= 65535);
     }
 
     private static String port(int port) {
