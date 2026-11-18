@@ -78,7 +78,8 @@ class SessionAccessScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("다른 사용자는 공개 세션을 읽기 전용으로 본다: isOwner=false, 소유자의 즐겨찾기는 보이지 않는다")
+    @DisplayName(
+            "[REC-11 R2] [X-SDT-01 S2] 다른 사용자는 공개 세션을 읽기 전용으로 본다: isOwner=false, 소유자의 즐겨찾기는 보이지 않는다")
     void foreignPublicSessionIsReadOnly() throws Exception {
         showContent(wanderer);
         wanderer.prague().update(null, null, null, true, null);
@@ -98,7 +99,7 @@ class SessionAccessScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("작성자의 노드 공개 범위가 URL 만이면 커뮤니티 API 처럼 제목 · 본문 · 발췌 없이 링크만 보인다")
+    @DisplayName("[X-SDT-01 S3] 작성자의 노드 공개 범위가 URL 만이면 커뮤니티 API 처럼 제목 · 본문 · 발췌 없이 링크만 보인다")
     void urlOnlyProfileHidesContent() throws Exception {
         mvc.perform(get("/sessions/{id}", wanderer.prague().getId()).with(as(me)))
                 .andExpect(okEnvelope())
@@ -116,7 +117,7 @@ class SessionAccessScenarioTest extends ScenarioTestSupport {
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
-    @DisplayName("다른 사용자의 세션 출처에는 http(s) 링크만 온다: 화면이 href 로 그대로 쓴다. 소유자에게는 그대로다")
+    @DisplayName("[REC-3-3 R1] 다른 사용자의 세션 출처에는 http(s) 링크만 온다: 화면이 href 로 그대로 쓴다. 소유자에게는 그대로다")
     void viewerSeesOnlyWebLinks(boolean content) throws Exception {
         BrowsingSession prague = wanderer.prague();
         prague.replaceSources(
@@ -158,14 +159,14 @@ class SessionAccessScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("다른 사용자에게 비공개 세션은 403 '비공개 세션이라 볼 수 없어요.'")
+    @DisplayName("[X-SDT-01 S1] 다른 사용자에게 비공개 세션은 403 '비공개 세션이라 볼 수 없어요.'")
     void foreignPrivateSession() throws Exception {
         mvc.perform(get("/sessions/{id}", wanderer.slow().getId()).with(as(me)))
                 .andExpect(errorEnvelope(HttpStatus.FORBIDDEN, FORBIDDEN));
     }
 
     @Test
-    @DisplayName("공개 세션에 비공개 해시태그가 섞여 있으면 다른 사용자에겐 그 태그만 빠지고, 소유자는 그대로 본다")
+    @DisplayName("[X-SDT-01 S2] 공개 세션에 비공개 해시태그가 섞여 있으면 다른 사용자에겐 그 태그만 빠지고, 소유자는 그대로 본다")
     void hiddenTagSession() throws Exception {
         mvc.perform(get("/sessions/{id}", wanderer.cafe().getId()).with(as(me)))
                 .andExpect(okEnvelope())
@@ -177,7 +178,7 @@ class SessionAccessScenarioTest extends ScenarioTestSupport {
 
     @ParameterizedTest
     @EnumSource(value = SessionStatus.class, names = "COMPLETED", mode = EnumSource.Mode.EXCLUDE)
-    @DisplayName("is_public 이 켜져 있어도 분석이 끝나지 않은 세션은 다른 사용자에게 403 이다")
+    @DisplayName("[X-SDT-01 S1] is_public 이 켜져 있어도 분석이 끝나지 않은 세션은 다른 사용자에게 403 이다")
     void unfinishedPublicSession(SessionStatus status) throws Exception {
         BrowsingSession unfinished =
                 sessionWithStatus(
@@ -205,7 +206,7 @@ class SessionAccessScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("지운 세션은 소유자 · 다른 사용자 모두 404 다 (공개였어도)")
+    @DisplayName("[X-SDT-01 R2] [REC-1 R1] 지운 세션은 소유자 · 다른 사용자 모두 404 다 (공개였어도)")
     void deletedSessionIs404ForEveryone() throws Exception {
         wanderer.prague().delete();
         sessions.saveAndFlush(wanderer.prague());
@@ -217,7 +218,7 @@ class SessionAccessScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("다른 사용자는 공개 세션이어도 수정 · 삭제할 수 없다 (404)")
+    @DisplayName("[X-SDT-01 R1] [REC-6 R2] 다른 사용자는 공개 세션이어도 수정 · 삭제할 수 없다 (404)")
     void foreignPublicSessionCannotBeChanged() throws Exception {
         showContent(wanderer);
         Long id = wanderer.prague().getId();

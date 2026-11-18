@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.web.servlet.ResultActions;
@@ -65,6 +66,7 @@ class RecommendationRankingTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[COM-6-1 S2] 겹치는 태그 수 → 최근 활동 → id 큰 순으로 추천한다")
     void moreMatchingTagsBeatRecencyWhichBeatsId() throws Exception {
         interests("가", "나", "다");
         var oneOld = card(ownerId, 0, "가");
@@ -99,6 +101,7 @@ class RecommendationRankingTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[COM-6-1 R1] 공개 세션마다 카드 한 장이고 내 카드는 빠진다")
     void oneCardPerSessionNeverMyOwnWithAllPublicTags() throws Exception {
         interests("여행");
         var first = card(ownerId, 1, "여행", "로마", "숨김");
@@ -128,6 +131,8 @@ class RecommendationRankingTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName(
+            "[COM-6-1 R2] [X-CMT-01 R1] 비공개 태그는 매칭에 쓰지 않고 URL만 공개 카드는 제목 · 요약 · 링크 제목이 null 이다")
     void urlOnlyCardsHideTitleAndHiddenTagsDoNotCountAsMatches() throws Exception {
         interests("가", "숨김");
         var two = card(ownerId, 0, "가", "숨김");
@@ -188,6 +193,7 @@ class RecommendationRankingTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[COM-6-1 S1] 추천 기준 태그는 10개까지이고 그 10개로만 찾는다")
     void basisStopsAtTenAndOnlyThoseTenMatch() throws Exception {
         List<String> tags = IntStream.range(0, 12).mapToObj(i -> "태그" + i).toList();
         interests(tags.toArray(String[]::new));
@@ -210,5 +216,39 @@ class RecommendationRankingTest extends CommunityTestSupport {
         recommend(RECENT)
                 .andExpect(jsonPath("$.data.basisHashtags").value(contains("여행")))
                 .andExpect(jsonPath("$.data.mindmaps[*].mindmapId").value(contains(ids(saved))));
+    }
+
+    @Test
+    @DisplayName("[COM-6-1 S3] 최근 저장 기준 태그는 최근에 저장한 북마크의 태그부터 온다")
+    void recentBasisFollowsSaveOrderNewestFirst() throws Exception {
+        card(ownerId, 0, "가", "나", "다");
+        var tags = hashtags.findByOwnerIdOrderByIdAsc(ownerId);
+        for (var tag : tags) {
+            bookmarks.save(
+                    viewerId,
+                    TargetType.HASHTAG,
+                    List.of(tag.getId()),
+                    SaveType.HASHTAG_BUNDLE,
+                    null,
+                    null);
+        }
+        var names = tags.stream().map(t -> t.getName()).toList();
+
+        recommend(RECENT)
+                .andExpect(
+                        jsonPath("$.data.basisHashtags")
+                                .value(contains(names.get(2), names.get(1), names.get(0))));
+    }
+
+    @Test
+    @DisplayName("[COM-6-1 R3] 조회 개수가 1~100 밖이면 400 \"조회 개수는 1개부터 100개까지 입력할 수 있습니다.\"")
+    void limitOutOfRangeIsRejectedWithMessage() throws Exception {
+        for (String path : List.of(INTERESTS, RECENT)) {
+            for (String limit : List.of("0", "101")) {
+                recommend(path, "limit", limit)
+                        .andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.message").value("조회 개수는 1개부터 100개까지 입력할 수 있습니다."));
+            }
+        }
     }
 }

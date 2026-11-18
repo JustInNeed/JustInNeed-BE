@@ -31,6 +31,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -97,6 +98,7 @@ class TrendingTest extends CommunityTestSupport {
 
     // 2026-10-01(목) 01:00 KST. UTC 로는 아직 9월 30일이다
     @Test
+    @DisplayName("[COM-6-3 S2] 오늘 · 어제는 KST 자정 기준이다")
     void todayAndYesterdayFollowKoreanMidnightWhenUtcDateDiffers() {
         clock.set("2026-09-30T16:00:00Z");
         explore(member(), "2026-09-30T15:00:00Z"); // 오늘 00:00 KST
@@ -109,6 +111,7 @@ class TrendingTest extends CommunityTestSupport {
 
     // 하루가 덜 지났을 때 어제 하루 전체와 비교하면 증감이 음수로 치우친다
     @Test
+    @DisplayName("[COM-6-3 S2] 오늘은 어제 같은 시각까지와 비교한다")
     void todayComparesWithYesterdayUpToTheSameTime() {
         clock.set("2026-09-30T16:00:00Z"); // 10월 1일 01:00 KST
         explore(member(), "2026-09-30T15:30:00Z"); // 오늘 00:30 KST
@@ -121,6 +124,7 @@ class TrendingTest extends CommunityTestSupport {
 
     // 달력 주가 아니라 최근 7일이라, 언제 봐도 두 기간의 길이가 같다
     @Test
+    @DisplayName("[COM-6-3 S2] 이번 주는 최근 7일을 그 앞 7일과 비교한다")
     void weekIsLastSevenDaysComparedWithTheSevenDaysBefore() {
         clock.set("2026-10-04T16:00:00Z");
         explore(member(), "2026-09-27T16:00:00Z"); // 최근 7일의 시작
@@ -179,6 +183,7 @@ class TrendingTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[COM-6-3 R1] 탈퇴 회원의 활동은 두 기간 숫자에서 빠지고 행은 남는다")
     void withdrawnActorsAreLeftOutOfBothWindowsAndTheirRowsStay() throws Exception {
         var gone = member();
         var stays = member();
@@ -222,6 +227,7 @@ class TrendingTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[COM-6-3 S3] 한 사람 · 태그 · 종류 · 날짜마다 1 로 센다")
     void onePersonCountsOncePerTagKindAndDayAcrossTargetsAndOwners() {
         var other = member();
         session(other, true, "JAVA");
@@ -258,6 +264,7 @@ class TrendingTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[COM-6-3 S3] 개수가 같으면 태그 이름 순이다")
     void equalCountsAreOrderedByName() {
         session(ownerId, true, "banana", "Apple");
         var tags = tagIds(ownerId);
@@ -297,6 +304,7 @@ class TrendingTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[COM-6-3 S6] 기간은 today · week 를 대소문자 무시로 받고 그 밖은 400")
     void periodIgnoresCaseAndRejectsOtherValues() throws Exception {
         explore(member(), "2026-09-30T01:00:00Z");
         for (var period : List.of("today", "TODAY", "Today", "week", "WEEK", "wEeK", "")) {
@@ -390,6 +398,7 @@ class TrendingTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[COM-6-3 R2] 비공개로 돌린 태그는 목록에서 빠지고 같은 세션의 다른 태그는 남는다")
     void hiddenHashtagLeavesAndTheOtherTagsOfTheSessionStay() {
         var s = session(ownerId, true, "Java", "Spring");
         var tags = tagIds(ownerId);
@@ -433,6 +442,29 @@ class TrendingTest extends CommunityTestSupport {
         assertThat(names("today")).containsExactly("Java");
 
         assertThat(nodes.count()).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("[COM-6-3 S3] 개수를 안 보내면 최대 10개까지 준다")
+    void defaultLimitIsTen() throws Exception {
+        session(ownerId, true, "A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9", "A10", "A11");
+        tagIds(ownerId).values().forEach(id -> explore(member(), id, "2026-09-30T01:00:00Z"));
+
+        assertThat(tagIds(ownerId)).hasSizeGreaterThan(10);
+        assertThat(names("today")).hasSize(10);
+    }
+
+    @Test
+    @DisplayName("[COM-6-3 R3] today · week 밖의 기간은 400 \"기간은 today 또는 week 만 쓸 수 있습니다\"")
+    void otherPeriodIsRejectedWithMessage() throws Exception {
+        for (var period : List.of("month", "오늘")) {
+            mvc.perform(
+                            get(TRENDING)
+                                    .param("period", period)
+                                    .header("Authorization", auth(viewerId)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("기간은 today 또는 week 만 쓸 수 있습니다"));
+        }
     }
 
     private record Row(int rank, long count, long trend) {}

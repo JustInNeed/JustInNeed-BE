@@ -13,9 +13,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.justinneed.auth.domain.Member;
+import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.domain.SessionStatus;
 import com.justinneed.session.taggroup.domain.TagGroup;
 import com.justinneed.session.taggroup.repository.TagGroupRepository;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -72,7 +76,7 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
 
     @Test
     @DisplayName(
-            "그룹 안 세션도 목록과 같은 순서: 진행 중 세션이 맨 위, 나머지는 실패 세션을 포함해 종료 시각 최신순, 종료 시각이 없으면 맨 뒤 — 조회 · 생성 · 수정 · 순서 변경 응답 모두")
+            "[REC-10-2 S2] 그룹 안 세션도 목록과 같은 순서: 진행 중 세션이 맨 위, 나머지는 실패 세션을 포함해 종료 시각 최신순, 종료 시각이 없으면 맨 뒤 — 조회 · 생성 · 수정 · 순서 변경 응답 모두")
     void groupSessionsFollowListOrder() throws Exception {
         Member me = member("sprout");
         seedMockSessions(me);
@@ -129,7 +133,7 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
 
     @Test
     @DisplayName(
-            "그룹 만들기 해시태그 후보(GET /sessions/hashtags): 내 세션 전체 태그를 목록 순서대로 처음 나온 순서로, 대소문자 무시 중복 없이 준다")
+            "[REC-7-5 S1] 그룹 만들기 해시태그 후보(GET /sessions/hashtags): 내 세션 전체 태그를 목록 순서대로 처음 나온 순서로, 대소문자 무시 중복 없이 준다")
     void hashtagCandidatesFollowListOrder() throws Exception {
         Member me = member("sprout");
         seedMockSessions(me);
@@ -175,7 +179,7 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("해시태그 후보에 삭제한 세션 · 다른 사람 세션의 태그는 안 나온다")
+    @DisplayName("[REC-7-5 S1] 해시태그 후보에 삭제한 세션 · 다른 사람 세션의 태그는 안 나온다")
     void hashtagCandidatesExcludeDeletedAndForeign() throws Exception {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
@@ -220,7 +224,65 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("그룹 해시태그는 대소문자를 무시하고 세션 태그와 맞춘다 (etias → ETIAS)")
+    @DisplayName(
+            "[REC-10-2 S2·R1] 그룹 세션은 페이징 없이 맞는 내 세션 전부가 목록 순서로 온다 — 10개를 넘어도 다 오고, 태그가 맞아도 지운 세션 · 다른 사람 세션은 빠진다")
+    void groupSessionsAreAllMineWithoutPaging() throws Exception {
+        Member me = member("sprout");
+        LocalDateTime base = LocalDateTime.parse("2026-04-01T10:00:00");
+        List<BrowsingSession> mine = new ArrayList<>();
+        for (int day = 0; day < 12; day++) {
+            mine.add(
+                    session(
+                            me,
+                            "로마 " + day,
+                            base.plusDays(day),
+                            base.plusDays(day).plusMinutes(30),
+                            1,
+                            false,
+                            false,
+                            // 대소문자만 다른 태그도 같은 그룹에 든다
+                            List.of(day % 2 == 0 ? "rome" : "ROME"),
+                            List.of(),
+                            null));
+        }
+        BrowsingSession deleted =
+                session(
+                        me,
+                        "지운 로마",
+                        base.plusDays(20),
+                        base.plusDays(20).plusMinutes(30),
+                        1,
+                        false,
+                        false,
+                        List.of("Rome"),
+                        List.of(),
+                        null);
+        mvc.perform(delete("/sessions/{id}", deleted.getId()).with(as(me))).andExpect(okEnvelope());
+        session(
+                member("wanderer"),
+                "남의 로마",
+                base.plusDays(21),
+                base.plusDays(21).plusMinutes(30),
+                1,
+                false,
+                true,
+                List.of("Rome"),
+                List.of(),
+                null);
+        group(me, List.of("Rome"), 0);
+
+        List<BrowsingSession> newestFirst = new ArrayList<>(mine);
+        Collections.reverse(newestFirst);
+        mvc.perform(get("/tag-groups").with(as(me)))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data[0].sessions", hasSize(12)))
+                .andExpect(
+                        jsonPath("$.data[0].sessions[*].id")
+                                .value(contains(ids(newestFirst.toArray(BrowsingSession[]::new)))));
+    }
+
+    @Test
+    @DisplayName("[REC-10-2 S2] 그룹 해시태그는 대소문자를 무시하고 세션 태그와 맞춘다 (etias → ETIAS)")
     void matchingIgnoresCase() throws Exception {
         Member me = member("sprout");
         seedMockSessions(me);
@@ -232,7 +294,7 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("그룹 만들기(REC-7-5): FE 처럼 해시태그만 보내면 맨 뒤 position 으로 생기고 매칭 세션이 함께 온다")
+    @DisplayName("[REC-7-5 S4] 그룹 만들기(REC-7-5): FE 처럼 해시태그만 보내면 맨 뒤 position 으로 생기고 매칭 세션이 함께 온다")
     void createGroupLikeFe() throws Exception {
         Member me = member("sprout");
         seedMockSessions(me);
@@ -251,7 +313,7 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("그룹 수정: hashtags 만 보내면(REC-7-4 드래그 순서) 그 순서로 저장된다")
+    @DisplayName("[REC-7-5 S4] [REC-7-4 S1] 그룹 수정: hashtags 만 보내면(REC-7-4 드래그 순서) 그 순서로 저장된다")
     void reorderHashtagsInsideGroup() throws Exception {
         Member me = member("sprout");
         seedMockSessions(me);
@@ -284,7 +346,7 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("세션 상세에서 태그를 지우거나 세션을 삭제하면 그룹 보기에서도 빠진다")
+    @DisplayName("[REC-10-2 R1] [REC-6 S2] 세션 상세에서 태그를 지우거나 세션을 삭제하면 그룹 보기에서도 빠진다")
     void groupFollowsSessionChanges() throws Exception {
         Member me = member("sprout");
         MockSessions mock = seedMockSessions(me);
@@ -303,7 +365,7 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("그룹을 지우면(확인 팝업 후) 남은 그룹 position 이 0 부터 다시 매겨진다")
+    @DisplayName("[REC-7-5 S5] 그룹을 지우면(확인 팝업 후) 남은 그룹 position 이 0 부터 다시 매겨진다")
     void deleteGroupCompactsPositions() throws Exception {
         Member me = member("sprout");
         TagGroup first = group(me, List.of("로마"), 0);
@@ -321,7 +383,7 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("그룹 순서 변경(위로 이동): 내 그룹 id 를 전부 한 번씩 보내면 그 순서로 position 0.. 이 매겨져 온다")
+    @DisplayName("[X-SES-02 S1] 그룹 순서 변경(위로 이동): 내 그룹 id 를 전부 한 번씩 보내면 그 순서로 position 0.. 이 매겨져 온다")
     void reorderGroups() throws Exception {
         Member me = member("sprout");
         TagGroup a = group(me, List.of("로마"), 0);
@@ -342,7 +404,8 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("순서 변경에 그룹이 빠지거나 · 중복되거나 · 남의 그룹이 섞이면 400 '정렬할 그룹 목록이 올바르지 않습니다.' 이고 순서는 그대로다")
+    @DisplayName(
+            "[X-SES-02 R1] 순서 변경에 그룹이 빠지거나 · 중복되거나 · 남의 그룹이 섞이면 400 '정렬할 그룹 목록이 올바르지 않습니다.' 이고 순서는 그대로다")
     void reorderMustContainEveryGroupExactlyOnce() throws Exception {
         Member me = member("sprout");
         TagGroup a = group(me, List.of("로마"), 0);
@@ -424,7 +487,7 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("그룹 해시태그가 10개를 넘거나 · 형식이 틀리거나 · 중복이면 400 이고 그룹은 안 생긴다")
+    @DisplayName("[REC-7-5 R2] 그룹 해시태그가 10개를 넘거나 · 형식이 틀리거나 · 중복이면 400 이고 그룹은 안 생긴다")
     void groupHashtagValidation() throws Exception {
         Member me = member("sprout");
         List<String> eleven =
@@ -447,7 +510,7 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("해시태그 없이 그룹을 만들면(빈 배열 · 누락 · null) 400 이고 그룹이 안 생기며 기존 그룹 위치도 그대로다")
+    @DisplayName("[REC-7-5 R1] 해시태그 없이 그룹을 만들면(빈 배열 · 누락 · null) 400 이고 그룹이 안 생기며 기존 그룹 위치도 그대로다")
     void createGroupRequiresHashtag() throws Exception {
         Member me = member("sprout");
         TagGroup europe = group(me, List.of("로마"), 0);
@@ -471,7 +534,7 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("그룹 해시태그를 빈 배열로 수정하면 400 이고 해시태그는 그대로다")
+    @DisplayName("[REC-7-5 R1] 그룹 해시태그를 빈 배열로 수정하면 400 이고 해시태그는 그대로다")
     void updateGroupRejectsEmptyHashtags() throws Exception {
         Member me = member("sprout");
         TagGroup europe = group(me, List.of("로마", "파리"), 0);
@@ -498,7 +561,7 @@ class TagGroupScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("다른 사람 그룹은 내 그룹 보기에 안 나오고, 수정 · 삭제하면 404 '해시태그 그룹을 찾을 수 없습니다.'")
+    @DisplayName("[REC-7-5 R4] 다른 사람 그룹은 내 그룹 보기에 안 나오고, 수정 · 삭제하면 404 '해시태그 그룹을 찾을 수 없습니다.'")
     void foreignGroupIsInvisible() throws Exception {
         Member me = member("sprout");
         TagGroup foreign = group(member("wanderer"), List.of("프라하"), 0);

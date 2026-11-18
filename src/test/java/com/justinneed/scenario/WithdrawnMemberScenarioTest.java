@@ -107,7 +107,8 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("탈퇴 후 같은 회원 id 로 새로 만든 access 토큰(서버 재시작으로 무효화 목록을 잃은 상황)으로도 내 정보 · 닉네임 변경은 401")
+    @DisplayName(
+            "[X-SET-05 R1] [X-COM-02 R2] 탈퇴 후 같은 회원 id 로 새로 만든 access 토큰(서버 재시작으로 무효화 목록을 잃은 상황)으로도 내 정보 · 닉네임 변경은 401")
     void withdrawnMemberIsUnauthorizedEvenWithFreshToken() throws Exception {
         withdraw(me);
         String freshToken = otherDeviceToken(me);
@@ -124,7 +125,8 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("웹에서 탈퇴하면 휴대폰에 남은 access 토큰도 모든 보호 API 에서 401 이고 그룹도 못 만든다")
+    @DisplayName(
+            "[X-SET-06 S4] [MEM-2-2 R2] 웹에서 탈퇴하면 휴대폰에 남은 access 토큰도 모든 보호 API 에서 401 이고 그룹도 못 만든다")
     void otherDeviceTokenIsRejectedAfterWithdrawal() throws Exception {
         String phone = otherDeviceToken(me);
         String web = jwt.createAccessToken(me.getId());
@@ -169,7 +171,7 @@ class WithdrawnMemberScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("탈퇴한 회원의 프로필 · 마인드맵 · 공유 세션 · 관심 해시태그 · 세션 상세를 열거나 좋아요를 누르면 404")
+    @DisplayName("[X-SET-06 S5] 탈퇴한 회원의 프로필 · 마인드맵 · 공유 세션 · 관심 해시태그 · 세션 상세를 열거나 좋아요를 누르면 404")
     void withdrawnProfileIsNotFound() throws Exception {
         mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me)))
                 .andExpect(okEnvelope());

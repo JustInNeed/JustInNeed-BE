@@ -348,7 +348,7 @@ class SessionCollectionScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("청크가 다 왔어도 seq 가 끊기면 합치지 않고 기다리다가, 1시간 뒤 FAILED 로 바꾸고 실패 기록을 남긴다")
+    @DisplayName("[X-SES-04 S1] 청크가 다 왔어도 seq 가 끊기면 합치지 않고 기다리다가, 1시간 뒤 FAILED 로 바꾸고 실패 기록을 남긴다")
     @SuppressWarnings("unchecked")
     void brokenFailsAfterQuiet() throws Exception {
         var second = chunk(2);
@@ -373,7 +373,7 @@ class SessionCollectionScenarioTest extends ScenarioTestSupport {
     // ---------- 마지막 청크 뒤 1시간 ----------
 
     @Test
-    @DisplayName("final 없이 1시간 조용하면 그때까지 온 청크로 합친다. 끝 시각은 마지막 기록 시각, 종료 사유는 timeout")
+    @DisplayName("[X-SES-04 S1] final 없이 1시간 조용하면 그때까지 온 청크로 합친다. 끝 시각은 마지막 기록 시각, 종료 사유는 timeout")
     @SuppressWarnings("unchecked")
     void quietWithoutFinal() throws Exception {
         send(1).andExpect(status().isCreated());
@@ -404,7 +404,7 @@ class SessionCollectionScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("빈 번호가 있어도 1시간 뒤 받은 만큼 합쳐 분석한다. 시작 기록이 없으면 세션 행의 시작 시각을 쓴다")
+    @DisplayName("[X-SES-04 S1] 빈 번호가 있어도 1시간 뒤 받은 만큼 합쳐 분석한다. 시작 기록이 없으면 세션 행의 시작 시각을 쓴다")
     void quietWithGapIsAnalyzed() throws Exception {
         send(2).andExpect(status().isCreated()); // 1번이 없음
         LocalDateTime rowStartedAt = row().getStartedAt();
@@ -499,7 +499,7 @@ class SessionCollectionScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("GET 뒤 콜백이 오지 않으면 복구 스케줄러가 30분 뒤 FAILED 로 바꾼다")
+    @DisplayName("[SUR-4 R4] GET 뒤 콜백이 오지 않으면 복구 스케줄러가 30분 뒤 FAILED 로 바꾼다")
     void callbackTimeoutFromScheduler() throws Exception {
         collectAll();
         input(sessionId()).andExpect(okEnvelope());
@@ -552,7 +552,7 @@ class SessionCollectionScenarioTest extends ScenarioTestSupport {
     // ---------- 삭제 ----------
 
     @Test
-    @DisplayName("수집 중 세션을 지우면 청크도 지우고, 이후 청크는 저장하지 않고 200(ignored) 으로 답하며 정리도 돌지 않는다")
+    @DisplayName("[REC-6 S2] 수집 중 세션을 지우면 청크도 지우고, 이후 청크는 저장하지 않고 200(ignored) 으로 답하며 정리도 돌지 않는다")
     void deleteWhileCollecting() throws Exception {
         send(1).andExpect(status().isCreated());
 

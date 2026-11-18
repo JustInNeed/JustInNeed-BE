@@ -19,7 +19,7 @@ class ExcludedUrlActiveUrlsTest {
             new ExcludedUrlService(repository, mock(MemberRepository.class));
 
     @Test
-    @DisplayName("행이 없으면 기본 URL 5개가 모두 적용 중")
+    @DisplayName("[X-SET-02 S4] 행이 없으면 기본 URL 5개가 모두 적용 중")
     void defaultsApplyWithoutRows() {
         when(repository.findByMemberId(1L)).thenReturn(List.of());
 
@@ -33,7 +33,7 @@ class ExcludedUrlActiveUrlsTest {
     }
 
     @Test
-    @DisplayName("체크 해제한 URL 은 빠지고, 기본 URL 도 해제했으면 빠진다")
+    @DisplayName("[X-SET-02 R1] 체크 해제한 URL 은 빠지고, 기본 URL 도 해제했으면 빠진다")
     void uncheckedUrlsAreLeftOut() {
         var instagram = new ExcludedUrl(1L, "instagram.com", "instagram.com", true);
         instagram.updateExcluded(false);

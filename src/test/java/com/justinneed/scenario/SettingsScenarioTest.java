@@ -24,6 +24,7 @@ import com.justinneed.auth.dto.TokenResponse;
 import com.justinneed.auth.service.AuthTokenService;
 import com.justinneed.settings.collection.domain.ExcludedUrl;
 import com.justinneed.settings.collection.repository.ExcludedUrlRepository;
+import com.justinneed.settings.extension.repository.ExtensionSettingRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +52,8 @@ class SettingsScenarioTest extends ScenarioTestSupport {
 
     @Autowired private ExcludedUrlRepository excludedUrls;
 
+    @Autowired private ExtensionSettingRepository extensionSettings;
+
     @Autowired private AuthTokenService authTokenService;
 
     private ResultActions postUrl(Member me, String url) throws Exception {
@@ -74,7 +77,7 @@ class SettingsScenarioTest extends ScenarioTestSupport {
     class ExcludedUrls {
 
         @Test
-        @DisplayName("처음 열면 기본 제외 URL 5개가 체크된 채로 도메인 순으로 온다 (MEM-5-1)")
+        @DisplayName("[MEM-5-1 S1] 처음 열면 기본 제외 URL 5개가 체크된 채로 도메인 순으로 온다 (MEM-5-1)")
         void defaultsOnFirstOpen() throws Exception {
             Member me = member("sprout");
 
@@ -102,7 +105,8 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("URL 을 추가하면 201 과 표시형 URL(프로토콜 · 끝 슬래시 제거, 소문자 도메인)이 체크된 상태로 온다 (MEM-5-3)")
+        @DisplayName(
+                "[MEM-5-3 S1] URL 을 추가하면 201 과 표시형 URL(프로토콜 · 끝 슬래시 제거, 소문자 도메인)이 체크된 상태로 온다 (MEM-5-3)")
         void addedUrlIsNormalized() throws Exception {
             Member me = member("sprout");
 
@@ -123,7 +127,7 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("정규화하면 같은 URL(기본 URL 포함)을 또 추가하면 409 '이미 등록된 URL입니다.'")
+        @DisplayName("[MEM-5-3 S5] 정규화하면 같은 URL(기본 URL 포함)을 또 추가하면 409 '이미 등록된 URL입니다.'")
         void duplicateUrl() throws Exception {
             Member me = member("sprout");
             addUrlId(me, "https://tistory.com/feed");
@@ -145,7 +149,8 @@ class SettingsScenarioTest extends ScenarioTestSupport {
                     "javascript:alert(1)",
                     "not-a-url"
                 })
-        @DisplayName("형식이 틀린 URL(http/https 아님 · 공백 · 계정정보 · TLD 없음)은 400 '올바른 URL 형식이 아닙니다.'")
+        @DisplayName(
+                "[MEM-5-3 S4] 형식이 틀린 URL(http/https 아님 · 공백 · 계정정보 · TLD 없음)은 400 '올바른 URL 형식이 아닙니다.'")
         void invalidUrl(String url) throws Exception {
             Member me = member("sprout");
 
@@ -162,7 +167,8 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("기본 URL 포함 100개가 차면 더 추가할 수 없다 (400 'URL은 최대 100개까지 등록할 수 있습니다.')")
+        @DisplayName(
+                "[MEM-5-3 S6] 기본 URL 포함 100개가 차면 더 추가할 수 없다 (400 'URL은 최대 100개까지 등록할 수 있습니다.')")
         void limitIsHundredIncludingDefaults() throws Exception {
             Member me = member("sprout");
             mvc.perform(get(EXCLUDED_URLS).with(as(me))).andExpect(okEnvelope()); // 기본 URL 5개 생성
@@ -180,7 +186,7 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("내가 추가한 URL 의 체크를 해제하면(MEM-5-2) 수집 제외가 꺼지고, 목록에서 체크된 항목 뒤로 간다")
+        @DisplayName("[MEM-5-2 S1] 내가 추가한 URL 의 체크를 해제하면(MEM-5-2) 수집 제외가 꺼지고, 목록에서 체크된 항목 뒤로 간다")
         void uncheckedGoLast() throws Exception {
             Member me = member("sprout");
             Long tistory = addUrlId(me, "https://tistory.com/feed");
@@ -221,7 +227,7 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("기본 URL 은 체크를 해제할 수 없다 — 섞여 있으면 400 이고 아무것도 바뀌지 않는다 (QA-029)")
+        @DisplayName("[MEM-5-2 R1] 기본 URL 은 체크를 해제할 수 없다 — 섞여 있으면 400 이고 아무것도 바뀌지 않는다 (QA-029)")
         void defaultCannotBeUnchecked() throws Exception {
             Member me = member("sprout");
             Long tistory = addUrlId(me, "https://tistory.com/feed");
@@ -246,7 +252,7 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("예전에 꺼 둔 기본 URL 은 목록을 열면 다시 켜진다 — 기본 URL 은 예외 없이 수집 제외 (QA-029)")
+        @DisplayName("[MEM-5-1 S2] 예전에 꺼 둔 기본 URL 은 목록을 열면 다시 켜진다 — 기본 URL 은 예외 없이 수집 제외 (QA-029)")
         void legacyUncheckedDefaultIsTurnedBackOn() throws Exception {
             Member me = member("sprout");
             Long mail = urlId(me, "mail.google.com");
@@ -307,7 +313,7 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("선택 삭제(MEM-5-4): 내가 추가한 URL 은 지워진다")
+        @DisplayName("[MEM-5-4 S1] 선택 삭제(MEM-5-4): 내가 추가한 URL 은 지워진다")
         void deleteOwnUrls() throws Exception {
             Member me = member("sprout");
             Long tistory = addUrlId(me, "https://tistory.com/feed");
@@ -329,7 +335,7 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("기본 URL 은 삭제할 수 없다 — 섞여 있으면 400 이고 아무것도 지우거나 해제하지 않는다 (QA-029)")
+        @DisplayName("[MEM-5-4 R1] 기본 URL 은 삭제할 수 없다 — 섞여 있으면 400 이고 아무것도 지우거나 해제하지 않는다 (QA-029)")
         void defaultCannotBeDeleted() throws Exception {
             Member me = member("sprout");
             Long tistory = addUrlId(me, "https://tistory.com/feed");
@@ -416,7 +422,7 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("프로토콜 없이 입력한 URL(tistory.com/feed)도 받아서 표시형으로 저장한다")
+        @DisplayName("[MEM-5-3 S2] 프로토콜 없이 입력한 URL(tistory.com/feed)도 받아서 표시형으로 저장한다")
         void urlWithoutScheme() throws Exception {
             Member me = member("sprout");
 
@@ -435,7 +441,7 @@ class SettingsScenarioTest extends ScenarioTestSupport {
                     "https://www.instagram.com/",
                     "HTTP://WWW.Instagram.com:443"
                 })
-        @DisplayName("프로토콜 · www · 끝 슬래시 · 기본 포트만 다른 URL 은 같은 URL 이라 409 다")
+        @DisplayName("[MEM-5-3 S5] 프로토콜 · www · 끝 슬래시 · 기본 포트만 다른 URL 은 같은 URL 이라 409 다")
         void sameUrlInOtherForms(String url) throws Exception {
             Member me = member("sprout");
             mvc.perform(get(EXCLUDED_URLS).with(as(me)))
@@ -445,7 +451,37 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("저장할 수 없을 만큼 긴 URL 은 500 이 아니라 400 '올바른 URL 형식이 아닙니다.' 다")
+        @DisplayName("[MEM-5-3 S3] 하위 도메인 URL 은 하위 도메인을 유지한 채 저장된다")
+        void subdomainIsKept() throws Exception {
+            Member me = member("sprout");
+
+            postUrl(me, "https://mail.naver.com")
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.data.url").value("mail.naver.com"))
+                    .andExpect(jsonPath("$.data.domain").value("mail.naver.com"));
+        }
+
+        @Test
+        @DisplayName("[MEM-5-3 R1] 경로의 %2F · 쿼리의 %26 은 풀지 않고 그대로 저장해, 푼 URL 과 다른 URL 로 본다")
+        void percentEncodingIsKept() throws Exception {
+            Member me = member("sprout");
+
+            postUrl(me, "https://example.com/a%2Fb")
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.data.url").value("example.com/a%2Fb"));
+            postUrl(me, "https://example.com/s?q=a%26b")
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.data.url").value("example.com/s?q=a%26b"));
+            postUrl(me, "https://example.com/a/b")
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.data.url").value("example.com/a/b"));
+            postUrl(me, "https://example.com/s?q=a&b")
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.data.url").value("example.com/s?q=a&b"));
+        }
+
+        @Test
+        @DisplayName("[MEM-5-3 R3] 저장할 수 없을 만큼 긴 URL 은 500 이 아니라 400 '올바른 URL 형식이 아닙니다.' 다")
         void tooLongUrl() throws Exception {
             Member me = member("sprout");
 
@@ -454,7 +490,7 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("기본 제외 URL 은 디자인 목처럼 5개이고 100개가 넘어도 채운다")
+        @DisplayName("[MEM-5-1 S5] 기본 제외 URL 은 디자인 목처럼 5개이고 100개가 넘어도 채운다")
         void defaultsMatchDesign() throws Exception {
             Member me = member("sprout");
             List<ExcludedUrl> filler = new ArrayList<>();
@@ -484,7 +520,7 @@ class SettingsScenarioTest extends ScenarioTestSupport {
     class Extension {
 
         @Test
-        @DisplayName("팝업 노출(MEM-6)을 끄면 바뀐 값만 담아 응답하고, 다시 켜면 true 로 온다")
+        @DisplayName("[MEM-6 S1] 팝업 노출(MEM-6)을 끄면 바뀐 값만 담아 응답하고, 다시 켜면 true 로 온다")
         void popupVisibleToggle() throws Exception {
             Member me = member("sprout");
 
@@ -537,7 +573,7 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("설정 화면을 열면 확장 프로그램 설정 현재 값(처음엔 모두 켜짐)을 불러온다")
+        @DisplayName("[X-SET-03 S1·S2] [MEM-6 S1] 설정 화면을 열면 확장 프로그램 설정 현재 값(처음엔 모두 켜짐)을 불러온다")
         void currentExtensionSettings() throws Exception {
             Member me = member("sprout");
 
@@ -557,6 +593,41 @@ class SettingsScenarioTest extends ScenarioTestSupport {
                     .andExpect(jsonPath("$.data.autoEndNotificationEnabled").value(true))
                     .andExpect(jsonPath("$.data.manualScrapEnabled").value(true))
                     .andExpect(jsonPath("$.data.updatedAt").value(notNullValue()));
+        }
+    }
+
+    @Nested
+    @DisplayName("확장 프로그램: 요구사항 기준")
+    class ExtensionRequirements {
+
+        @Test
+        @DisplayName("[X-SET-03 R1] 저장한 적 없는 회원이 설정을 조회만 하면 DB 에 설정 행이 생기지 않는다")
+        void readDoesNotCreateRow() throws Exception {
+            Member me = member("sprout");
+
+            mvc.perform(get("/settings/extension").with(as(me)))
+                    .andExpect(okEnvelope())
+                    .andExpect(jsonPath("$.data.popupVisible").value(true));
+            mvc.perform(get("/settings/extension").with(as(me))).andExpect(okEnvelope());
+
+            assertThat(extensionSettings.findByMemberId(me.getId())).isEmpty();
+        }
+
+        @Test
+        @DisplayName("[X-SET-04 S1] 자동 종료 알림을 끄면 저장되어 다시 불러와도 꺼져 있고 다른 토글은 그대로다")
+        void autoEndNotificationIsKept() throws Exception {
+            Member me = member("sprout");
+
+            mvc.perform(
+                            patch("/settings/extension/auto-end-notification")
+                                    .with(as(me))
+                                    .with(json(Map.of("enabled", false))))
+                    .andExpect(okEnvelope());
+
+            mvc.perform(get("/settings/extension").with(as(me)))
+                    .andExpect(okEnvelope())
+                    .andExpect(jsonPath("$.data.autoEndNotificationEnabled").value(false))
+                    .andExpect(jsonPath("$.data.popupVisible").value(true));
         }
     }
 
@@ -673,7 +744,7 @@ class SettingsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("탈퇴하면 쓰던 access · refresh 토큰이 모두 무효가 된다")
+        @DisplayName("[X-SET-06 S4] 탈퇴하면 쓰던 access · refresh 토큰이 모두 무효가 된다")
         void withdrawRevokesTokens() throws Exception {
             Member me = member("sprout");
             TokenResponse login = authTokenService.issue(me.getId());
@@ -725,7 +796,7 @@ class SettingsScenarioTest extends ScenarioTestSupport {
 
         @ParameterizedTest(name = "\"{0}\"")
         @ValueSource(strings = {"withdraw", "WITHDRAW ", "탈퇴"})
-        @DisplayName("확인 문구가 틀리면 400 '탈퇴 확인 문구가 올바르지 않습니다.' 이고 계정은 그대로다")
+        @DisplayName("[X-SET-06 R1] 확인 문구가 틀리면 400 '탈퇴 확인 문구가 올바르지 않습니다.' 이고 계정은 그대로다")
         void wrongConfirmText(String confirmText) throws Exception {
             Member me = member("sprout");
 

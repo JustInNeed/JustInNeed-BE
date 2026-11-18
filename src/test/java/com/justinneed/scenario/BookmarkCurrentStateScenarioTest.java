@@ -337,7 +337,7 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("작성자가 제목 · 본문을 고치면 새 값이 보이고 스냅샷은 그대로다")
+    @DisplayName("[COM-2-2@1 S4] 작성자가 제목 · 본문을 고치면 새 값이 보이고 스냅샷은 그대로다")
     void retitleShowsCurrentTitle() throws Exception {
         setScope(NodeVisibility.CONTENT);
         analyse(wanderer.prague(), "", CASTLE);
@@ -456,7 +456,7 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("URL만: 같은 URL 을 인용한 AI 노드는 한 번만 보이고, http(s) 가 아닌 인용 URL 은 빠진다")
+    @DisplayName("[COM-2-2@1 S2] URL만: 같은 URL 을 인용한 AI 노드는 한 번만 보이고, http(s) 가 아닌 인용 URL 은 빠진다")
     void urlOnlyDeduplicatesAndDropsUnsafeUrls() throws Exception {
         BookmarkSnapshot.Node first =
                 new BookmarkSnapshot.Node(
@@ -552,7 +552,7 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("옛 기본 제목(영문 · 한글)은 어떤 경우에도 나오지 않는다: 카드가 있으면 카드 제목, 없으면 null")
+    @DisplayName("[COM-2-2@1 R1] 옛 기본 제목(영문 · 한글)은 어떤 경우에도 나오지 않는다: 카드가 있으면 카드 제목, 없으면 null")
     void defaultTitlesNeverLeak() throws Exception {
         BookmarkSnapshot.Node stored =
                 new BookmarkSnapshot.Node(
@@ -699,7 +699,7 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("여러 세션 + 내용까지 → URL만: 세션마다 URL 라벨만 남고 AI 글이 응답에 없다")
+    @DisplayName("[COM-2-2@1 S2] 여러 세션 + 내용까지 → URL만: 세션마다 URL 라벨만 남고 AI 글이 응답에 없다")
     void mixedSourcesRespectUrlOnly() throws Exception {
         setScope(NodeVisibility.CONTENT);
         analyse(wanderer.prague(), "프라하", CASTLE);
@@ -722,7 +722,7 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     // ---------- 원래 마인드맵 ----------
 
     @Test
-    @DisplayName("원래 마인드맵: 내용까지 → URL만 뒤에도 같은 세션의 URL 노드가 강조된다")
+    @DisplayName("[COM-2-2@2 S3] 원래 마인드맵: 내용까지 → URL만 뒤에도 같은 세션의 URL 노드가 강조된다")
     void originalHighlightsSameSessionAfterUrlOnly() throws Exception {
         setScope(NodeVisibility.CONTENT);
         analyse(wanderer.prague(), "", CASTLE);
@@ -807,7 +807,7 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("원래 마인드맵: 재분석으로 AI 노드 id 가 바뀌어도 내용까지 그래프에서 같은 세션 노드를 강조한다")
+    @DisplayName("[COM-2-2@2 S3] 원래 마인드맵: 재분석으로 AI 노드 id 가 바뀌어도 내용까지 그래프에서 같은 세션 노드를 강조한다")
     void originalAfterReanalysis() throws Exception {
         setScope(NodeVisibility.CONTENT);
         analyse(wanderer.prague(), "옛", CASTLE);
@@ -832,7 +832,7 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("원래 마인드맵: 재분석으로 그 세션의 AI 노드가 없어지면 URL 그래프에서 같은 세션 노드를 강조한다")
+    @DisplayName("[COM-2-2@2 S3] 원래 마인드맵: 재분석으로 그 세션의 AI 노드가 없어지면 URL 그래프에서 같은 세션 노드를 강조한다")
     void originalAfterAnalysisEmptied() throws Exception {
         setScope(NodeVisibility.CONTENT);
         analyse(wanderer.prague(), "", CASTLE);
@@ -879,7 +879,7 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("묶음 이름: 앞뒤 공백을 지우고 저장하며 저장 응답에도 온다. 공백뿐이면 null 이다")
+    @DisplayName("[COM-4-3@3 S2] 묶음 이름: 앞뒤 공백을 지우고 저장하며 저장 응답에도 온다. 공백뿐이면 null 이다")
     void bundleNameIsTrimmed() throws Exception {
         saveBundleNamed("  동유럽 자료  ", "프라하")
                 .andExpect(status().isCreated())
@@ -896,7 +896,7 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("묶음 이름: 공백을 지운 뒤 30자까지, 31자면 한국어 400 이고 저장되지 않는다")
+    @DisplayName("[COM-4-3@3 R1] 묶음 이름: 공백을 지운 뒤 30자까지, 31자면 한국어 400 이고 저장되지 않는다")
     void bundleNameLength() throws Exception {
         saveBundleNamed("  " + "가".repeat(30) + "  ", "프라하").andExpect(status().isCreated());
 
@@ -907,7 +907,7 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("묶음 이름: 글자가 아닌 제어 문자가 있으면 400 이다 (DB 에 넣지 못하는 NUL 포함)")
+    @DisplayName("[COM-4-3@3 R1] 묶음 이름: 글자가 아닌 제어 문자가 있으면 400 이다 (DB 에 넣지 못하는 NUL 포함)")
     void bundleNameRejectsControlCharacters() throws Exception {
         saveBundleNamed("이름\u0000", "프라하")
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "묶음 이름에 쓸 수 없는 문자가 있습니다."));
@@ -916,7 +916,7 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("묶음 이름: 미니 마인드맵에 이름을 보내면 400, 비었거나 공백이면 없는 것으로 본다")
+    @DisplayName("[COM-4-3@3 R2] 묶음 이름: 미니 마인드맵에 이름을 보내면 400, 비었거나 공백이면 없는 것으로 본다")
     void bundleNameOnlyForBundles() throws Exception {
         Long prague = hashtagId(wanderer.member(), "프라하");
 
@@ -928,7 +928,7 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("같은 선택을 다시 저장하면 같은 행이다: 이름이 있으면 바꾸고, 없거나 비면 두고, 저장 시각 · 순서는 그대로다")
+    @DisplayName("[COM-4-3@3 S3] 같은 선택을 다시 저장하면 같은 행이다: 이름이 있으면 바꾸고, 없거나 비면 두고, 저장 시각 · 순서는 그대로다")
     void sameSelectionResave() throws Exception {
         Long id = readLong(saveBundleNamed("처음", "프라하"), "$.data.bookmarkId");
         Instant savedAt = rows.findById(id).orElseThrow().getSavedAt();
@@ -961,7 +961,7 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("되돌리기: 카드 북마크는 지운 뒤 세션 id 로 다시 켜면 새 행이 맨 위로 오고 카드 숫자가 돌아온다")
+    @DisplayName("[COM-4-3@2 S2·R3] 되돌리기: 카드 북마크는 지운 뒤 세션 id 로 다시 켜면 새 행이 맨 위로 오고 카드 숫자가 돌아온다")
     void undoCardBookmark() throws Exception {
         Long first = saveCard(wanderer.prague());
         Long other = saveCard(wanderer.vienna());
@@ -987,7 +987,7 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("되돌리기: 태그로 고른 미니 마인드맵은 목록 값 그대로 POST 하면 새 행이 맨 위로 온다")
+    @DisplayName("[COM-4-3@2 S2] 되돌리기: 태그로 고른 미니 마인드맵은 목록 값 그대로 POST 하면 새 행이 맨 위로 온다")
     void undoTagPick() throws Exception {
         Long first = saveTags("프라하", "비엔나");
         Long other = saveCard(wanderer.prague());
@@ -1015,7 +1015,7 @@ class BookmarkCurrentStateScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("되돌리기: 이름 붙인 묶음은 목록 값 그대로 POST 하면 이름까지 돌아오고 맨 위로 온다")
+    @DisplayName("[COM-4-3@2 S2] 되돌리기: 이름 붙인 묶음은 목록 값 그대로 POST 하면 이름까지 돌아오고 맨 위로 온다")
     void undoNamedBundle() throws Exception {
         Long first = readLong(saveBundleNamed("동유럽 자료", "프라하"), "$.data.bookmarkId");
         Long other = readLong(saveBundleNamed(null, "비엔나"), "$.data.bookmarkId");

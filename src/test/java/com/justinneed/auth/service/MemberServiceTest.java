@@ -25,7 +25,7 @@ class MemberServiceTest {
     @InjectMocks private MemberService memberService;
 
     @Test
-    @DisplayName("중복 확인을 통과했어도 저장 순간 유니크 제약에 걸리면 DUPLICATE_NICKNAME 으로 바꾼다")
+    @DisplayName("[MEM-4 R3] 중복 확인을 통과했어도 저장 순간 유니크 제약에 걸리면 DUPLICATE_NICKNAME 으로 바꾼다")
     void uniqueViolationBecomesDuplicateNickname() {
         Member member = new Member(SocialProvider.KAKAO, "provider-id", null, null);
         when(memberRepository.findByIdAndWithdrawnAtIsNull(1L)).thenReturn(Optional.of(member));

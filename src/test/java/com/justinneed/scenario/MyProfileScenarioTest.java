@@ -137,7 +137,8 @@ class MyProfileScenarioTest extends ScenarioTestSupport {
     // ---------- 세션 범위 ----------
 
     @Test
-    @DisplayName("비공개 세션은 내 목록에 isPublic false 로 오고, 공개 API 로는 작성자 본인에게도 나오지 않는다")
+    @DisplayName(
+            "[X-PRF-03 S2] [COM-1-6 S1] [X-OPRF-02 R1] 비공개 세션은 내 목록에 isPublic false 로 오고, 공개 API 로는 작성자 본인에게도 나오지 않는다")
     void privateSessionsAreOwnerOnly() throws Exception {
         MockSessions mock = seedMockSessions(me);
         setPublic(mock.rome(), true);
@@ -225,7 +226,8 @@ class MyProfileScenarioTest extends ScenarioTestSupport {
     // ---------- 프로필 헤더 ----------
 
     @Test
-    @DisplayName("프로필 헤더: 전체 노드 수는 홈 통계와 같고, 공유 세션 수는 공개 세션 수, 비공개 세션 노드도 포함한다")
+    @DisplayName(
+            "[COM-3-2 S1] [X-PRF-02 S1·R1] 프로필 헤더: 전체 노드 수는 홈 통계와 같고, 공유 세션 수는 공개 세션 수, 비공개 세션 노드도 포함한다")
     void headerMatchesHome() throws Exception {
         MockSessions mock = seedMockSessions(me);
         keywords(mock.rome(), "콜로세움", "바티칸");
@@ -282,7 +284,8 @@ class MyProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("상위 해시태그: 비공개 태그도 isPublic false 로 들어오고, 노드 수 많은 순 → 이름순 5개, 노드 없는 태그는 빠진다")
+    @DisplayName(
+            "[COM-3-3 S1·R1] 상위 해시태그: 비공개 태그도 isPublic false 로 들어오고, 노드 수 많은 순 → 이름순 5개, 노드 없는 태그는 빠진다")
     void topHashtags() throws Exception {
         BrowsingSession first =
                 tagged("첫 세션", "2026-04-20T10:00:00", "베타", "알파", "비밀", "감마", "델타", "엡실론");
@@ -364,7 +367,8 @@ class MyProfileScenarioTest extends ScenarioTestSupport {
     // ---------- 순서 · 페이지 ----------
 
     @Test
-    @DisplayName("고정 세션이 핀 순서로 맨 앞, 나머지는 최근 활동 최신순. 공개가 풀린 핀은 고정으로 보지 않고 제자리로 간다")
+    @DisplayName(
+            "[COM-1-6 S1] [X-PRF-03 R1] [COM-1-3@2 S2] 고정 세션이 핀 순서로 맨 앞, 나머지는 최근 활동 최신순. 공개가 풀린 핀은 고정으로 보지 않고 제자리로 간다")
     void pinnedOrdering() throws Exception {
         MockSessions mock = seedMockSessions(me);
         // 종료 시각이 없으면 시작 시각으로 정렬한다: 로마(4.26 22:48) 와 항공권(4.25 15:21) 사이

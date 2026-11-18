@@ -93,7 +93,7 @@ class SessionResultScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("본문은 # 제목 없이 첫 ## 소제목부터 시작하고, 제목은 세션 제목으로만 남는다")
+    @DisplayName("[REC-2-1 S2·R1] 본문은 # 제목 없이 첫 ## 소제목부터 시작하고, 제목은 세션 제목으로만 남는다")
     void markdownHasNoTitle() throws Exception {
         callback("AI 대제목");
 
@@ -107,7 +107,7 @@ class SessionResultScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("제목을 고쳐도 본문에 옛 제목이 남지 않는다")
+    @DisplayName("[REC-2-1 R1] 제목을 고쳐도 본문에 옛 제목이 남지 않는다")
     void titleEditLeavesNoOldTitle() throws Exception {
         callback("AI 대제목");
 
@@ -121,7 +121,8 @@ class SessionResultScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("병합된 링크는 대표 문단을 발췌로 출처에 더해지고 같은 링크는 한 번만 나온다 (원본의 제목 · 방문 시각 사용, 방문순 정렬)")
+    @DisplayName(
+            "[REC-3-1 S2] 병합된 링크는 대표 문단을 발췌로 출처에 더해지고 같은 링크는 한 번만 나온다 (원본의 제목 · 방문 시각 사용, 방문순 정렬)")
     void mergedLinksBecomeSources() throws Exception {
         callback("AI 대제목");
 
@@ -137,7 +138,7 @@ class SessionResultScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("AI 가 만든 긴 이모지 제목도 고치지 않고 그대로 다시 저장할 수 있다")
+    @DisplayName("[REC-2-1 S2] AI 가 만든 긴 이모지 제목도 고치지 않고 그대로 다시 저장할 수 있다")
     void longEmojiTitleCanBeSavedAgain() throws Exception {
         callback("😀".repeat(60));
 

@@ -103,7 +103,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("다른 회원 · 삭제 · 진행 중 · 실패 세션은 어떤 카드에도 들어가지 않는다")
+        @DisplayName("[X-ANA-01 R1] 다른 회원 · 삭제 · 진행 중 · 실패 세션은 어떤 카드에도 들어가지 않는다")
         void onlyMyCompletedSessions() throws Exception {
             analyzed(
                     completed("2026-10-31T09:00:00", "2026-10-31T09:30:00", 3),
@@ -159,7 +159,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("기간은 오늘 포함 최근 7일이고 세션 시작 시각(KST)으로 본다")
+        @DisplayName("[X-ANA-01 R1] 기간은 오늘 포함 최근 7일이고 세션 시작 시각(KST)으로 본다")
         void lastSevenDays() throws Exception {
             BrowsingSession first = completed("2026-10-25T00:00:00", "2026-10-25T00:10:00", 1);
             BrowsingSession last = completed("2026-10-31T23:59:59", null, 1);
@@ -244,7 +244,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
     class Exploration {
 
         @Test
-        @DisplayName("세션 평균 URL · 평균 페이지 체류 · 평균 세션 길이를 세션별로 계산해 평균한다")
+        @DisplayName("[ANA-4 S3·R1] [ANA-2-3 R1] 세션 평균 URL · 평균 페이지 체류 · 평균 세션 길이를 세션별로 계산해 평균한다")
         void stats() throws Exception {
             // 페이지 3개 체류 180초 → 페이지 평균 60초
             analyzed(
@@ -285,7 +285,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
             "9,  29, 59, QUICK_CHECK",
             "1,  60, 0,  QUICK_CHECK",
         })
-        @DisplayName("성향 판정 기준의 경계 (정독 % 는 Idle 포함 유닛 수 기준)")
+        @DisplayName("[ANA-4 S1] 성향 판정 기준의 경계 (정독 % 는 Idle 포함 유닛 수 기준)")
         void judge(int urls, int dwellSec, int focusedPct, String expected) throws Exception {
             analyzed(
                     completed("2026-10-31T09:00:00", null, urls),
@@ -297,7 +297,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("7일 중 가장 많이 나온 성향의 엑셀 문구가 오고, 같은 수면 앞선 성향이다")
+        @DisplayName("[ANA-4 S1·S2] 7일 중 가장 많이 나온 성향의 엑셀 문구가 오고, 같은 수면 앞선 성향이다")
         void mostCommonType() throws Exception {
             analyzed(
                     completed("2026-10-31T09:00:00", null, 1),
@@ -334,7 +334,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("집중 판정은 체류시간이 아니라 유닛 수로 본다 (Idle 이 많으면 체류가 정독에 몰려도 집중이 아니다)")
+        @DisplayName("[ANA-4 S1] 집중 판정은 체류시간이 아니라 유닛 수로 본다 (Idle 이 많으면 체류가 정독에 몰려도 집중이 아니다)")
         void focusedByUnits() throws Exception {
             Map<String, Object> summary =
                     Map.of(
@@ -352,7 +352,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("pageVisits 가 빈 목록인 세션도 없는 세션처럼 평균 · 판정에서 뺀다")
+        @DisplayName("[ANA-4 R1] pageVisits 가 빈 목록인 세션도 없는 세션처럼 평균 · 판정에서 뺀다")
         void emptyPageVisits() throws Exception {
             analyzed(
                     completed("2026-10-31T09:00:00", null, 4),
@@ -366,7 +366,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("pageVisits 가 없는 세션뿐이면 통계만 오고 판정은 비어 있다")
+        @DisplayName("[ANA-4 S4] pageVisits 가 없는 세션뿐이면 통계만 오고 판정은 비어 있다")
         void cannotJudge() throws Exception {
             analyzed(
                     completed("2026-10-31T09:00:00", "2026-10-31T09:30:00", 4),
@@ -388,7 +388,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
     class ReadingBehavior {
 
         @Test
-        @DisplayName("유닛 수 기준이고 Idle 도 분모에 들어가며 비율 합은 100 이다")
+        @DisplayName("[ANA-3-1 S1] 유닛 수 기준이고 Idle 도 분모에 들어가며 비율 합은 100 이다")
         void unitBasedShares() throws Exception {
             analyzed(
                     completed("2026-10-31T09:00:00", null, 1),
@@ -444,7 +444,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
                     "Idle         | 5 | 0 | 0 | 0 | 정보를 찾기 위해 페이지 간 이동이 많은 탐색형 패턴입니다. **Idle 비중 100%**로 가장 높아요.",
                     "동률이면 앞선 분류 | 5 | 5 | 5 | 5 | 한 번 읽기 시작하면 깊이 있게 이해하는 편입니다. **Deep Reading 비중 25%**로 가장 높아요.",
                 })
-        @DisplayName("가장 높은 분류의 문구가 온다")
+        @DisplayName("[ANA-3-2 S1·S2] 가장 높은 분류의 문구가 온다")
         void note(String name, int idle, int scanning, int reading, int deep, String expected)
                 throws Exception {
             analyzed(
@@ -459,7 +459,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("유닛이 하나도 없으면 null 이다")
+        @DisplayName("[ANA-3-1 R2] 유닛이 하나도 없으면 null 이다")
         void noUnits() throws Exception {
             analyzed(
                     completed("2026-10-31T09:00:00", null, 1),
@@ -471,7 +471,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("같은 데이터면 홈 Deep Reading 비율과 같은 숫자다")
+        @DisplayName("[ANA-3-1 S2] 같은 데이터면 홈 Deep Reading 비율과 같은 숫자다")
         void sameAsHome() throws Exception {
             // 33.5% 처럼 반올림과 합 100 맞추기가 어긋날 수 있는 값
             analyzed(
@@ -491,7 +491,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
     class Categories {
 
         @Test
-        @DisplayName("재방문을 포함해 세고, 많은 순으로 오며 비율 합은 100 이다")
+        @DisplayName("[ANA-1-1 S1] 재방문을 포함해 세고, 많은 순으로 오며 비율 합은 100 이다")
         void countsRevisits() throws Exception {
             analyzed(
                     completed("2026-10-31T09:00:00", null, 3),
@@ -537,7 +537,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("1위가 70% 이상이면 '중심' 문구, 아니면 '균형' 문구에 상위 3개가 나온다")
+        @DisplayName("[ANA-1-2 S1·S2] 1위가 70% 이상이면 '중심' 문구, 아니면 '균형' 문구에 상위 3개가 나온다")
         void note() throws Exception {
             analyzed(
                     completed("2026-10-31T09:00:00", null, 1),
@@ -568,7 +568,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("추천 행동이 있으면 첫 번째 추천을 추천 문구로 함께 준다")
+        @DisplayName("[ANA-1-4 S2] 추천 행동이 있으면 첫 번째 추천을 추천 문구로 함께 준다")
         void recommendationInNote() throws Exception {
             analyzed(
                     completed("2026-10-31T09:00:00", null, 1),
@@ -587,7 +587,44 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("pageVisits 가 없는 세션만 있으면 null 이다")
+        @DisplayName("[ANA-1-2 R1] '균형' 문구 괄호에는 방문이 있는 카테고리만 나온다 (0회 카테고리는 빠진다)")
+        void balancedNoteSkipsZeroCategories() throws Exception {
+            analyzed(
+                    completed("2026-10-31T09:00:00", null, 1),
+                    null,
+                    List.of(
+                            visit("https://velog.io/a", 1_000, 6),
+                            visit("https://docs.spring.io/b", 1_000, 4)),
+                    List.of());
+
+            card("categories")
+                    .andExpect(
+                            jsonPath("$.data.note.analysis")
+                                    .value("다양한 유형의 출처를 균형 있게 활용하고 있습니다. (블로그 60% / 공식문서 40%)"));
+        }
+
+        @Test
+        @DisplayName("[ANA-1-4 R1] 맞는 추천 행동이 없으면 추천 문구는 null 이다")
+        void noRecommendationInNote() throws Exception {
+            analyzed(
+                    completed("2026-10-31T09:00:00", null, 1),
+                    null,
+                    List.of(
+                            visit("https://velog.io/a", 1_000, 20),
+                            visit("https://tistory.com/b", 1_000, 20),
+                            visit("https://stackoverflow.com/c", 1_000, 19),
+                            visit("https://docs.spring.io/d", 1_000, 21),
+                            visit("https://reuters.com/e", 1_000, 20)),
+                    List.of());
+
+            card("recommendations").andExpect(jsonPath("$.data.recommendations", empty()));
+            card("categories")
+                    .andExpect(jsonPath("$.data.note.analysis").isString())
+                    .andExpect(jsonPath("$.data.note.recommendation").value(nullValue()));
+        }
+
+        @Test
+        @DisplayName("[ANA-1-1 R1] pageVisits 가 없는 세션만 있으면 null 이다")
         void noPageVisits() throws Exception {
             analyzed(
                     completed("2026-10-31T09:00:00", null, 1),
@@ -611,7 +648,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("블로그 + 커뮤니티가 60% 이상이면 공식 문서를 권한다")
+        @DisplayName("[ANA-1-4 S1] 블로그 + 커뮤니티가 60% 이상이면 공식 문서를 권한다")
         void blogAndCommunity() throws Exception {
             titles(
                             Map.of(
@@ -633,7 +670,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("블로그 + 커뮤니티가 59% 면 나오지 않는다")
+        @DisplayName("[ANA-1-4 R1] 블로그 + 커뮤니티가 59% 면 나오지 않는다")
         void blogAndCommunityBelow() throws Exception {
             titles(
                             Map.of(
@@ -651,7 +688,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("커뮤니티가 50% 이상이면 비율이 든 문구가 나오고, 49% 면 나오지 않는다")
+        @DisplayName("[ANA-1-4 S1] 커뮤니티가 50% 이상이면 비율이 든 문구가 나오고, 49% 면 나오지 않는다")
         void community() throws Exception {
             titles(
                             Map.of(
@@ -667,7 +704,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("커뮤니티 49% 면 커뮤니티 문구는 나오지 않는다")
+        @DisplayName("[ANA-1-4 R1] 커뮤니티 49% 면 커뮤니티 문구는 나오지 않는다")
         void communityBelow() throws Exception {
             titles(
                             Map.of(
@@ -681,7 +718,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("한 사이트가 60% 이상이면 그 사이트 이름이 든 문구가 나오고, www. 유무는 같은 사이트다")
+        @DisplayName("[ANA-1-4 S1] 한 사이트가 60% 이상이면 그 사이트 이름이 든 문구가 나오고, www. 유무는 같은 사이트다")
         void oneSite() throws Exception {
             titles(
                             Map.of(
@@ -713,7 +750,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("요일 7 × 3시간 구간 8 칸이고, 활동은 유닛이 가장 많은 칸 대비, 정독은 칸 안의 정독 유닛 비율이다")
+        @DisplayName("[ANA-2-4 S1] 요일 7 × 3시간 구간 8 칸이고, 활동은 유닛이 가장 많은 칸 대비, 정독은 칸 안의 정독 유닛 비율이다")
         void grids() throws Exception {
             units(
                     unit("Deep Reading", 60_000, "2026-10-31T00:30:00+00:00"), // 토 09:30 KST
@@ -736,7 +773,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("구간 경계는 KST 3시간 단위이고 월요일이 첫 줄, 일요일이 마지막 줄이다")
+        @DisplayName("[ANA-2-4 S1] 구간 경계는 KST 3시간 단위이고 월요일이 첫 줄, 일요일이 마지막 줄이다")
         void boundaries() throws Exception {
             units(
                     unit("Reading", 1_000, "2026-10-25T17:59:59+00:00"), // 월 02:59 KST
@@ -750,7 +787,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("본 적 없는 유닛(시각 null)만 있으면 null 이다")
+        @DisplayName("[ANA-2-4 R1] 본 적 없는 유닛(시각 null)만 있으면 null 이다")
         void skipsUnseen() throws Exception {
             units(unseenUnit());
 
@@ -776,7 +813,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("유닛이 가장 많은 구간이 30% 이상이면 '주로' 문구다 (체류시간이 아니라 유닛 수로 본다)")
+        @DisplayName("[ANA-2-4 S2] 유닛이 가장 많은 구간이 30% 이상이면 '주로' 문구다 (체류시간이 아니라 유닛 수로 본다)")
         void peakNote() throws Exception {
             units(
                     unit("Scanning", 90_000, "2026-10-31T00:30:00+00:00"), // 09시 구간, 체류는 가장 길다
@@ -808,7 +845,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("유닛이 가장 많은 구간이 정확히 30% 여도 '주로' 문구다")
+        @DisplayName("[ANA-2-4 S2] 유닛이 가장 많은 구간이 정확히 30% 여도 '주로' 문구다")
         void peakAtThreshold() throws Exception {
             units(
                     unit("Scanning", 1_000, "2026-10-30T15:10:00+00:00"), // 00시 구간 3개 (10개 중 30%)
@@ -830,7 +867,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("어느 구간도 유닛 30% 가 안 되면 '하루 전반' 문구다")
+        @DisplayName("[ANA-2-4 S2] 어느 구간도 유닛 30% 가 안 되면 '하루 전반' 문구다")
         void noPeak() throws Exception {
             units(
                     unit("Scanning", 29_000, "2026-10-30T15:10:00+00:00"),
@@ -847,7 +884,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("체류 10분 이상 구간 중 정독 유닛 비율이 가장 높은 구간을 추천한다")
+        @DisplayName("[ANA-2-5 S2·R1] 체류 10분 이상 구간 중 정독 유닛 비율이 가장 높은 구간을 추천한다")
         void focusNote() throws Exception {
             units(
                     unit(
@@ -871,6 +908,20 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
+        @DisplayName("[ANA-2-5 S2] 정독 비율이 같은 구간이 여럿이면 하루 중 이른 구간을 추천한다")
+        void focusTiePrefersEarlierSlot() throws Exception {
+            units(
+                    unit("Reading", 600_000, "2026-10-30T06:30:00+00:00"), // 금 15:30 KST, 100%
+                    unit("Reading", 600_000, "2026-10-31T00:30:00+00:00")); // 토 09:30 KST, 100%
+
+            card("time-patterns")
+                    .andExpect(
+                            jsonPath("$.data.note.recommendation")
+                                    .value(
+                                            "**오전 9시 ~ 오후 12시**에 집중도가 가장 높아요. (정독 비율 100%로 가장 높은 시간대) 중요한 학습은 이 시간대를 활용해보세요."));
+        }
+
+        @Test
         @DisplayName("밤 구간은 오후 9시 ~ 오전 0시로 쓴다")
         void lastSlotLabel() throws Exception {
             units(unit("Deep Reading", 60_000, "2026-10-30T12:10:00+00:00"));
@@ -883,7 +934,7 @@ class AnalyticsScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName("정독 유닛이 없으면 추천 문구가 없다")
+        @DisplayName("[ANA-2-5 R2] 정독 유닛이 없으면 추천 문구가 없다")
         void noFocus() throws Exception {
             units(unit("Scanning", 120_000, "2026-10-30T12:10:00+00:00"));
 

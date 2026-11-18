@@ -80,7 +80,8 @@ class AuthOverHttpTest {
     }
 
     @Test
-    @DisplayName("같은 refresh 토큰으로 동시에 재발급하면 한 요청만 200, 나머지는 401 이고 새 토큰 행 하나만 남으며 그 토큰으로 다시 재발급된다")
+    @DisplayName(
+            "[MEM-2-1 S2] 같은 refresh 토큰으로 동시에 재발급하면 한 요청만 200, 나머지는 401 이고 새 토큰 행 하나만 남으며 그 토큰으로 다시 재발급된다")
     void concurrentRefreshWithSameToken() throws Exception {
         for (int round = 0; round < ROUNDS; round++) {
             Long memberId = newMember().getId();
@@ -136,7 +137,8 @@ class AuthOverHttpTest {
     }
 
     @Test
-    @DisplayName("두 회원이 같은 닉네임을 동시에 저장하면 한 명만 200, 다른 한 명은 409 '이미 사용 중인 닉네임입니다.' 이고 닉네임 행은 하나다")
+    @DisplayName(
+            "[MEM-1-2 S6] 두 회원이 같은 닉네임을 동시에 저장하면 한 명만 200, 다른 한 명은 409 '이미 사용 중인 닉네임입니다.' 이고 닉네임 행은 하나다")
     void concurrentSameNickname() throws Exception {
         for (int round = 0; round < ROUNDS; round++) {
             String nickname = "race" + round;

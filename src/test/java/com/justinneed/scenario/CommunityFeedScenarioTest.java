@@ -154,7 +154,7 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("비공개 해시태그(카페)로 찾으면 프로필 · 마인드맵 · 연관 해시태그 모두 아무것도 안 나온다")
+    @DisplayName("[COM-5-1@1 R2] 비공개 해시태그(카페)로 찾으면 프로필 · 마인드맵 · 연관 해시태그 모두 아무것도 안 나온다")
     void searchHidesPrivateHashtags() throws Exception {
         mvc.perform(get("/community/search/profiles").param("q", "카페").with(as(me)))
                 .andExpect(okEnvelope())
@@ -309,7 +309,7 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("FE 탭 값 그대로 period=today / week 로 보내도 떠오르는 해시태그가 온다")
+    @DisplayName("[COM-6-3 S6] FE 탭 값 그대로 period=today / week 로 보내도 떠오르는 해시태그가 온다")
     void trendingAcceptsLowercasePeriod() throws Exception {
         mvc.perform(get(TRENDING).param("period", "today").with(as(me))).andExpect(okEnvelope());
         mvc.perform(get(TRENDING).param("period", "week").with(as(me))).andExpect(okEnvelope());
@@ -427,13 +427,26 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("검색어 · 대상 id 같은 필수 파라미터를 빠뜨리면 400")
+    @DisplayName("[X-CMT-05 R1] 검색어 · 대상 id 같은 필수 파라미터를 빠뜨리면 400")
     void missingRequiredParameterIs400() throws Exception {
         mvc.perform(get("/community/search/profiles").with(as(me)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false));
         mvc.perform(get("/community/exploring").param("targetType", "HASHTAG").with(as(me)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("[X-CMT-05 S1·R1] q 없이 검색 API 를 부르면 500 이 아니라 400 \"필수 요청 값이 누락되었습니다.\"")
+    void missingSearchKeywordIsKorean400() throws Exception {
+        for (String path :
+                List.of(
+                        "/community/search/hashtags",
+                        "/community/search/profiles",
+                        "/community/search/mindmaps")) {
+            mvc.perform(get(path).with(as(me)))
+                    .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "필수 요청 값이 누락되었습니다."));
+        }
     }
 
     /**
@@ -517,7 +530,7 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
 
         @Test
         @DisplayName(
-                "최근 저장 기반(COM-6-2): 작성자가 나중에 비공개로 돌린 해시태그는 추천 기준(basisHashtags)에도 안 나오고, 다시 공개로 돌리면 돌아온다")
+                "[COM-6-1 R2] 최근 저장 기반(COM-6-2): 작성자가 나중에 비공개로 돌린 해시태그는 추천 기준(basisHashtags)에도 안 나오고, 다시 공개로 돌리면 돌아온다")
         void recentBookmarkBasisHidesPrivateHashtags() throws Exception {
             setWandererHashtagPublic("카페", true);
             bookmarkHashtag(me, wanderer.member(), "카페");

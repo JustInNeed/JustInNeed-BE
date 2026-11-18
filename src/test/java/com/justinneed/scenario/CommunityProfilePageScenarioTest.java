@@ -81,7 +81,7 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     // ---------- GET /community/mindmaps/{id}/sessions ----------
 
     @Test
-    @DisplayName("관련 세션: 그 세션이 먼저, 이어서 공개 태그가 겹치는 같은 작성자의 공개 세션이 최신순으로, 최대 3개 온다")
+    @DisplayName("[X-CMT-02 S2] 관련 세션: 그 세션이 먼저, 이어서 공개 태그가 겹치는 같은 작성자의 공개 세션이 최신순으로, 최대 3개 온다")
     void relatedSessionsOrder() throws Exception {
         BrowsingSession newest =
                 publicSession(
@@ -172,7 +172,7 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("비공개 해시태그로만 겹치는 세션은 관련 세션이 아니고, 대소문자가 달라도 같은 태그다")
+    @DisplayName("[X-CMT-02 R3] 비공개 해시태그로만 겹치는 세션은 관련 세션이 아니고, 대소문자가 달라도 같은 태그다")
     void relatedSessionsUsePublicTagsOnly() throws Exception {
         BrowsingSession onlyHidden =
                 publicSession(
@@ -256,7 +256,7 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("비공개로 바꾼 세션의 관련 세션은 404")
+    @DisplayName("[X-CMT-02 R2] 비공개로 바꾼 세션의 관련 세션은 404")
     void relatedSessionsFollowPublicRule() throws Exception {
         mvc.perform(
                         patch("/sessions/{id}", wanderer.vienna().getId())
@@ -272,7 +272,7 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
 
     @Test
     @DisplayName(
-            "프로필 마인드맵 탭: 고정 카드가 고정 순서로 먼저, 나머지는 최신순으로 오고 비공개 세션은 빠진다. URL_ONLY 면 제목 · 요약은 null")
+            "[X-OPRF-02 S1·R1] 프로필 마인드맵 탭: 고정 카드가 고정 순서로 먼저, 나머지는 최신순으로 오고 비공개 세션은 빠진다. URL_ONLY 면 제목 · 요약은 null")
     void profileMindmaps() throws Exception {
         mvc.perform(get(MINDMAPS, wanderer.id()).with(as(me)))
                 .andExpect(okEnvelope())
@@ -377,7 +377,8 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("노드 수는 보이는 그래프의 고유 노드 수다: URL 만 공개면 같은 URL 은 세션이 달라도 하나고 카드 nodeCount 는 그대로다")
+    @DisplayName(
+            "[COM-3-2 S2] 노드 수는 보이는 그래프의 고유 노드 수다: URL 만 공개면 같은 URL 은 세션이 달라도 하나고 카드 nodeCount 는 그대로다")
     void totalNodeCountCountsDistinctUrls() throws Exception {
         Member traveler = member("traveler");
         Source second = new Source("둘째", "https://prague.example.com/b", "발췌");
@@ -414,7 +415,8 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("내용까지 공개면 노드 수는 AI 노드를 홈과 같은 키로 합친 수다: 공백 · 대소문자만 다르면 하나고 AI 결과 없는 세션은 0 이다")
+    @DisplayName(
+            "[COM-3-2 S2] 내용까지 공개면 노드 수는 AI 노드를 홈과 같은 키로 합친 수다: 공백 · 대소문자만 다르면 하나고 AI 결과 없는 세션은 0 이다")
     void totalNodeCountMergesAiKeywords() throws Exception {
         Member traveler = member("traveler");
         BrowsingSession first =
@@ -472,7 +474,7 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("비공개 세션이 있으면 방문자의 노드 수가 작성자 본인의 노드 수보다 많을 수 없다")
+    @DisplayName("[COM-3-2 R1] 비공개 세션이 있으면 방문자의 노드 수가 작성자 본인의 노드 수보다 많을 수 없다")
     void visitorNeverSeesMoreNodesThanOwner() throws Exception {
         Member traveler = member("traveler");
         BrowsingSession open =
@@ -531,7 +533,8 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("상위 해시태그는 고유 노드 수 많은 순 → 이름 순 → id 순이고 다섯 개까지다. 대소문자만 다른 표기도 순서 비교는 소문자로 한다")
+    @DisplayName(
+            "[COM-3-3 R1] 상위 해시태그는 고유 노드 수 많은 순 → 이름 순 → id 순이고 다섯 개까지다. 대소문자만 다른 표기도 순서 비교는 소문자로 한다")
     void topHashtagOrderUsesDistinctCounts() throws Exception {
         Member traveler = member("traveler");
         Source b = new Source("b", "https://prague.example.com/b", "발췌");
@@ -627,7 +630,7 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("탈퇴한 회원의 프로필 · 전체 마인드맵 · 공유 세션은 404")
+    @DisplayName("[X-OPRF-01 S2·R1] 탈퇴한 회원의 프로필 · 전체 마인드맵 · 공유 세션은 404")
     void withdrawnProfileIs404() throws Exception {
         withdraw(wanderer.member());
 

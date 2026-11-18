@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -95,6 +96,7 @@ class FollowTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[X-CMT-04 R1] [X-OPRF-03 R1] 자기 자신 팔로우는 400 \"자기 자신은 팔로우할 수 없습니다.\"")
     void selfFollowIsRejectedInKorean() throws Exception {
         for (boolean following : List.of(true, false)) {
             follow(viewerId, viewerId, following)
@@ -113,6 +115,7 @@ class FollowTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[X-CMT-04 R3] [X-OPRF-03 R1] 탈퇴 회원은 팔로우할 수 없다 (404, 기존 행은 남는다)")
     void withdrawnTargetIs404AndExistingRowStays() throws Exception {
         follow(viewerId, ownerId, true).andExpect(status().isOk());
         withdraw(ownerId);

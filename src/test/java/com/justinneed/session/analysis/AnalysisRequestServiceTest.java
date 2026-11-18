@@ -32,6 +32,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -238,6 +239,7 @@ class AnalysisRequestServiceTest {
     }
 
     @Test
+    @DisplayName("[SUR-4 R4] AI 가 계속 대기 중이어도 ANALYZING 전환 뒤 30분이 지나면 FAILED")
     void AI_가_계속_대기_중이어도_전환_후_30분이_지나면_FAILED() {
         Long sessionId = analyzing();
         LocalDateTime requestedAt = collection(sessionId).getAiRequestedAt();
@@ -282,6 +284,7 @@ class AnalysisRequestServiceTest {
     }
 
     @Test
+    @DisplayName("[SUR-4 R4] GET /input 뒤 30분 동안 콜백이 없으면 FAILED")
     void GET_뒤_30분_동안_콜백이_없으면_FAILED() {
         Long sessionId = analyzing();
         LocalDateTime fetchedAt = LocalDateTime.of(2026, 11, 2, 10, 0);

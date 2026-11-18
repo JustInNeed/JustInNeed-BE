@@ -205,7 +205,7 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
 
     @ParameterizedTest
     @EnumSource(value = SessionStatus.class, names = "FAILED", mode = EnumSource.Mode.EXCLUDE)
-    @DisplayName("실패한 세션이 아니면 409 이고 상태도 AI 요청도 그대로다")
+    @DisplayName("[SUR-4 R1] 실패한 세션이 아니면 409 이고 상태도 AI 요청도 그대로다")
     void onlyFailedSession(SessionStatus status) throws Exception {
         Long id = session(status, true);
 
@@ -216,7 +216,7 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("다른 사용자 · 지운 세션 · 없는 세션은 404 다")
+    @DisplayName("[SUR-4 R1] [X-SDT-01 R1] 다른 사용자 · 지운 세션 · 없는 세션은 404 다")
     void onlyOwner() throws Exception {
         Member other = member("foodtrip");
         Long id = session(SessionStatus.FAILED, true);
@@ -232,7 +232,7 @@ class SessionReanalyzeScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("원본이 없으면 404 '세션 원본을 찾을 수 없습니다.' 이고 FAILED 그대로다")
+    @DisplayName("[SUR-4 R1] 원본이 없으면 404 '세션 원본을 찾을 수 없습니다.' 이고 FAILED 그대로다")
     void rawPayloadMissing() throws Exception {
         Long id = session(SessionStatus.FAILED, false);
 

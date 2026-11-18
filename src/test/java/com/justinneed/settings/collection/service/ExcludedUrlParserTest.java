@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.justinneed.global.exception.CustomException;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -84,6 +85,7 @@ class ExcludedUrlParserTest {
     }
 
     @Test
+    @DisplayName("[MEM-5-3 R3] 2,048바이트까지는 받고 2,049바이트부터는 거절한다")
     void limitsLengthInBytes() {
         String domain = "example.com/";
         assertThat(ExcludedUrlParser.parse(domain + "a".repeat(2048 - domain.length())).url())

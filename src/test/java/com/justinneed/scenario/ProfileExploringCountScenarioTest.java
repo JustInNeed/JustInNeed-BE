@@ -21,7 +21,7 @@ class ProfileExploringCountScenarioTest extends ScenarioTestSupport {
     @MockitoBean private CardCounts counts;
 
     @Test
-    @DisplayName("작성자 공개 카드 전체의 나도 탐색중 수를 더한다")
+    @DisplayName("[X-OPRF-01 S4] 작성자 공개 카드 전체의 나도 탐색중 수를 더한다")
     void sumsExploringCountOfOwnerCards() throws Exception {
         Member me = member("sprout");
         Wanderer wanderer = seedWanderer();

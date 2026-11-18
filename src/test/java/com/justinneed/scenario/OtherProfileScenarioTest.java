@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -103,7 +104,7 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
 
     @Test
     @DisplayName(
-            "프로필을 열면 비공개 해시태그(카페 · 슬로우트래블)를 뺀 상위 5개 · 대표 해시태그와, 태그가 섞인 세션을 포함한 노드 수가 온다 (COM-1-2, COM-3-2~3-4)")
+            "[COM-3-3 S2] [COM-3-4 S2] [COM-1-2 S2] 프로필을 열면 비공개 해시태그(카페 · 슬로우트래블)를 뺀 상위 5개 · 대표 해시태그와, 태그가 섞인 세션을 포함한 노드 수가 온다 (COM-1-2, COM-3-2~3-4)")
     void profileHidesPrivateHashtags() throws Exception {
         mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me)))
                 .andExpect(okEnvelope())
@@ -201,7 +202,7 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("대표 해시태그: 다른 사람에겐 비공개(카페)가 빠지고, 주인에게는 다 보인다")
+    @DisplayName("[COM-3-4 S2] 대표 해시태그: 다른 사람에겐 비공개(카페)가 빠지고, 주인에게는 다 보인다")
     void interestsHideHiddenForVisitors() throws Exception {
         mvc.perform(get("/community/profiles/{id}/interests", wanderer.id()).with(as(me)))
                 .andExpect(jsonPath("$.data").value(contains("프라하", "비엔나", "야간열차", "카페투어")));
@@ -212,7 +213,8 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("세션 탭(COM-1-6): 공개 세션 전체가 고정 순서 먼저, 나머지는 뒤에 오고, URL_ONLY 면 제목 · 본문은 빠진다")
+    @DisplayName(
+            "[COM-1-6 S2] 세션 탭(COM-1-6): 공개 세션 전체가 고정 순서 먼저, 나머지는 뒤에 오고, URL_ONLY 면 제목 · 본문은 빠진다")
     void sharedSessionsTab() throws Exception {
         mvc.perform(get("/community/profiles/{id}/shared-sessions", wanderer.id()).with(as(me)))
                 .andExpect(okEnvelope())
@@ -319,7 +321,7 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("없는 사용자 프로필을 열면 404 '회원을 찾을 수 없습니다.'")
+    @DisplayName("[X-OPRF-01 S2] 없는 사용자 프로필을 열면 404 '회원을 찾을 수 없습니다.'")
     void unknownProfileIs404() throws Exception {
         mvc.perform(get("/community/profiles/{id}", 999_999).with(as(me)))
                 .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다."));
@@ -327,7 +329,7 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
 
     @Test
     @DisplayName(
-            "프로필 좋아요(COM-4-1): 누르면 수가 오르고 likedByMe=true, 다시 누르면(해제) 내려간다. 같은 요청을 반복해도 한 번만 센다")
+            "[COM-4-1 S1·S2] 프로필 좋아요(COM-4-1): 누르면 수가 오르고 likedByMe=true, 다시 누르면(해제) 내려간다. 같은 요청을 반복해도 한 번만 센다")
     void profileLikeToggle() throws Exception {
         String like = "/community/profiles/{id}/like";
 
@@ -490,7 +492,18 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("팔로우 버튼: 누르면 팔로잉이 되어 프로필에 보이고, 다시 누르면 풀린다")
+    @DisplayName("[COM-4-4 R1] 101개를 골라 저장하면 400 이고 아무것도 저장되지 않는다")
+    void bookmarkOverHundredIsRejected() throws Exception {
+        List<Long> hundredOne = LongStream.rangeClosed(1, 101).boxed().toList();
+
+        bookmark(me, "HASHTAG", hundredOne, "HASHTAG_BUNDLE", null)
+                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, "저장할 대상은 최대 100개까지 선택할 수 있습니다."));
+        mvc.perform(get("/community/me/bookmarks/hashtag-bundles").with(as(me)))
+                .andExpect(jsonPath("$.data.bundles", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("[X-OPRF-03 S1] 팔로우 버튼: 누르면 팔로잉이 되어 프로필에 보이고, 다시 누르면 풀린다")
     void follow() throws Exception {
         mvc.perform(
                         patch("/community/profiles/{id}/follow", wanderer.id())
@@ -522,7 +535,7 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("비공개 해시태그가 섞인 공유 세션은 그 태그만 빠진 채 세션 탭에 남는다")
+    @DisplayName("[COM-1-6 S5] 비공개 해시태그가 섞인 공유 세션은 그 태그만 빠진 채 세션 탭에 남는다")
     void mixedTagSessionStaysWithoutHiddenTag() throws Exception {
         mvc.perform(get("/community/profiles/{id}/shared-sessions", wanderer.id()).with(as(me)))
                 .andExpect(
@@ -571,7 +584,8 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("태그가 전부 비공개인 공개 세션: 세션 · 카드는 태그 없이 남지만, 노드는 마인드맵 · 노드 수에 나오지 않는다 (QA-048)")
+    @DisplayName(
+            "[COM-1-2 R2] 태그가 전부 비공개인 공개 세션: 세션 · 카드는 태그 없이 남지만, 노드는 마인드맵 · 노드 수에 나오지 않는다 (QA-048)")
     void sessionWithOnlyHiddenTags() throws Exception {
         String url = "https://locked.example.com/a";
         BrowsingSession locked = publicSession(wanderer.member(), "잠긴 세션", List.of("카페"), url);
@@ -599,7 +613,7 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("대표 해시태그(COM-3-4): 비공개를 뺀 뒤 앞에서 10개까지다")
+    @DisplayName("[COM-3-4 R1] 대표 해시태그(COM-3-4): 비공개를 뺀 뒤 앞에서 10개까지다")
     void interestsAreCappedAfterHiddenAreRemoved() throws Exception {
         List<String> shown = IntStream.rangeClosed(1, 10).mapToObj(i -> "태그" + i).toList();
         List<String> saved = new ArrayList<>(List.of("카페"));
@@ -667,7 +681,7 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("좋아요 대상: 나는 400 한글, 없거나 탈퇴한 회원은 등록 · 해제 모두 404 이고 눌러 둔 행은 남는다")
+    @DisplayName("[COM-4-1 R1] 좋아요 대상: 나는 400 한글, 없거나 탈퇴한 회원은 등록 · 해제 모두 404 이고 눌러 둔 행은 남는다")
     void likeTargets() throws Exception {
         String like = "/community/profiles/{id}/like";
         mvc.perform(patch(like, me.getId()).with(as(me)).with(json(Map.of("liked", true))))
@@ -689,7 +703,7 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("프로필 나도 탐색중 수는 카드별 수의 합이고, 탈퇴한 사람의 탐색은 빠진다 (A-10)")
+    @DisplayName("[X-OPRF-01 S4] 프로필 나도 탐색중 수는 카드별 수의 합이고, 탈퇴한 사람의 탐색은 빠진다 (A-10)")
     void profileExploringCountExcludesWithdrawnActors() throws Exception {
         String card = "/community/mindmaps/{id}/exploring";
         for (var pair :

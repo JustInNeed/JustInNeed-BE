@@ -125,7 +125,7 @@ class CommunityGraphSourceScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("URL 만 공개면 분석 결과가 있어도 태그 → URL 이다")
+    @DisplayName("[COM-1-1 S2] URL 만 공개면 분석 결과가 있어도 태그 → URL 이다")
     void urlOnlyUsesTagToUrl() throws Exception {
         saveResult(MINDMAP, SELECTED);
         setPublic();
@@ -139,7 +139,8 @@ class CommunityGraphSourceScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("내용까지 공개면 AI 노드와 hierarchy 연결선이고, 태그는 뿌리에 이어진다. related · 없는 노드 연결선은 빠진다")
+    @DisplayName(
+            "[COM-1-1 S2] 내용까지 공개면 AI 노드와 hierarchy 연결선이고, 태그는 뿌리에 이어진다. related · 없는 노드 연결선은 빠진다")
     void contentUsesAiMindmap() throws Exception {
         saveResult(MINDMAP, SELECTED);
         setPublic();

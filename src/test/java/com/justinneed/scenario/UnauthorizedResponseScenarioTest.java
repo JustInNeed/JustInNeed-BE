@@ -57,7 +57,7 @@ class UnauthorizedResponseScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("토큰이 없으면 401 공통 에러 응답")
+    @DisplayName("[MEM-2-2 S4] 토큰이 없으면 401 공통 에러 응답")
     void noToken() throws Exception {
         expectLoginExpired(mvc.perform(get("/members/me")));
     }
@@ -107,7 +107,7 @@ class UnauthorizedResponseScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("탈퇴한 회원의 access 토큰이면 어떤 보호 API 든 401 공통 에러 응답")
+    @DisplayName("[MEM-2-2 R2] 탈퇴한 회원의 access 토큰이면 어떤 보호 API 든 401 공통 에러 응답")
     void withdrawnMemberToken() throws Exception {
         Member me = member("sprout");
         String phone = jwt.createAccessToken(me.getId());

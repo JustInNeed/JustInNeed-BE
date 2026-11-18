@@ -9,6 +9,7 @@ import com.justinneed.community.domain.CommunityProfile;
 import com.justinneed.community.graph.PublicGraphService;
 import com.justinneed.session.management.domain.Source;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -16,6 +17,7 @@ class PublicGraphTest extends CommunityTestSupport {
     @Autowired PublicGraphService graph;
 
     @Test
+    @DisplayName("[COM-3-3 R1] [COM-3-1 R1] 공개 리프만 세고 상위 해시태그는 5개까지이며, javascript: 주소는 노드가 되지 않는다")
     void countsOnlyPublicLeavesRanksFiveTagsAndKeepsStableIds() throws Exception {
         var s = session(ownerId, true, "Java", "Spring", "AI", "Web", "Data", "Six");
         session(ownerId, false, "Secret");

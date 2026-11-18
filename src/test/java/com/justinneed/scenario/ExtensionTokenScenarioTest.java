@@ -73,7 +73,7 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("웹이 받은 코드를 확장이 교환하면 웹과 다른 토큰을 받고 같은 회원으로 API 를 쓴다")
+    @DisplayName("[MEM-2-3 S4] 웹이 받은 코드를 확장이 교환하면 웹과 다른 토큰을 받고 같은 회원으로 API 를 쓴다")
     void connectExtension() throws Exception {
         Member me = member("sprout");
         TokenResponse web = authTokenService.issue(me.getId());
@@ -93,7 +93,7 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("웹과 확장은 번갈아 재발급해도 서로 로그아웃시키지 않는다")
+    @DisplayName("[MEM-2-3 S4] 웹과 확장은 번갈아 재발급해도 서로 로그아웃시키지 않는다")
     void refreshIsIndependent() throws Exception {
         TokenResponse web = authTokenService.issue(member("sprout").getId());
         TokenResponse extension = connect(web);
@@ -109,7 +109,7 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("웹에서 로그아웃하면 재발급을 거친 확장 토큰도 재발급이 막힌다")
+    @DisplayName("[MEM-3@1 S2] 웹에서 로그아웃하면 재발급을 거친 확장 토큰도 재발급이 막힌다")
     void webLogoutEndsExtension() throws Exception {
         Member me = member("sprout");
         TokenResponse web = authTokenService.issue(me.getId());
@@ -136,7 +136,7 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("웹에서 로그아웃하면 확장이 알림을 못 받았어도 확장의 access 토큰이 바로 막힌다 (QA-045)")
+    @DisplayName("[MEM-3@1 S5] 웹에서 로그아웃하면 확장이 알림을 못 받았어도 확장의 access 토큰이 바로 막힌다 (QA-045)")
     void webLogoutBlocksExtensionAccessToken() throws Exception {
         TokenResponse web = authTokenService.issue(member("sprout").getId());
         TokenResponse extension = refreshed(connect(web));
@@ -202,7 +202,7 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("토큰 없이 · refresh 토큰으로 · 로그아웃한 access 토큰으로는 코드를 받을 수 없다")
+    @DisplayName("[MEM-2-3 R3] 토큰 없이 · refresh 토큰으로 · 로그아웃한 access 토큰으로는 코드를 받을 수 없다")
     void codeRequiresLogin() throws Exception {
         TokenResponse web = authTokenService.issue(member("sprout").getId());
 
@@ -213,7 +213,7 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("확장에서 로그아웃한 뒤 웹에 남은 access 토큰으로는 코드를 받을 수 없다")
+    @DisplayName("[MEM-2-3 R3] 확장에서 로그아웃한 뒤 웹에 남은 access 토큰으로는 코드를 받을 수 없다")
     void codeRequiresActiveGroup() throws Exception {
         TokenResponse web = authTokenService.issue(member("sprout").getId());
 
@@ -224,7 +224,7 @@ class ExtensionTokenScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("코드를 받은 뒤 로그아웃하면 그 코드는 교환되지 않는다")
+    @DisplayName("[MEM-2-3 R3] 코드를 받은 뒤 로그아웃하면 그 코드는 교환되지 않는다")
     void codeDiesWithLogout() throws Exception {
         TokenResponse web = authTokenService.issue(member("sprout").getId());
         String code = code(web);

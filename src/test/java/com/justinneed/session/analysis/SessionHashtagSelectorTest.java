@@ -7,11 +7,13 @@ import com.justinneed.session.analysis.dto.AiMindmap;
 import com.justinneed.session.analysis.dto.AiMindmapNode;
 import java.util.Arrays;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class SessionHashtagSelectorTest {
 
     @Test
+    @DisplayName("[REC-7-1 S2·R2] 주제 → 유닛 순서로 최대 5개를 고른다")
     void selectsTopicsFirstThenUnitsUpToFive() {
         AiMindmap mindmap =
                 new AiMindmap(
@@ -29,6 +31,7 @@ class SessionHashtagSelectorTest {
     }
 
     @Test
+    @DisplayName("[REC-7-1 S2] 점수가 높은 유닛도 주제 뒤에 온다")
     void unitWithHigherScoreStillComesAfterTopics() {
         AiMindmap mindmap = new AiMindmap(List.of(unit("유닛", 9.9), topic("주제", 0.1, 0)));
 
@@ -36,6 +39,7 @@ class SessionHashtagSelectorTest {
     }
 
     @Test
+    @DisplayName("[REC-7-1 S2] 같은 단계에서는 점수 → 자식 수 → 원래 순서로 고른다")
     void breaksScoreTiesByChildCountThenOriginalOrder() {
         AiMindmap mindmap =
                 new AiMindmap(
@@ -62,6 +66,7 @@ class SessionHashtagSelectorTest {
     }
 
     @Test
+    @DisplayName("[REC-7-1 S2] 키워드의 공백을 모두 지워 해시태그로 쓴다")
     void removesAllWhitespaceFromKeyword() {
         AiMindmap mindmap =
                 new AiMindmap(
@@ -75,6 +80,7 @@ class SessionHashtagSelectorTest {
     }
 
     @Test
+    @DisplayName("[REC-7-1 R1] 해시태그 규칙(한글 · 영문 · 숫자, 1~10자)에 맞지 않는 키워드는 고르지 않는다")
     void skipsKeywordsViolatingHashtagRule() {
         AiMindmap mindmap =
                 new AiMindmap(

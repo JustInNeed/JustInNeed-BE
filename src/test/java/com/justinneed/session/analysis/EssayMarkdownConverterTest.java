@@ -7,11 +7,13 @@ import com.justinneed.session.analysis.dto.AiEssay;
 import com.justinneed.session.analysis.dto.AiEssaySection;
 import java.util.Arrays;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class EssayMarkdownConverterTest {
 
     @Test
+    @DisplayName("[REC-2-1 S2·R1] 소제목 · 본문을 빈 줄로 이은 마크다운으로 바꾸고 대제목(# 제목)은 넣지 않는다")
     void convertsSectionsToMarkdownWithoutTitle() {
         AiEssay essay =
                 new AiEssay(
@@ -54,6 +56,7 @@ class EssayMarkdownConverterTest {
     }
 
     @Test
+    @DisplayName("[REC-2-1 S2] 빈 소제목 · 빈 본문은 건너뛴다")
     void skipsEmptyTitleHeadingAndBody() {
         AiEssay essay =
                 new AiEssay(
@@ -92,6 +95,7 @@ class EssayMarkdownConverterTest {
     }
 
     @Test
+    @DisplayName("[REC-2-1 S2] 세션 제목은 AI 대제목을 최대 100자로 자른다")
     void truncatesSessionTitleTo100Characters() {
         String exact = "가".repeat(100);
         assertThat(EssayMarkdownConverter.toSessionTitle(new AiEssay(exact, null, null)))
@@ -103,6 +107,7 @@ class EssayMarkdownConverterTest {
     }
 
     @Test
+    @DisplayName("[REC-2-1 S2] 100자 끝에 이모지가 걸리면 반쪽 없이 이모지를 통째로 뺀다")
     void doesNotSplitSurrogatePairWhenTruncating() {
         // 이모지(서로게이트 쌍)가 100번째 글자에 걸리면 쌍째로 빠지고 반쪽 문자가 남지 않는다.
         String title = "가".repeat(99) + "😀" + "끝";

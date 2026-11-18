@@ -1,6 +1,8 @@
 package com.justinneed.scenario;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -22,6 +24,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -157,7 +160,8 @@ class LoginScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("카카오로 처음 로그인하면 닉네임 없는 회원이 생기고 needsNickname=true 라 FE 가 닉네임 입력 화면으로 보낸다")
+    @DisplayName(
+            "[MEM-1-1@2 S1] 카카오로 처음 로그인하면 닉네임 없는 회원이 생기고 needsNickname=true 라 FE 가 닉네임 입력 화면으로 보낸다")
     void firstKakaoLoginCreatesMember() {
         OAuth2User principal = login("kakao", kakaoProfile(4100000001L, "sprout@kakao.com"));
 
@@ -222,7 +226,7 @@ class LoginScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("소셜 로그인 콜백이 실패하면(저장된 인가 요청 없음) FE 로그인 페이지(?error=oauth)로 302")
+    @DisplayName("[MEM-1-1@3 S1] 소셜 로그인 콜백이 실패하면(저장된 인가 요청 없음) FE 로그인 페이지(?error=oauth)로 302")
     void failedCallbackRedirectsToLogin() throws Exception {
         mvc.perform(get("/login/oauth2/code/kakao").param("code", "x").param("state", "y"))
                 .andExpect(status().isFound())
@@ -248,7 +252,7 @@ class LoginScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("로그인에 성공하면 FE 콜백으로 일회용 코드만 담아 302 — 토큰 · needsNickname 은 URL 에 없다")
+    @DisplayName("[MEM-1-1@2 R1] 로그인에 성공하면 FE 콜백으로 일회용 코드만 담아 302 — 토큰 · needsNickname 은 URL 에 없다")
     void successRedirectCarriesOnlyCode() throws Exception {
         String redirect = successRedirect(login("kakao", kakaoProfile(4100000010L, null)));
 
@@ -267,7 +271,7 @@ class LoginScenarioTest extends ScenarioTestSupport {
 
     @Test
     @DisplayName(
-            "처음 가입한 회원: 코드를 POST /auth/token 으로 바꾸면 토큰과 needsNickname=true 가 오고, 그 토큰으로 내 정보를 연다")
+            "[MEM-1-1@2 S1] 처음 가입한 회원: 코드를 POST /auth/token 으로 바꾸면 토큰과 needsNickname=true 가 오고, 그 토큰으로 내 정보를 연다")
     void exchangeCodeForNewMember() throws Exception {
         OAuth2User principal = login("kakao", kakaoProfile(4100000011L, null));
         String code = loginCode(principal);
@@ -292,7 +296,7 @@ class LoginScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("닉네임을 정한 회원: 다시 로그인해 코드를 바꾸면 needsNickname=false 라 바로 홈으로 간다")
+    @DisplayName("[MEM-1-1@2 S2] 닉네임을 정한 회원: 다시 로그인해 코드를 바꾸면 needsNickname=false 라 바로 홈으로 간다")
     void exchangeCodeForReturningMember() throws Exception {
         Member member =
                 members.findById(memberIdOf(login("naver", naverProfile("naver-back", null))))
@@ -314,7 +318,7 @@ class LoginScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("한 번 바꾼 코드로 다시 요청하면(새로고침 · 뒤로 가기) 401 과 '로그인 정보가 만료되었어요' 문구")
+    @DisplayName("[MEM-1-1@2 R2] 한 번 바꾼 코드로 다시 요청하면(새로고침 · 뒤로 가기) 401 과 '로그인 정보가 만료되었어요' 문구")
     void codeIsSingleUse() throws Exception {
         String code = loginCode(login("kakao", kakaoProfile(4100000012L, null)));
 
@@ -324,7 +328,7 @@ class LoginScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("60초가 지난 코드는 401")
+    @DisplayName("[MEM-1-1@2 R2] 60초가 지난 코드는 401")
     void expiredCodeIsRejected() throws Exception {
         String code = loginCode(login("kakao", kakaoProfile(4100000013L, null)));
         expireLoginCodes();
@@ -334,7 +338,7 @@ class LoginScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("코드를 받은 뒤 60초 안에 탈퇴하면 코드를 토큰으로 바꿀 수 없다")
+    @DisplayName("[MEM-1-1@2 R3] 코드를 받은 뒤 60초 안에 탈퇴하면 코드를 토큰으로 바꿀 수 없다")
     void withdrawnMemberCannotExchangeCode() throws Exception {
         OAuth2User principal = login("kakao", kakaoProfile(7101L, null));
         Member member = members.findById(memberIdOf(principal)).orElseThrow();
@@ -375,7 +379,8 @@ class LoginScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("탈퇴한 소셜 계정으로 다시 로그인하면 새 회원(닉네임 없음 · needsNickname=true)으로 가입되고, 예전 닉네임도 다시 쓸 수 있다")
+    @DisplayName(
+            "[MEM-1-1@4 S1·R1] 탈퇴한 소셜 계정으로 다시 로그인하면 새 회원(닉네임 없음 · needsNickname=true)으로 가입되고, 예전 닉네임도 다시 쓸 수 있다")
     void withdrawnAccountSignsUpAgain() throws Exception {
         Long oldId = memberIdOf(login("kakao", kakaoProfile(4100000020L, "sprout@kakao.com")));
         Member old = members.findById(oldId).orElseThrow();
@@ -418,7 +423,65 @@ class LoginScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("익명화 전에 탈퇴해 소셜 id · 닉네임이 남은 행도, 다시 로그인하면 그 행을 비우고 새 회원으로 가입시켜 예전 닉네임이 풀린다")
+    @DisplayName("[MEM-1-1@4 S2] 탈퇴한 회원이 쓰던 닉네임은 다른 사람이 중복 확인하면 사용 가능이다")
+    void withdrawnNicknameIsAvailableToOthers() throws Exception {
+        Member old =
+                members.findById(memberIdOf(login("kakao", kakaoProfile(4100000030L, null))))
+                        .orElseThrow();
+        mvc.perform(
+                        patch("/members/me/nickname")
+                                .with(as(old))
+                                .with(json(Map.of("nickname", "leaver"))))
+                .andExpect(okEnvelope());
+        Member someone = member(null);
+        assertThat(nicknameAvailable(someone, "leaver")).isFalse();
+
+        withdraw(old);
+
+        assertThat(nicknameAvailable(someone, "leaver")).isTrue();
+    }
+
+    @Test
+    @DisplayName("[MEM-1-1@4 R2] 탈퇴한 소셜 계정으로 다시 가입한 새 계정에는 예전 세션이 보이지 않는다")
+    void rejoinedAccountDoesNotSeeOldRecords() throws Exception {
+        Long oldId = memberIdOf(login("kakao", kakaoProfile(4100000031L, null)));
+        Member old = members.findById(oldId).orElseThrow();
+        mvc.perform(
+                        patch("/members/me/nickname")
+                                .with(as(old))
+                                .with(json(Map.of("nickname", "returner"))))
+                .andExpect(okEnvelope());
+        session(
+                old,
+                "로마 여행 준비",
+                "2026-04-26T21:14:00",
+                "2026-04-26T22:48:00",
+                3,
+                true,
+                true,
+                List.of("로마"),
+                List.of(),
+                null);
+        mvc.perform(get("/sessions").with(as(old)))
+                .andExpect(jsonPath("$.data.sessions", hasSize(1)));
+        withdraw(old);
+
+        String accessToken =
+                read(
+                        exchange(loginCode(login("kakao", kakaoProfile(4100000031L, null))))
+                                .andExpect(okEnvelope()),
+                        "$.data.accessToken");
+
+        mvc.perform(get("/members/me").with(bearerToken(accessToken)))
+                .andExpect(jsonPath("$.data.id").value(not(oldId.intValue())));
+        mvc.perform(get("/sessions").with(bearerToken(accessToken)))
+                .andExpect(okEnvelope())
+                .andExpect(jsonPath("$.data.sessions", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName(
+            "[MEM-1-1@4 S1·S2] 익명화 전에 탈퇴해 소셜 id · 닉네임이 남은 행도, 다시 로그인하면 그 행을 비우고 새 회원으로 가입시켜 예전 닉네임이 풀린다")
     void legacyWithdrawnAccountSignsUpAgain() throws Exception {
         Member legacy =
                 members.saveAndFlush(

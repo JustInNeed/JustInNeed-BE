@@ -25,6 +25,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -123,6 +124,8 @@ class AnalysisResultServiceTest {
     }
 
     @Test
+    @DisplayName(
+            "[REC-7-1 S2] [REC-3-1 S2] [REC-2-1 S2] AI 결과를 세션 · 요약 · 결과 · 원본에 나눠 저장한다 (해시태그 자동 선택, 출처는 링크당 1개 방문순, 본문은 ## 소제목부터)")
     void AI_결과를_세션_요약_결과_원본에_나눠_저장한다() {
         service.save(sessionId, result(RESULT_JSON));
         entityManager.flush();
@@ -182,6 +185,29 @@ class AnalysisResultServiceTest {
 
         LocalDateTime expiresAt = rawRepository.findById(sessionId).orElseThrow().getExpiresAt();
         assertThat(expiresAt).isAfter(LocalDateTime.now().plusDays(20));
+    }
+
+    @Test
+    @DisplayName("[REC-3-1 S2] 방문 시각을 알 수 없는 출처는 맨 뒤에 온다")
+    void 방문_시각을_모르는_출처는_맨_뒤에_온다() {
+        // 원본에 없는 링크인데 firstSeenAt 도 없으면 방문 시각을 알 수 없다
+        service.save(
+                sessionId,
+                result(
+                        RESULT_JSON.replace(
+                                "\"text\": \"원본 없음\", \"score\": 1.0, \"firstSeenAt\": \"2026-10-30T01:20:00+00:00\"",
+                                "\"text\": \"원본 없음\", \"score\": 1.0")));
+        entityManager.flush();
+        entityManager.clear();
+
+        List<Source> sources = sessionRepository.findById(sessionId).orElseThrow().getSources();
+        assertThat(sources)
+                .extracting(Source::url)
+                .containsExactly(
+                        "https://docs.spring.io/jpa",
+                        "https://blog.naver.com/cat/1",
+                        "https://unknown.example.com/x");
+        assertThat(sources.get(2).visitedAt()).isNull();
     }
 
     @Test

@@ -16,6 +16,7 @@ import com.justinneed.community.reaction.ProfileLikeRepository;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -45,6 +46,7 @@ class WithdrawnActorCountTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[COM-4-1 S4] 탈퇴 회원의 프로필 좋아요는 수에서 빠지고 행은 남는다")
     void profileLikeCountExcludesWithdrawnActorsButKeepsRows() throws Exception {
         interactions.like(viewerId, ownerId, true);
         interactions.like(leaverId, ownerId, true);

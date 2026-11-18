@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import org.hibernate.Session;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -81,6 +82,7 @@ class SimilarPeopleTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[X-CMT-04 S2] 겹치는 태그가 많은 사람이 먼저 온다")
     void ranksBySharedCountAcrossSessionsAndInterests() throws Exception {
         interests(viewerId, ALPHA, BETA, GAMMA);
         Long one = person("one");
@@ -116,6 +118,7 @@ class SimilarPeopleTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[X-CMT-04 S2] 겹치는 수가 같으면 최근 공개 활동 → id 순이다")
     void tiesGoToMostRecentPublicActivityThenLowerId() throws Exception {
         interests(viewerId, ALPHA);
         var now = LocalDateTime.of(2026, 10, 1, 12, 0);
@@ -162,6 +165,7 @@ class SimilarPeopleTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[X-CMT-04 R1] 나 · 탈퇴 회원 · 겹치지 않는 사람은 추천되지 않는다")
     void excludesSelfWithdrawnAndPeopleWithoutOverlap() throws Exception {
         interests(viewerId, ALPHA);
         session(viewerId, true, ALPHA);
@@ -221,6 +225,7 @@ class SimilarPeopleTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[X-CMT-04 R2] 비공개 태그는 겹친 태그 · 점수에 들어가지 않는다")
     void hiddenTagsNeverReachMatchedHashtagsOrTheScore() throws Exception {
         interests(viewerId, ALPHA, BETA, GAMMA);
         Long hider = person("hider");
@@ -247,6 +252,7 @@ class SimilarPeopleTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[X-CMT-04 R2] 비공개 태그로만 겹치는 사람은 추천되지 않는다")
     void personOverlappingOnlyOnHiddenTagIsNotRecommended() throws Exception {
         interests(viewerId, ALPHA);
         Long hider = person("hider");
@@ -309,6 +315,7 @@ class SimilarPeopleTest extends CommunityTestSupport {
     }
 
     @Test
+    @DisplayName("[X-CMT-04 S1] 비슷한 사람은 기본 3명, 1~20 까지 받는다")
     void limitDefaultsToThreeAndCapsAtTwenty() throws Exception {
         interests(viewerId, ALPHA);
         for (int i = 0; i < 22; i++) interests(person(null), ALPHA);
