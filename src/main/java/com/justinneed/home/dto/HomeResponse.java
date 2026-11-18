@@ -26,10 +26,17 @@ public record HomeResponse(
             List<String> filterTags) {}
 
     @Schema(name = "HomeResponseNode")
-    public record Node(String id, String label, int size, String group) {}
+    public record Node(
+            String id,
+            String label,
+            int size,
+            @Schema(allowableValues = {"core", "city", "logi", "sub"}) String group) {}
 
     /** seen 은 today / week / month / all, sessionId 는 이 노드가 나온 가장 최근 세션. */
-    public record NodeMeta(String seen, List<String> tags, Long sessionId) {}
+    public record NodeMeta(
+            @Schema(allowableValues = {"today", "week", "month", "all"}) String seen,
+            List<String> tags,
+            Long sessionId) {}
 
     @Schema(name = "HomeResponseTagGroup")
     public record TagGroup(Long id, List<String> tags) {}

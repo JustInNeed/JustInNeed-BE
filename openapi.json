@@ -2245,6 +2245,7 @@
       "HomeResponseNode" : {
         "properties" : {
           "group" : {
+            "enum" : [ "core", "city", "logi", "sub" ],
             "type" : "string"
           },
           "id" : {
@@ -2855,6 +2856,7 @@
       "NodeMeta" : {
         "properties" : {
           "seen" : {
+            "enum" : [ "today", "week", "month", "all" ],
             "type" : "string"
           },
           "sessionId" : {
