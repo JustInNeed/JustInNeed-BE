@@ -12,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,7 +63,7 @@ public class VisibilityService {
     }
 
     public record VisibilityResponse(
-            int code, NodeVisibility visibilityScope, LocalDateTime updatedAt) {}
+            int code, NodeVisibility visibilityScope, @Nullable LocalDateTime updatedAt) {}
 
     public record NodeResponse(String hashtag, List<SharedSessionView> sessions) {}
 }

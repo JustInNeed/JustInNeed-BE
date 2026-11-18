@@ -3,15 +3,16 @@ package com.justinneed.settings.extension.dto;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.justinneed.settings.extension.domain.ExtensionSetting;
 import java.time.LocalDateTime;
+import org.jspecify.annotations.Nullable;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ExtensionSettingResponse(
         int code,
         Long userId,
-        Boolean popupVisible,
-        Boolean autoEndNotificationEnabled,
-        Boolean manualScrapEnabled,
-        LocalDateTime updatedAt) {
+        @Nullable Boolean popupVisible,
+        @Nullable Boolean autoEndNotificationEnabled,
+        @Nullable Boolean manualScrapEnabled,
+        @Nullable LocalDateTime updatedAt) {
 
     public static ExtensionSettingResponse of(Long userId, ExtensionSetting setting) {
         return new ExtensionSettingResponse(

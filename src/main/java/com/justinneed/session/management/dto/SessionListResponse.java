@@ -4,12 +4,13 @@ import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.domain.SessionStatus;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 public record SessionListResponse(
         Long id,
         String title,
         LocalDateTime startedAt,
-        LocalDateTime endedAt,
+        @Nullable LocalDateTime endedAt,
         int pageCount,
         SessionStatus status,
         boolean isFavorite,

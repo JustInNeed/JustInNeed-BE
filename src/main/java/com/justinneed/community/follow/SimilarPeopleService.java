@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -117,7 +118,10 @@ public class SimilarPeopleService {
 
     @Schema(name = "SimilarPeopleServicePerson")
     public record Person(
-            Long userId, String nickname, List<String> matchedHashtags, boolean following) {}
+            Long userId,
+            @Nullable String nickname,
+            List<String> matchedHashtags,
+            boolean following) {}
 
     public record SimilarPeople(List<Person> people) {}
 }

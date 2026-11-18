@@ -7,19 +7,20 @@ import com.justinneed.session.management.domain.Source;
 import com.justinneed.session.summary.domain.Summary;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 public record SessionDetailResponse(
         Long id,
         String title,
         LocalDateTime startedAt,
-        LocalDateTime endedAt,
+        @Nullable LocalDateTime endedAt,
         int pageCount,
         SessionStatus status,
         boolean isOwner,
         boolean isFavorite,
         boolean isPublic,
         List<String> tags,
-        SummaryResponse summary,
+        @Nullable SummaryResponse summary,
         List<Source> sources) {
 
     public static SessionDetailResponse from(BrowsingSession session) {

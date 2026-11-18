@@ -34,6 +34,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -342,7 +343,7 @@ public class PublicGraphService {
             int code,
             Long mindmapId,
             Long ownerId,
-            String nickname,
+            @Nullable String nickname,
             String title,
             List<BookmarkSnapshot.Tag> hashtags,
             List<BookmarkSnapshot.Node> nodes,
@@ -352,8 +353,8 @@ public class PublicGraphService {
     public record Profile(
             int code,
             Long userId,
-            String nickname,
-            String bio,
+            @Nullable String nickname,
+            @Nullable String bio,
             NodeVisibility visibility,
             long totalNodeCount,
             List<TopTag> topHashtags,
@@ -365,5 +366,8 @@ public class PublicGraphService {
             long sharedSessionCount) {}
 
     public record Original(
-            int code, boolean sourceAvailable, Graph mindmap, List<Long> highlightedNodeIds) {}
+            int code,
+            boolean sourceAvailable,
+            @Nullable Graph mindmap,
+            List<Long> highlightedNodeIds) {}
 }

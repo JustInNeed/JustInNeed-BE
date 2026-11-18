@@ -3,9 +3,13 @@ package com.justinneed.settings.integration.dto.response;
 import com.justinneed.settings.integration.domain.ExternalIntegration;
 import com.justinneed.settings.integration.domain.IntegrationProvider;
 import java.time.LocalDateTime;
+import org.jspecify.annotations.Nullable;
 
 public record IntegrationItemResponse(
-        String provider, boolean isConnected, String email, LocalDateTime connectedAt) {
+        String provider,
+        boolean isConnected,
+        @Nullable String email,
+        @Nullable LocalDateTime connectedAt) {
 
     public static IntegrationItemResponse disconnected(IntegrationProvider provider) {
         return new IntegrationItemResponse(provider.getApiName(), false, null, null);

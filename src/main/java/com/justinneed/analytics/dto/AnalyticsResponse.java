@@ -5,6 +5,7 @@ import com.justinneed.session.management.dto.SessionListResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 
 /** 분석 화면 카드별 응답. 문구의 "**강조**" 는 FE 가 강조 글씨로 보여준다 */
 public final class AnalyticsResponse {
@@ -12,7 +13,7 @@ public final class AnalyticsResponse {
     private AnalyticsResponse() {}
 
     /** 카드 아래 분석 · 추천 문구. 추천이 없으면 null */
-    public record Note(String analysis, String recommendation) {}
+    public record Note(String analysis, @Nullable String recommendation) {}
 
     /** 이번 주 인사이트 후보 — 고르는 건 FE */
     public record WeekSessions(List<SessionListResponse> sessions) {}
@@ -23,7 +24,7 @@ public final class AnalyticsResponse {
             int avgUrlsPerSession,
             int avgDwellSec,
             int avgSessionMinutes,
-            ExplorationType type,
+            @Nullable ExplorationType type,
             Note note) {}
 
     /** shares: DEEP_READING · READING · SCANNING · IDLE → % (합 100) */

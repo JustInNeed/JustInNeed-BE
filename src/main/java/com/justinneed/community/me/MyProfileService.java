@@ -42,6 +42,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -288,8 +289,8 @@ public class MyProfileService {
 
     public record MyProfile(
             Long userId,
-            String nickname,
-            String bio,
+            @Nullable String nickname,
+            @Nullable String bio,
             NodeVisibility visibility,
             long totalNodeCount,
             long sharedSessionCount,
@@ -308,7 +309,7 @@ public class MyProfileService {
             Long id,
             String title,
             LocalDateTime startedAt,
-            LocalDateTime endedAt,
+            @Nullable LocalDateTime endedAt,
             int pageCount,
             SessionStatus status,
             boolean isFavorite,
@@ -338,13 +339,13 @@ public class MyProfileService {
             Long mindmapId,
             Owner owner,
             String title,
-            String snippet,
+            @Nullable String snippet,
             List<String> hashtags,
             long nodeCount,
             long likeCount,
             boolean likedByMe,
             long bookmarkCount,
-            Long bookmarkId,
+            @Nullable Long bookmarkId,
             long exploringCount,
             boolean exploringByMe,
             LocalDateTime lastActivityAt,

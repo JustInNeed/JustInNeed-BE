@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -212,7 +213,7 @@ public class CommunitySearchService {
     }
 
     public record ProfileItem(
-            Long userId, String nickname, List<String> hashtags, long mindmapCount) {}
+            Long userId, @Nullable String nickname, List<String> hashtags, long mindmapCount) {}
 
     public record TagCount(String tag, long count) {}
 

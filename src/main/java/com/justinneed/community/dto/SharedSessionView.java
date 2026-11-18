@@ -6,6 +6,7 @@ import com.justinneed.session.management.domain.SessionStatus;
 import com.justinneed.session.management.domain.Source;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record SharedSessionView(
@@ -13,12 +14,12 @@ public record SharedSessionView(
         List<String> tags,
         List<String> urls,
         LocalDateTime startedAt,
-        LocalDateTime endedAt,
+        @Nullable LocalDateTime endedAt,
         int pageCount,
         SessionStatus status,
-        String title,
-        String markdown,
-        List<Source> sources,
+        @Nullable String title,
+        @Nullable String markdown,
+        @Nullable List<Source> sources,
         boolean isPinned) {
     public static SharedSessionView from(
             BrowsingSession session,
