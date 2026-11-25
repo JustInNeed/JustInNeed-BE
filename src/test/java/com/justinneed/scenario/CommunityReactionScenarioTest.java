@@ -39,12 +39,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** 카드(세션) 단위 좋아요 · 나도 탐색중 · 북마크. 숫자는 카드 응답과 PATCH 응답이 같은 기준이다. */
+/** 카드(세션) 단위 좋아요 · 북마크. 숫자는 카드 응답과 PATCH 응답이 같은 기준이다. */
 @DisplayName("카드 반응")
 class CommunityReactionScenarioTest extends ScenarioTestSupport {
 
     private static final String LIKE = "/community/mindmaps/{id}/like";
-    private static final String EXPLORING = "/community/mindmaps/{id}/exploring";
     private static final String BOOKMARK = "/community/mindmaps/{id}/bookmark";
     private static final String SAVED = "/community/me/bookmarks/mindmaps";
     private static final String MISSING = "요청한 정보를 찾을 수 없습니다.";
@@ -82,14 +81,6 @@ class CommunityReactionScenarioTest extends ScenarioTestSupport {
     private ResultActions like(Member actor, BrowsingSession card, boolean liked) throws Exception {
         return mvc.perform(
                 patch(LIKE, card.getId()).with(as(actor)).with(json(Map.of("liked", liked))));
-    }
-
-    private ResultActions exploring(Member actor, BrowsingSession card, boolean exploring)
-            throws Exception {
-        return mvc.perform(
-                patch(EXPLORING, card.getId())
-                        .with(as(actor))
-                        .with(json(Map.of("exploring", exploring))));
     }
 
     private ResultActions bookmark(Member actor, BrowsingSession card, boolean bookmarked)
@@ -193,7 +184,7 @@ class CommunityReactionScenarioTest extends ScenarioTestSupport {
     // ---------- 공개 조건 ----------
 
     @Test
-    @DisplayName("[COM-4-3@1 R2] [COM-4-2@1 R1] [X-CMT-05 S2] 공개 카드가 아니면 세 API 모두 어느 값을 보내도 404 다")
+    @DisplayName("[COM-4-3@1 R2] [X-CMT-05 S2] 공개 카드가 아니면 두 API 모두 어느 값을 보내도 404 다")
     void notPublicCard() throws Exception {
         BrowsingSession failed =
                 sessionWithStatus(
@@ -206,8 +197,6 @@ class CommunityReactionScenarioTest extends ScenarioTestSupport {
         for (BrowsingSession hidden : List.of(wanderer.slow(), failed)) {
             for (boolean value : List.of(true, false)) {
                 like(me, hidden, value).andExpect(errorEnvelope(HttpStatus.NOT_FOUND, MISSING));
-                exploring(me, hidden, value)
-                        .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, MISSING));
                 bookmark(me, hidden, value).andExpect(errorEnvelope(HttpStatus.NOT_FOUND, MISSING));
             }
         }
@@ -218,7 +207,7 @@ class CommunityReactionScenarioTest extends ScenarioTestSupport {
                 .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, MISSING));
         assertThat(jdbc.queryForObject("select count(*) from community_bookmarks", Integer.class))
                 .isZero();
-        assertThat(activityTags(me, "EXPLORE")).isEmpty();
+        assertThat(activityTags(me, "BOOKMARK")).isEmpty();
     }
 
     @Test
@@ -230,7 +219,6 @@ class CommunityReactionScenarioTest extends ScenarioTestSupport {
 
         cardSync.removeOwner(wanderer.id());
         withdraw(wanderer.member());
-        exploring(me, wanderer.vienna(), true).andExpect(status().isNotFound());
         bookmark(me, wanderer.vienna(), true).andExpect(status().isNotFound());
     }
 
@@ -238,7 +226,6 @@ class CommunityReactionScenarioTest extends ScenarioTestSupport {
     @DisplayName("카드가 비공개가 돼도 행은 남고, 다시 공개하면 숫자 · 내 상태 · 북마크가 돌아온다")
     void cardLeavingPublic() throws Exception {
         like(me, prague, true);
-        exploring(me, prague, true);
         Long bookmarkId = readLong(bookmark(me, prague, true), "$.data.bookmarkId");
 
         setPublic(prague, false);
@@ -247,51 +234,26 @@ class CommunityReactionScenarioTest extends ScenarioTestSupport {
         saved(me).andExpect(jsonPath("$.data.mindmaps").value(hasSize(0)));
         like(me, prague, false).andExpect(status().isNotFound());
         assertThat(rows("community_mindmap_likes", me)).isEqualTo(1);
-        assertThat(rows("community_mindmap_explorations", me)).isEqualTo(1);
 
         setPublic(prague, true);
 
         CommunityCard back = card(prague, me);
         assertThat(back.likeCount()).isEqualTo(1);
         assertThat(back.likedByMe()).isTrue();
-        assertThat(back.exploringCount()).isEqualTo(1);
-        assertThat(back.exploringByMe()).isTrue();
         assertThat(back.bookmarkCount()).isEqualTo(1);
         assertThat(back.bookmarkId()).isEqualTo(bookmarkId);
         saved(me).andExpect(jsonPath("$.data.mindmaps[0].bookmarkId").value(bookmarkId.intValue()));
     }
 
-    // ---------- 나도 탐색중 ----------
+    // ---------- 북마크 ----------
 
     @Test
-    @DisplayName("[COM-4-2@1 S3] 나도 탐색중: 수와 내 상태가 바뀌고, 취소했다 다시 눌러도 같은 날 활동은 한 번이다")
-    void exploring() throws Exception {
-        exploring(me, prague, true)
-                .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.exploringCount").value(1))
-                .andExpect(jsonPath("$.data.exploringByMe").value(true));
-        exploring(me, prague, true).andExpect(jsonPath("$.data.exploringCount").value(1));
-        exploring(other, prague, true).andExpect(jsonPath("$.data.exploringCount").value(2));
+    @DisplayName("북마크: 내 카드도 저장할 수 있고, 활동은 공개 태그만 남긴다. 떠오르는 해시태그에 잡힌다")
+    void bookmarkRecordsPublicTags() throws Exception {
+        bookmark(wanderer.member(), prague, true).andExpect(okEnvelope());
+        bookmark(me, wanderer.cafe(), true).andExpect(okEnvelope());
 
-        assertThat(card(prague, me).exploringCount()).isEqualTo(2);
-        assertThat(card(prague, me).exploringByMe()).isTrue();
-
-        exploring(me, prague, false)
-                .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.exploringCount").value(1))
-                .andExpect(jsonPath("$.data.exploringByMe").value(false));
-        exploring(me, prague, true);
-
-        assertThat(activityTags(me, "EXPLORE")).containsExactlyInAnyOrder("프라하", "카를교", "체코");
-    }
-
-    @Test
-    @DisplayName("[COM-4-2@1 S3] 나도 탐색중: 내 카드도 누를 수 있고, 활동은 공개 태그만 남긴다. 떠오르는 해시태그에 잡힌다")
-    void exploringRecordsPublicTags() throws Exception {
-        exploring(wanderer.member(), prague, true).andExpect(okEnvelope());
-        exploring(me, wanderer.cafe(), true).andExpect(okEnvelope());
-
-        assertThat(activityTags(me, "EXPLORE")).containsExactly("비엔나");
+        assertThat(activityTags(me, "BOOKMARK")).containsExactly("비엔나");
         mvc.perform(
                         get("/community/recommendations/hashtags/trending")
                                 .param("period", "TODAY")
@@ -300,45 +262,6 @@ class CommunityReactionScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.hashtags[*].name").value(hasItem("체코")))
                 .andExpect(jsonPath("$.data.hashtags[*].name").value(not(hasItem("카페"))));
     }
-
-    @Test
-    @DisplayName("기존 노드 · 해시태그 나도 탐색중은 그대로 동작하고 카드 숫자와 섞이지 않는다")
-    void nodeAndHashtagExploringKeepWorking() throws Exception {
-        Long hashtag = hashtagId(wanderer.member(), "프라하");
-        mvc.perform(
-                        patch("/community/exploring")
-                                .with(as(me))
-                                .with(
-                                        json(
-                                                Map.of(
-                                                        "targetType",
-                                                        "HASHTAG",
-                                                        "targetId",
-                                                        hashtag,
-                                                        "exploring",
-                                                        true))))
-                .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.exploring").value(true))
-                .andExpect(jsonPath("$.data.exploringCount").value(1));
-
-        exploring(me, prague, true).andExpect(jsonPath("$.data.exploringCount").value(1));
-
-        mvc.perform(
-                        get("/community/exploring")
-                                .param("targetType", "HASHTAG")
-                                .param("targetId", hashtag.toString())
-                                .with(as(me)))
-                .andExpect(jsonPath("$.data.exploringCount").value(1));
-        assertThat(card(wanderer.nightjet(), me).exploringCount()).isZero();
-        mvc.perform(
-                        get("/community/exploring")
-                                .param("targetType", "CARD")
-                                .param("targetId", "1")
-                                .with(as(me)))
-                .andExpect(status().isBadRequest());
-    }
-
-    // ---------- 북마크 ----------
 
     @Test
     @DisplayName("북마크: URL만 공개 카드는 그 카드의 URL 노드만 저장하고 제목 · 내용을 담지 않는다")
@@ -551,34 +474,27 @@ class CommunityReactionScenarioTest extends ScenarioTestSupport {
     // ---------- 숫자 · 입력 ----------
 
     @Test
-    @DisplayName("[X-CMT-03 R3] [COM-4-2@1 R2] 탈퇴한 사람의 행동은 숫자에서 빠지고 행은 남는다")
+    @DisplayName("[X-CMT-03 R3] 탈퇴한 사람의 행동은 숫자에서 빠지고 행은 남는다")
     void withdrawnActors() throws Exception {
         like(other, prague, true);
-        exploring(other, prague, true);
         bookmark(other, prague, true);
         like(me, prague, true);
-        exploring(me, prague, true);
         bookmark(me, prague, true);
 
         withdraw(other);
 
         CommunityCard card = card(prague, me);
         assertThat(card.likeCount()).isEqualTo(1);
-        assertThat(card.exploringCount()).isEqualTo(1);
         assertThat(card.bookmarkCount()).isEqualTo(1);
         like(me, prague, true).andExpect(jsonPath("$.data.likeCount").value(1));
-        exploring(me, prague, true).andExpect(jsonPath("$.data.exploringCount").value(1));
         bookmark(me, prague, true).andExpect(jsonPath("$.data.bookmarkCount").value(1));
         assertThat(rows("community_mindmap_likes", other)).isEqualTo(1);
-        assertThat(rows("community_mindmap_explorations", other)).isEqualTo(1);
     }
 
     @Test
     @DisplayName("[X-CMT-05 S2] 필수 값이 없으면 400, 로그인하지 않으면 401 이다")
     void validation() throws Exception {
         mvc.perform(patch(LIKE, prague.getId()).with(as(me)).with(json("{}")))
-                .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, INVALID));
-        mvc.perform(patch(EXPLORING, prague.getId()).with(as(me)).with(json("{}")))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, INVALID));
         mvc.perform(patch(BOOKMARK, prague.getId()).with(as(me)).with(json("{}")))
                 .andExpect(errorEnvelope(HttpStatus.BAD_REQUEST, INVALID));

@@ -99,18 +99,6 @@ public class CommunityCardReader {
         return cards(List.of(sessionId), viewerId).stream().findFirst();
     }
 
-    /** 작성자 카드 전체의 나도 탐색중 합. 프로필의 노드 수는 세션이 겹치면 카드 합과 달라 PublicGraphService 가 센다. */
-    public long exploringCount(CommunityProfile owner, Long viewerId) {
-        List<CommunityCardRow> rows =
-                cards.findByOwnerIdInOrderBySessionIdDesc(List.of(owner.getUserId()));
-        return counts
-                .counts(rows.stream().map(CommunityCardRow::getSessionId).toList(), viewerId)
-                .values()
-                .stream()
-                .mapToLong(CardCounts.Count::exploringCount)
-                .sum();
-    }
-
     private static long nodeCount(CommunityCardRow row, boolean content) {
         return content ? row.getAiNodeCount() : row.getUrlCount();
     }
@@ -129,8 +117,6 @@ public class CommunityCardReader {
                 count.likedByMe(),
                 count.bookmarkCount(),
                 count.bookmarkId(),
-                count.exploringCount(),
-                count.exploringByMe(),
                 row.getLastActivityAt(),
                 row.getUrls().stream()
                         .map(url -> new RelatedUrl(content ? url.title() : null, url.url()))

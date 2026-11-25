@@ -571,7 +571,7 @@ class MyProfileScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("공개였다가 비공개로 돌린 세션은 카드 행이 없어도 받았던 좋아요 · 탐색중 · 북마크 숫자가 남는다")
+    @DisplayName("공개였다가 비공개로 돌린 세션은 카드 행이 없어도 받았던 좋아요 · 북마크 숫자가 남는다")
     void countsSurviveGoingPrivate() throws Exception {
         BrowsingSession rome =
                 session(
@@ -592,11 +592,6 @@ class MyProfileScenarioTest extends ScenarioTestSupport {
                                 .with(json(Map.of("liked", true))))
                 .andExpect(okEnvelope());
         mvc.perform(
-                        patch(card + "exploring", rome.getId())
-                                .with(as(viewer))
-                                .with(json(Map.of("exploring", true))))
-                .andExpect(okEnvelope());
-        mvc.perform(
                         patch(card + "bookmark", rome.getId())
                                 .with(as(viewer))
                                 .with(json(Map.of("bookmarked", true))))
@@ -609,8 +604,9 @@ class MyProfileScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.mindmaps[0].isPublic").value(false))
                 .andExpect(jsonPath("$.data.mindmaps[0].likeCount").value(1))
                 .andExpect(jsonPath("$.data.mindmaps[0].likedByMe").value(false))
-                .andExpect(jsonPath("$.data.mindmaps[0].exploringCount").value(1))
-                .andExpect(jsonPath("$.data.mindmaps[0].bookmarkCount").value(1));
+                .andExpect(jsonPath("$.data.mindmaps[0].bookmarkCount").value(1))
+                .andExpect(jsonPath("$.data.mindmaps[0].exploringCount").doesNotExist())
+                .andExpect(jsonPath("$.data.mindmaps[0].exploringByMe").doesNotExist());
     }
 
     // ---------- 관련 세션 ----------

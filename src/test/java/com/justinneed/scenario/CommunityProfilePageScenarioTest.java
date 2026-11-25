@@ -346,14 +346,14 @@ class CommunityProfilePageScenarioTest extends ScenarioTestSupport {
     // ---------- GET /community/profiles/{id} ----------
 
     @Test
-    @DisplayName("프로필 헤더: 소개 · 공개 범위 · 팔로우 상태 · 나도 탐색중 수가 함께 온다")
+    @DisplayName("프로필 헤더: 소개 · 공개 범위 · 팔로우 상태가 함께 오고 나도 탐색중 수는 없다")
     void profileHeaderFields() throws Exception {
         mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me)))
                 .andExpect(okEnvelope())
                 .andExpect(jsonPath("$.data.bio").value(nullValue()))
                 .andExpect(jsonPath("$.data.visibility").value("URL_ONLY"))
                 .andExpect(jsonPath("$.data.following").value(false))
-                .andExpect(jsonPath("$.data.exploringCount").value(0));
+                .andExpect(jsonPath("$.data.exploringCount").doesNotExist());
 
         mvc.perform(
                         patch("/community/me/profile")

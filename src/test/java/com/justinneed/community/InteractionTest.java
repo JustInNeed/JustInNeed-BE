@@ -59,22 +59,6 @@ class InteractionTest extends CommunityTestSupport {
     }
 
     @Test
-    void exploringRepeatedRequestsDoNotInflateCountsOrActivityAndHiddenTargetCanBeCancelled() {
-        var s = session(ownerId, true, "Java");
-        var node = graphs.graph(ownerId, null).nodes().get(0).nodeId();
-        assertThat(interactions.exploring(viewerId, TargetType.NODE, node, true).exploringCount())
-                .isEqualTo(1);
-        assertThat(interactions.exploring(viewerId, TargetType.NODE, node, true).exploringCount())
-                .isEqualTo(1);
-        interactions.exploring(viewerId, TargetType.NODE, node, false);
-        interactions.exploring(viewerId, TargetType.NODE, node, true);
-        assertThat(activity.count()).isEqualTo(1);
-        s.update(null, null, false, null, null);
-        assertThat(interactions.exploring(viewerId, TargetType.NODE, node, false).exploringCount())
-                .isZero();
-    }
-
-    @Test
     void snapshotPreservesRelationsIsPrivateAndStaysStoredWhenSourceGoesPrivate() throws Exception {
         var s = session(ownerId, true, "Java", "Spring");
         var graph = graphs.graph(ownerId, null);

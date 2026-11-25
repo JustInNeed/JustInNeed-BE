@@ -101,12 +101,18 @@ class RecommendationTest extends CommunityTestSupport {
         var graph = graphs.graph(ownerId, null);
         Long tag = graph.hashtags().get(0).hashtagId();
         Long node = graph.nodes().get(0).nodeId();
-        event(viewerId, TargetType.NODE, node, tag, ActivityKind.EXPLORE, "2026-09-29T15:00:00Z");
-        event(viewerId, TargetType.HASHTAG, tag, tag, ActivityKind.EXPLORE, "2026-09-30T01:00:00Z");
+        event(viewerId, TargetType.NODE, node, tag, ActivityKind.BOOKMARK, "2026-09-29T15:00:00Z");
+        event(
+                viewerId,
+                TargetType.HASHTAG,
+                tag,
+                tag,
+                ActivityKind.BOOKMARK,
+                "2026-09-30T01:00:00Z");
         event(ownerId, TargetType.NODE, node, tag, ActivityKind.BOOKMARK, "2026-09-29T14:59:59Z");
-        event(viewerId, TargetType.NODE, node, tag, ActivityKind.EXPLORE, "2026-09-27T15:00:00Z");
-        event(ownerId, TargetType.NODE, node, tag, ActivityKind.EXPLORE, "2026-09-27T14:59:59Z");
-        event(ownerId, TargetType.HASHTAG, tag, tag, ActivityKind.EXPLORE, "2026-10-01T03:00:00Z");
+        event(viewerId, TargetType.NODE, node, tag, ActivityKind.BOOKMARK, "2026-09-27T15:00:00Z");
+        event(ownerId, TargetType.NODE, node, tag, ActivityKind.BOOKMARK, "2026-09-27T14:59:59Z");
+        event(ownerId, TargetType.HASHTAG, tag, tag, ActivityKind.BOOKMARK, "2026-10-01T03:00:00Z");
         var today = trending.trending(TrendingService.Period.TODAY, 10).hashtags().get(0);
         assertThat(today.count()).isEqualTo(1);
         var week = trending.trending(TrendingService.Period.WEEK, 10).hashtags().get(0);
@@ -120,7 +126,7 @@ class RecommendationTest extends CommunityTestSupport {
         var graph = graphs.graph(ownerId, null);
         var tag = graph.hashtags().get(0).hashtagId();
         var node = graph.nodes().get(0).nodeId();
-        event(viewerId, TargetType.NODE, node, tag, ActivityKind.EXPLORE, NOW.toString());
+        event(viewerId, TargetType.NODE, node, tag, ActivityKind.BOOKMARK, NOW.toString());
         assertThat(trending.trending(TrendingService.Period.TODAY, 10).hashtags()).hasSize(1);
         s.update(null, null, false, null, null);
         assertThat(trending.trending(TrendingService.Period.TODAY, 10).hashtags()).isEmpty();

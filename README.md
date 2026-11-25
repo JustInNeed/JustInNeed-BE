@@ -117,7 +117,7 @@ JWT 인증 필터 예외 처리 로직 추가(O)
 | GET | `/members/nickname/available?nickname=` | 닉네임 중복 확인. `{nickname, available}` 반환. 형식 규칙은 PATCH 와 같음(위반 시 400), 본인 닉네임은 사용 가능 |
 
 로그인 흐름: FE `/oauth2/authorization/{kakao|naver}` 진입 → 소셜 로그인 → BE 콜백 → FE `/oauth/callback?code=..` → FE 가 `POST /auth/token` 으로 토큰 교환 → `needsNickname=true` 면 닉네임 입력 화면.
-탈퇴(`DELETE /settings/account`)하면 회원 행의 소셜 식별자 · 닉네임 · 이메일을 비우므로, 같은 소셜 계정으로 다시 로그인하면 새 회원으로 가입되고 예전 닉네임도 다시 쓸 수 있습니다. 탈퇴한 회원은 커뮤니티(프로필 · 검색 · 추천 · 북마크 해시태그)에서도 보이지 않습니다. 그 회원이 남긴 좋아요 · 나도 탐색중 · 활동 행은 지우지 않고 읽을 때 숫자에서만 뺍니다. 탈퇴하면 다른 기기에 남은 access 토큰도 모든 보호 API 에서 401 입니다.
+탈퇴(`DELETE /settings/account`)하면 회원 행의 소셜 식별자 · 닉네임 · 이메일을 비우므로, 같은 소셜 계정으로 다시 로그인하면 새 회원으로 가입되고 예전 닉네임도 다시 쓸 수 있습니다. 탈퇴한 회원은 커뮤니티(프로필 · 검색 · 추천 · 북마크 해시태그)에서도 보이지 않습니다. 그 회원이 남긴 좋아요 · 활동 행은 지우지 않고 읽을 때 숫자에서만 뺍니다. 탈퇴하면 다른 기기에 남은 access 토큰도 모든 보호 API 에서 401 입니다.
 
 ### 세션 / 해시태그 그룹
 
@@ -189,7 +189,7 @@ API, 데이터 모델, 공개 범위 처리, 테스트 및 PR 병합 순서는 [
 | --- | --- | --- |
 | PATCH | `/community/profiles/{userId}/follow` | 팔로우 설정 `{following}` → `{following}`. 같은 값을 다시 보내거나 동시에 보내도 200. 자기 자신은 400, 없거나 탈퇴한 회원은 404. 탈퇴해도 팔로우 행은 남고 읽을 때 뺀다 |
 | GET | `/community/recommendations/profiles/similar` | 관심사가 비슷한 사람 `{people: [{userId, nickname, matchedHashtags, following}]}`. `limit` 기본 3, 1~20(밖이면 400). 태그 = 공개 · 완료 · 미삭제 세션의 태그 + 관심 해시태그에서 각자의 비공개 해시태그를 뺀 것(대소문자 무시). 겹치는 태그 수가 많은 순 → 최근 공개 활동(세션 종료 시각, 없으면 시작 시각) 순, 활동이 없으면 뒤 → id 순. 나 · 탈퇴 회원 · 겹치는 태그가 없는 사람은 빠진다. 닉네임을 정하지 않은 사람은 `nickname: null` 로 온다. 조회는 쓰기 · 잠금을 하지 않는다 |
-| GET | `/community/recommendations/hashtags/trending` | 떠오르는 해시태그 `{period, hashtags: [{rank, name, count, trend}]}`. `period` 는 `today`(기본) · `week`, 대소문자 무시, 응답은 `TODAY` · `WEEK`. `limit` 기본 10, 1~100. `count` = 기간 안의 나도 탐색중 + 북마크(내 행동 포함, 탈퇴 회원 제외, 사람 · 태그 · 종류 · 날짜마다 1, 취소해도 유지). `trend` = `count` - 직전 기간 값. 직전 기간은 길이가 같다: 오늘(직전은 어제 같은 시각까지, KST), 최근 7일(직전은 그 앞 7일) |
+| GET | `/community/recommendations/hashtags/trending` | 떠오르는 해시태그 `{period, hashtags: [{rank, name, count, trend}]}`. `period` 는 `today`(기본) · `week`, 대소문자 무시, 응답은 `TODAY` · `WEEK`. `limit` 기본 10, 1~100. `count` = 기간 안의 북마크(내 행동 포함, 탈퇴 회원 제외, 사람 · 태그 · 날짜마다 1, 취소해도 유지). `trend` = `count` - 직전 기간 값. 직전 기간은 길이가 같다: 오늘(직전은 어제 같은 시각까지, KST), 최근 7일(직전은 그 앞 7일) |
 
 ### 카드 반응
 
@@ -198,7 +198,6 @@ API, 데이터 모델, 공개 범위 처리, 테스트 및 PR 병합 순서는 [
 | Method | Path | 설명 |
 | --- | --- | --- |
 | PATCH | `/community/mindmaps/{mindmapId}/like` | 좋아요 `{liked}` → `{likeCount, likedByMe}`. 내 카드는 400 |
-| PATCH | `/community/mindmaps/{mindmapId}/exploring` | 나도 탐색중 `{exploring}` → `{exploringCount, exploringByMe}`. 새로 켜면 공개 해시태그마다 활동을 남깁니다 |
 | PATCH | `/community/mindmaps/{mindmapId}/bookmark` | 북마크 `{bookmarked}` → `{bookmarkCount, bookmarkId}`. 켜면 카드의 노드를 미니 마인드맵으로 저장(이미 있으면 그 id), 끄면 삭제. 노드가 없는 카드는 400 |
 
 ### 북마크
@@ -245,7 +244,7 @@ API, 데이터 모델, 공개 범위 처리, 테스트 및 PR 병합 순서는 [
 
 | Method | Path | 설명 |
 | --- | --- | --- |
-| GET | `/community/profiles/{userId}` | 프로필 헤더 `{code, userId, nickname, bio, visibility, totalNodeCount, topHashtags, interests, likeCount, likedByMe, following, exploringCount, sharedSessionCount, pinnedSessions}`. `totalNodeCount` · `exploringCount` 는 작성자 카드의 `nodeCount` · `exploringCount` 합. `sharedSessionCount` 는 공개 세션 수, `pinnedSessions` 는 그중 고정한 세션. 닉네임 · 소개를 정하지 않았으면 null. 없거나 탈퇴한 회원은 404 |
+| GET | `/community/profiles/{userId}` | 프로필 헤더 `{code, userId, nickname, bio, visibility, totalNodeCount, topHashtags, interests, likeCount, likedByMe, following, sharedSessionCount, pinnedSessions}`. `totalNodeCount` 는 작성자 카드의 `nodeCount` 합. `sharedSessionCount` 는 공개 세션 수, `pinnedSessions` 는 그중 고정한 세션. 닉네임 · 소개를 정하지 않았으면 null. 없거나 탈퇴한 회원은 404 |
 | PATCH | `/community/me/profile` | 소개 수정 `{bio}` → `{bio}`. 앞뒤 공백을 지우고 120자까지, 빠지거나 넘으면 400. 탈퇴하면 지운다 |
 | GET | `/community/profiles/{userId}/mindmaps` | 프로필 마인드맵 탭 `{mindmaps: [카드 + isPinned], hasNext}`. 고정 카드가 고정 순서로 먼저, 나머지는 최근 활동 최신순, `page` 기본 0, `size` 기본 10(1~100, 밖이면 400). 없거나 탈퇴한 회원은 404 |
 | GET | `/community/mindmaps/{id}/sessions` | 카드 상세의 관련 세션 `{sessions: [세션 목록 항목]}`. 그 세션 + 공개 태그(대소문자 무시)가 겹치는 같은 작성자의 공개 세션 최신순, 최대 3개. 본인이 불러도 방문자 규칙: `isFavorite` 는 false, `URL_ONLY` 면 `title` 은 `""`, 비공개 해시태그는 뺀다. 공개 카드가 아니면 404 |

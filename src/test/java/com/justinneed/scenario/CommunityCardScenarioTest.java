@@ -411,7 +411,6 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
         assertThat(card.lastActivityAt()).isEqualTo(LocalDateTime.parse("2026-04-26T22:00:00"));
         assertThat(card.likeCount()).isZero();
         assertThat(card.bookmarkId()).isNull();
-        assertThat(card.exploringByMe()).isFalse();
     }
 
     @Test
@@ -513,8 +512,6 @@ class CommunityCardScenarioTest extends ScenarioTestSupport {
                         "likedByMe",
                         "bookmarkCount",
                         "bookmarkId",
-                        "exploringCount",
-                        "exploringByMe",
                         "lastActivityAt",
                         "relatedUrls");
         assertThat(json.get("title").isNull()).isTrue();

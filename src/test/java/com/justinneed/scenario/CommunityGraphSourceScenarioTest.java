@@ -223,26 +223,13 @@ class CommunityGraphSourceScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("AI 노드도 북마크 · 나도 탐색중 대상이고, 위로 올라가 뿌리에 달린 태그를 찾는다")
+    @DisplayName("AI 노드도 북마크 대상이고, 위로 올라가 뿌리에 달린 태그를 찾는다")
     void aiNodeIsATarget() throws Exception {
         saveResult(MINDMAP, SELECTED);
         setPublic();
         showContent();
         Long unit = nodeId("입장권");
 
-        mvc.perform(
-                        patch("/community/exploring")
-                                .with(as(viewer))
-                                .with(
-                                        json(
-                                                Map.of(
-                                                        "targetType",
-                                                        "NODE",
-                                                        "targetId",
-                                                        unit,
-                                                        "exploring",
-                                                        true))))
-                .andExpect(okEnvelope());
         mvc.perform(
                         post("/community/bookmarks")
                                 .with(as(viewer))
@@ -268,25 +255,12 @@ class CommunityGraphSourceScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("내용까지로 바꾸기 전에 URL 노드로 저장한 북마크 · 나도 탐색중은 계속 동작한다")
+    @DisplayName("내용까지로 바꾸기 전에 URL 노드로 저장한 북마크는 계속 동작한다")
     void urlNodeIdsKeepWorkingAfterContent() throws Exception {
         saveResult(MINDMAP, SELECTED);
         setPublic();
         Long urlNode =
                 readLong(mvc.perform(get(mindmap()).with(as(viewer))), "$.data.nodes[0].nodeId");
-        mvc.perform(
-                        patch("/community/exploring")
-                                .with(as(viewer))
-                                .with(
-                                        json(
-                                                Map.of(
-                                                        "targetType",
-                                                        "NODE",
-                                                        "targetId",
-                                                        urlNode,
-                                                        "exploring",
-                                                        true))))
-                .andExpect(okEnvelope());
         Long bookmark =
                 readLong(
                         mvc.perform(
@@ -308,14 +282,6 @@ class CommunityGraphSourceScenarioTest extends ScenarioTestSupport {
 
         showContent();
 
-        mvc.perform(
-                        get("/community/exploring")
-                                .param("targetType", "NODE")
-                                .param("targetId", urlNode.toString())
-                                .with(as(viewer)))
-                .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.exploring").value(true))
-                .andExpect(jsonPath("$.data.exploringCount").value(1));
         mvc.perform(get("/community/me/bookmarks/mindmaps").with(as(viewer)))
                 .andExpect(jsonPath("$.data.mindmaps[*].nodes[*].sourceUrl").value(contains(LINK)));
         mvc.perform(get("/community/me/bookmarks/{id}/original", bookmark).with(as(viewer)))
