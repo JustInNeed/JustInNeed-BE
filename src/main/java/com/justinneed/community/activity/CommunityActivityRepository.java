@@ -38,6 +38,7 @@ public interface CommunityActivityRepository extends JpaRepository<CommunityActi
             left join CommunityNode n on n.id = a.targetId
                 and a.targetType = com.justinneed.community.bookmark.TargetType.NODE
             where a.occurredAt >= :start and a.occurredAt <= :end
+                and a.kind = com.justinneed.community.activity.ActivityKind.BOOKMARK
             """)
     List<TrendingActivity> findTrending(@Param("start") Instant start, @Param("end") Instant end);
 

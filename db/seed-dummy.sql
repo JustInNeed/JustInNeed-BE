@@ -605,47 +605,27 @@ INSERT INTO community_profile_likes (id, actor_id, profile_id) VALUES (18, 18, 1
 INSERT INTO community_profile_likes (id, actor_id, profile_id) VALUES (19, 19, 2);
 INSERT INTO community_profile_likes (id, actor_id, profile_id) VALUES (20, 19, 6);
 
--- community_explorations (20) · community_activities (20)
-INSERT INTO community_explorations (id, actor_id, target_type, target_id) VALUES (1, 1, 'NODE', 7);
-INSERT INTO community_explorations (id, actor_id, target_type, target_id) VALUES (2, 4, 'NODE', 8);
-INSERT INTO community_explorations (id, actor_id, target_type, target_id) VALUES (3, 4, 'NODE', 12);
-INSERT INTO community_explorations (id, actor_id, target_type, target_id) VALUES (4, 6, 'NODE', 24);
-INSERT INTO community_explorations (id, actor_id, target_type, target_id) VALUES (5, 6, 'NODE', 29);
-INSERT INTO community_explorations (id, actor_id, target_type, target_id) VALUES (6, 7, 'NODE', 30);
-INSERT INTO community_explorations (id, actor_id, target_type, target_id) VALUES (7, 8, 'NODE', 20);
-INSERT INTO community_explorations (id, actor_id, target_type, target_id) VALUES (8, 9, 'NODE', 25);
-INSERT INTO community_explorations (id, actor_id, target_type, target_id) VALUES (9, 10, 'NODE', 38);
-INSERT INTO community_explorations (id, actor_id, target_type, target_id) VALUES (10, 12, 'NODE', 12);
-INSERT INTO community_explorations (id, actor_id, target_type, target_id) VALUES (11, 12, 'NODE', 16);
-INSERT INTO community_explorations (id, actor_id, target_type, target_id) VALUES (12, 13, 'NODE', 21);
-INSERT INTO community_explorations (id, actor_id, target_type, target_id) VALUES (13, 15, 'NODE', 13);
-INSERT INTO community_explorations (id, actor_id, target_type, target_id) VALUES (14, 16, 'NODE', 2);
-INSERT INTO community_explorations (id, actor_id, target_type, target_id) VALUES (15, 17, 'NODE', 32);
-INSERT INTO community_explorations (id, actor_id, target_type, target_id) VALUES (16, 17, 'NODE', 43);
-INSERT INTO community_explorations (id, actor_id, target_type, target_id) VALUES (17, 19, 'NODE', 6);
-INSERT INTO community_explorations (id, actor_id, target_type, target_id) VALUES (18, 19, 'NODE', 13);
-INSERT INTO community_explorations (id, actor_id, target_type, target_id) VALUES (19, 20, 'NODE', 33);
-INSERT INTO community_explorations (id, actor_id, target_type, target_id) VALUES (20, 20, 'NODE', 39);
-INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (1, 1, 'NODE', 7, 47, 'EXPLORE', (TIMESTAMP '2026-10-29 08:07:00')::date, (TIMESTAMP '2026-10-29 08:07:00') AT TIME ZONE 'Asia/Seoul');
-INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (2, 4, 'NODE', 8, 47, 'EXPLORE', (TIMESTAMP '2026-10-26 21:21:00')::date, (TIMESTAMP '2026-10-26 21:21:00') AT TIME ZONE 'Asia/Seoul');
+-- community_activities (20): 다른 사람 노드 저장 활동 (떠오르는 해시태그)
+INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (1, 1, 'NODE', 7, 47, 'BOOKMARK', (TIMESTAMP '2026-10-29 08:07:00')::date, (TIMESTAMP '2026-10-29 08:07:00') AT TIME ZONE 'Asia/Seoul');
+INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (2, 4, 'NODE', 8, 47, 'BOOKMARK', (TIMESTAMP '2026-10-26 21:21:00')::date, (TIMESTAMP '2026-10-26 21:21:00') AT TIME ZONE 'Asia/Seoul');
 INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (3, 4, 'NODE', 12, 52, 'BOOKMARK', (TIMESTAMP '2026-10-29 09:55:00')::date, (TIMESTAMP '2026-10-29 09:55:00') AT TIME ZONE 'Asia/Seoul');
-INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (4, 6, 'NODE', 24, 62, 'EXPLORE', (TIMESTAMP '2026-10-24 19:49:00')::date, (TIMESTAMP '2026-10-24 19:49:00') AT TIME ZONE 'Asia/Seoul');
-INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (5, 6, 'NODE', 29, 67, 'EXPLORE', (TIMESTAMP '2026-10-27 23:39:00')::date, (TIMESTAMP '2026-10-27 23:39:00') AT TIME ZONE 'Asia/Seoul');
+INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (4, 6, 'NODE', 24, 62, 'BOOKMARK', (TIMESTAMP '2026-10-24 19:49:00')::date, (TIMESTAMP '2026-10-24 19:49:00') AT TIME ZONE 'Asia/Seoul');
+INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (5, 6, 'NODE', 29, 67, 'BOOKMARK', (TIMESTAMP '2026-10-27 23:39:00')::date, (TIMESTAMP '2026-10-27 23:39:00') AT TIME ZONE 'Asia/Seoul');
 INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (6, 7, 'NODE', 30, 67, 'BOOKMARK', (TIMESTAMP '2026-10-29 20:42:00')::date, (TIMESTAMP '2026-10-29 20:42:00') AT TIME ZONE 'Asia/Seoul');
-INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (7, 8, 'NODE', 20, 1, 'EXPLORE', (TIMESTAMP '2026-10-24 21:16:00')::date, (TIMESTAMP '2026-10-24 21:16:00') AT TIME ZONE 'Asia/Seoul');
-INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (8, 9, 'NODE', 25, 62, 'EXPLORE', (TIMESTAMP '2026-10-29 03:35:00')::date, (TIMESTAMP '2026-10-29 03:35:00') AT TIME ZONE 'Asia/Seoul');
+INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (7, 8, 'NODE', 20, 1, 'BOOKMARK', (TIMESTAMP '2026-10-24 21:16:00')::date, (TIMESTAMP '2026-10-24 21:16:00') AT TIME ZONE 'Asia/Seoul');
+INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (8, 9, 'NODE', 25, 62, 'BOOKMARK', (TIMESTAMP '2026-10-29 03:35:00')::date, (TIMESTAMP '2026-10-29 03:35:00') AT TIME ZONE 'Asia/Seoul');
 INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (9, 10, 'NODE', 38, 22, 'BOOKMARK', (TIMESTAMP '2026-10-25 20:06:00')::date, (TIMESTAMP '2026-10-25 20:06:00') AT TIME ZONE 'Asia/Seoul');
-INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (10, 12, 'NODE', 12, 52, 'EXPLORE', (TIMESTAMP '2026-10-27 23:28:00')::date, (TIMESTAMP '2026-10-27 23:28:00') AT TIME ZONE 'Asia/Seoul');
-INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (11, 12, 'NODE', 16, 57, 'EXPLORE', (TIMESTAMP '2026-10-26 18:24:00')::date, (TIMESTAMP '2026-10-26 18:24:00') AT TIME ZONE 'Asia/Seoul');
+INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (10, 12, 'NODE', 12, 52, 'BOOKMARK', (TIMESTAMP '2026-10-27 23:28:00')::date, (TIMESTAMP '2026-10-27 23:28:00') AT TIME ZONE 'Asia/Seoul');
+INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (11, 12, 'NODE', 16, 57, 'BOOKMARK', (TIMESTAMP '2026-10-26 18:24:00')::date, (TIMESTAMP '2026-10-26 18:24:00') AT TIME ZONE 'Asia/Seoul');
 INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (12, 13, 'NODE', 21, 1, 'BOOKMARK', (TIMESTAMP '2026-10-28 14:42:00')::date, (TIMESTAMP '2026-10-28 14:42:00') AT TIME ZONE 'Asia/Seoul');
-INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (13, 15, 'NODE', 13, 52, 'EXPLORE', (TIMESTAMP '2026-10-24 15:55:00')::date, (TIMESTAMP '2026-10-24 15:55:00') AT TIME ZONE 'Asia/Seoul');
-INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (14, 16, 'NODE', 2, 1, 'EXPLORE', (TIMESTAMP '2026-10-24 18:49:00')::date, (TIMESTAMP '2026-10-24 18:49:00') AT TIME ZONE 'Asia/Seoul');
+INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (13, 15, 'NODE', 13, 52, 'BOOKMARK', (TIMESTAMP '2026-10-24 15:55:00')::date, (TIMESTAMP '2026-10-24 15:55:00') AT TIME ZONE 'Asia/Seoul');
+INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (14, 16, 'NODE', 2, 1, 'BOOKMARK', (TIMESTAMP '2026-10-24 18:49:00')::date, (TIMESTAMP '2026-10-24 18:49:00') AT TIME ZONE 'Asia/Seoul');
 INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (15, 17, 'NODE', 32, 67, 'BOOKMARK', (TIMESTAMP '2026-10-29 21:21:00')::date, (TIMESTAMP '2026-10-29 21:21:00') AT TIME ZONE 'Asia/Seoul');
-INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (16, 17, 'NODE', 43, 72, 'EXPLORE', (TIMESTAMP '2026-10-28 06:28:00')::date, (TIMESTAMP '2026-10-28 06:28:00') AT TIME ZONE 'Asia/Seoul');
-INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (17, 19, 'NODE', 6, 47, 'EXPLORE', (TIMESTAMP '2026-10-29 10:37:00')::date, (TIMESTAMP '2026-10-29 10:37:00') AT TIME ZONE 'Asia/Seoul');
+INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (16, 17, 'NODE', 43, 72, 'BOOKMARK', (TIMESTAMP '2026-10-28 06:28:00')::date, (TIMESTAMP '2026-10-28 06:28:00') AT TIME ZONE 'Asia/Seoul');
+INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (17, 19, 'NODE', 6, 47, 'BOOKMARK', (TIMESTAMP '2026-10-29 10:37:00')::date, (TIMESTAMP '2026-10-29 10:37:00') AT TIME ZONE 'Asia/Seoul');
 INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (18, 19, 'NODE', 13, 52, 'BOOKMARK', (TIMESTAMP '2026-10-25 11:21:00')::date, (TIMESTAMP '2026-10-25 11:21:00') AT TIME ZONE 'Asia/Seoul');
-INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (19, 20, 'NODE', 33, 22, 'EXPLORE', (TIMESTAMP '2026-10-29 20:56:00')::date, (TIMESTAMP '2026-10-29 20:56:00') AT TIME ZONE 'Asia/Seoul');
-INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (20, 20, 'NODE', 39, 72, 'EXPLORE', (TIMESTAMP '2026-10-26 21:38:00')::date, (TIMESTAMP '2026-10-26 21:38:00') AT TIME ZONE 'Asia/Seoul');
+INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (19, 20, 'NODE', 33, 22, 'BOOKMARK', (TIMESTAMP '2026-10-29 20:56:00')::date, (TIMESTAMP '2026-10-29 20:56:00') AT TIME ZONE 'Asia/Seoul');
+INSERT INTO community_activities (id, actor_id, target_type, target_id, tag_id, kind, activity_day, occurred_at) VALUES (20, 20, 'NODE', 39, 72, 'BOOKMARK', (TIMESTAMP '2026-10-26 21:38:00')::date, (TIMESTAMP '2026-10-26 21:38:00') AT TIME ZONE 'Asia/Seoul');
 
 -- community_bookmarks (20): 다른 사람 노드를 미니 마인드맵으로 저장
 INSERT INTO community_bookmarks (id, user_id, save_type, target_type, selection_key, source_mindmap_id, target_ids, snapshot, saved_at) VALUES (1, 1, 'MINI_MINDMAP', 'NODE', 'c5a042165b91f344bc40646cb5ff9db6b41c02b1daf874278404c779186ecb14', 5, '[7]'::jsonb, '{"title": "Saved community mindmap", "hashtags": [{"hashtagId": 47, "ownerId": 5, "name": "사료"}, {"hashtagId": 48, "ownerId": 5, "name": "훈련"}], "nodes": [{"nodeId": 7, "label": "분리불안 고민", "sourceUrl": "https://cafe.naver.com/dogcafe/50213", "content": "분리불안이 있는 강아지는 외출 준비 행동에 무뎌지게 하는 연습이 효과적이다. 열쇠를 들었다 내려놓기를 반복해", "visibilityScope": "CONTENT"}], "edges": [{"from": "tag:47", "to": "node:7"}, {"from": "tag:48", "to": "node:7"}]}'::jsonb, (TIMESTAMP '2026-10-28 12:07:00') AT TIME ZONE 'Asia/Seoul');
@@ -680,7 +660,6 @@ SELECT setval(pg_get_serial_sequence('external_integrations', 'id'), (SELECT max
 SELECT setval(pg_get_serial_sequence('community_hashtags', 'id'), (SELECT max(id) FROM community_hashtags));
 SELECT setval(pg_get_serial_sequence('community_nodes', 'id'), (SELECT max(id) FROM community_nodes));
 SELECT setval(pg_get_serial_sequence('community_profile_likes', 'id'), (SELECT max(id) FROM community_profile_likes));
-SELECT setval(pg_get_serial_sequence('community_explorations', 'id'), (SELECT max(id) FROM community_explorations));
 SELECT setval(pg_get_serial_sequence('community_activities', 'id'), (SELECT max(id) FROM community_activities));
 SELECT setval(pg_get_serial_sequence('community_bookmarks', 'id'), (SELECT max(id) FROM community_bookmarks));
 

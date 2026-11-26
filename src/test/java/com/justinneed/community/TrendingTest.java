@@ -17,7 +17,6 @@ import com.justinneed.community.bookmark.TargetType;
 import com.justinneed.community.domain.CommunityProfile;
 import com.justinneed.community.graph.CommunityNodeRepository;
 import com.justinneed.community.graph.PublicGraphService;
-import com.justinneed.community.reaction.InteractionService;
 import com.justinneed.session.management.domain.Source;
 import java.time.Clock;
 import java.time.Instant;
@@ -82,7 +81,6 @@ class TrendingTest extends CommunityTestSupport {
     @Autowired PublicGraphService graphs;
     @Autowired CommunityNodeRepository nodes;
     @Autowired CommunityActivityRepository activity;
-    @Autowired InteractionService interactions;
     @Autowired BookmarkCommandService bookmarks;
     private Long tag;
     private Long node;
@@ -101,10 +99,10 @@ class TrendingTest extends CommunityTestSupport {
     @DisplayName("[COM-6-3 S2] 오늘 · 어제는 KST 자정 기준이다")
     void todayAndYesterdayFollowKoreanMidnightWhenUtcDateDiffers() {
         clock.set("2026-09-30T16:00:00Z");
-        explore(member(), "2026-09-30T15:00:00Z"); // 오늘 00:00 KST
-        explore(member(), "2026-09-29T15:59:59Z"); // 어제 00:59:59 KST
-        explore(member(), "2026-09-29T15:00:00Z"); // 어제 00:00 KST
-        explore(member(), "2026-09-29T14:59:59Z"); // 그제 (어느 기간도 아니다)
+        bookmark(member(), "2026-09-30T15:00:00Z"); // 오늘 00:00 KST
+        bookmark(member(), "2026-09-29T15:59:59Z"); // 어제 00:59:59 KST
+        bookmark(member(), "2026-09-29T15:00:00Z"); // 어제 00:00 KST
+        bookmark(member(), "2026-09-29T14:59:59Z"); // 그제 (어느 기간도 아니다)
 
         assertThat(row("today", "Java")).isEqualTo(new Row(1, 1, -1));
     }
@@ -114,10 +112,10 @@ class TrendingTest extends CommunityTestSupport {
     @DisplayName("[COM-6-3 S2] 오늘은 어제 같은 시각까지와 비교한다")
     void todayComparesWithYesterdayUpToTheSameTime() {
         clock.set("2026-09-30T16:00:00Z"); // 10월 1일 01:00 KST
-        explore(member(), "2026-09-30T15:30:00Z"); // 오늘 00:30 KST
-        explore(member(), "2026-09-29T15:30:00Z"); // 어제 00:30 KST
-        explore(member(), "2026-09-29T16:00:01Z"); // 어제 01:00:01 KST (같은 시각을 넘었다)
-        explore(member(), "2026-09-30T14:00:00Z"); // 어제 23:00 KST
+        bookmark(member(), "2026-09-30T15:30:00Z"); // 오늘 00:30 KST
+        bookmark(member(), "2026-09-29T15:30:00Z"); // 어제 00:30 KST
+        bookmark(member(), "2026-09-29T16:00:01Z"); // 어제 01:00:01 KST (같은 시각을 넘었다)
+        bookmark(member(), "2026-09-30T14:00:00Z"); // 어제 23:00 KST
 
         assertThat(row("today", "Java")).isEqualTo(new Row(1, 1, 0));
     }
@@ -127,19 +125,19 @@ class TrendingTest extends CommunityTestSupport {
     @DisplayName("[COM-6-3 S2] 이번 주는 최근 7일을 그 앞 7일과 비교한다")
     void weekIsLastSevenDaysComparedWithTheSevenDaysBefore() {
         clock.set("2026-10-04T16:00:00Z");
-        explore(member(), "2026-09-27T16:00:00Z"); // 최근 7일의 시작
-        explore(member(), "2026-09-27T15:59:59Z"); // 직전 7일의 끝
-        explore(member(), "2026-09-20T16:00:00Z"); // 직전 7일의 시작
-        explore(member(), "2026-09-20T15:59:59Z"); // 어느 기간도 아니다
+        bookmark(member(), "2026-09-27T16:00:00Z"); // 최근 7일의 시작
+        bookmark(member(), "2026-09-27T15:59:59Z"); // 직전 7일의 끝
+        bookmark(member(), "2026-09-20T16:00:00Z"); // 직전 7일의 시작
+        bookmark(member(), "2026-09-20T15:59:59Z"); // 어느 기간도 아니다
 
         assertThat(row("week", "Java")).isEqualTo(new Row(1, 1, -1));
     }
 
     @Test
     void futureEventsAreIgnored() {
-        explore(member(), "2026-09-30T02:59:59Z");
-        explore(member(), "2026-09-30T03:00:00Z");
-        explore(member(), "2026-09-30T03:00:01Z");
+        bookmark(member(), "2026-09-30T02:59:59Z");
+        bookmark(member(), "2026-09-30T03:00:00Z");
+        bookmark(member(), "2026-09-30T03:00:01Z");
 
         assertThat(row("today", "Java")).isEqualTo(new Row(1, 2, 2));
     }
@@ -148,13 +146,11 @@ class TrendingTest extends CommunityTestSupport {
     void recordedDayIsTheKoreanDay() {
         var actor = member();
         clock.set("2026-09-30T14:30:00Z"); // 9월 30일 23:30 KST
-        interactions.exploring(actor, TargetType.NODE, node, true);
-        interactions.exploring(actor, TargetType.NODE, node, false);
+        bookmarks.delete(actor, saveTag(actor));
         clock.set("2026-09-30T15:30:00Z"); // 10월 1일 00:30 KST, UTC 는 같은 날
-        interactions.exploring(actor, TargetType.NODE, node, true);
-        interactions.exploring(actor, TargetType.NODE, node, false);
+        bookmarks.delete(actor, saveTag(actor));
         clock.set("2026-10-01T00:30:00Z"); // 10월 1일 09:30 KST, UTC 는 다음 날
-        interactions.exploring(actor, TargetType.NODE, node, true);
+        saveTag(actor);
 
         assertThat(activity.findAll())
                 .extracting(CommunityActivity::getActivityDay)
@@ -167,14 +163,14 @@ class TrendingTest extends CommunityTestSupport {
         var tags = tagIds(ownerId);
         var today = "2026-09-30T01:00:00Z";
         var yesterday = "2026-09-29T01:00:00Z";
-        explore(member(), tags.get("rising"), today);
-        explore(member(), tags.get("rising"), today);
-        explore(member(), tags.get("falling"), today);
-        explore(member(), tags.get("falling"), yesterday);
-        explore(member(), tags.get("falling"), yesterday);
-        explore(member(), tags.get("steady"), today);
-        explore(member(), tags.get("steady"), yesterday);
-        explore(member(), tags.get("java"), yesterday); // 어제만 있으면 오늘 순위엔 없다
+        bookmark(member(), tags.get("rising"), today);
+        bookmark(member(), tags.get("rising"), today);
+        bookmark(member(), tags.get("falling"), today);
+        bookmark(member(), tags.get("falling"), yesterday);
+        bookmark(member(), tags.get("falling"), yesterday);
+        bookmark(member(), tags.get("steady"), today);
+        bookmark(member(), tags.get("steady"), yesterday);
+        bookmark(member(), tags.get("java"), yesterday); // 어제만 있으면 오늘 순위엔 없다
 
         assertThat(names("today")).containsExactly("Rising", "Falling", "Steady");
         assertThat(row("today", "Rising")).isEqualTo(new Row(1, 2, 2));
@@ -187,9 +183,9 @@ class TrendingTest extends CommunityTestSupport {
     void withdrawnActorsAreLeftOutOfBothWindowsAndTheirRowsStay() throws Exception {
         var gone = member();
         var stays = member();
-        explore(gone, "2026-09-30T01:00:00Z");
-        explore(stays, "2026-09-30T01:00:00Z");
-        explore(gone, "2026-09-29T01:00:00Z");
+        bookmark(gone, "2026-09-30T01:00:00Z");
+        bookmark(stays, "2026-09-30T01:00:00Z");
+        bookmark(gone, "2026-09-29T01:00:00Z");
         assertThat(row("today", "Java")).isEqualTo(new Row(1, 2, 1));
 
         members.findById(gone).orElseThrow().withdraw("test", LocalDateTime.of(2026, 9, 30, 12, 0));
@@ -200,42 +196,32 @@ class TrendingTest extends CommunityTestSupport {
 
     @Test
     void myOwnActionsCount() {
-        interactions.exploring(ownerId, TargetType.HASHTAG, tag, true);
-        bookmarks.save(
-                ownerId, TargetType.HASHTAG, List.of(tag), SaveType.HASHTAG_BUNDLE, null, null);
+        saveTag(ownerId);
 
-        assertThat(row("today", "Java")).isEqualTo(new Row(1, 2, 2));
+        assertThat(row("today", "Java")).isEqualTo(new Row(1, 1, 1));
     }
 
     @Test
     void undoKeepsTheCountAndRepeatingOnTheSameDayDoesNotAddOne() {
         var actor = member();
-        interactions.exploring(actor, TargetType.NODE, node, true);
-        interactions.exploring(actor, TargetType.NODE, node, false);
-        interactions.exploring(actor, TargetType.NODE, node, true);
-        var saved =
-                bookmarks.save(
-                        actor,
-                        TargetType.HASHTAG,
-                        List.of(tag),
-                        SaveType.HASHTAG_BUNDLE,
-                        null,
-                        null);
-        bookmarks.delete(actor, saved.bookmarkId());
+        bookmarks.delete(actor, saveTag(actor));
+        assertThat(row("today", "Java")).isEqualTo(new Row(1, 1, 1));
 
-        assertThat(row("today", "Java")).isEqualTo(new Row(1, 2, 2));
+        saveTag(actor);
+
+        assertThat(row("today", "Java")).isEqualTo(new Row(1, 1, 1));
     }
 
     @Test
-    @DisplayName("[COM-6-3 S3] 한 사람 · 태그 · 종류 · 날짜마다 1 로 센다")
-    void onePersonCountsOncePerTagKindAndDayAcrossTargetsAndOwners() {
+    @DisplayName("[COM-6-3 S3] 한 사람 · 태그 · 날짜마다 1 로 센다")
+    void onePersonCountsOncePerTagAndDayAcrossTargetsAndOwners() {
         var other = member();
         session(other, true, "JAVA");
         var otherGraph = graphs.graph(other, null);
         var actor = member();
-        explore(actor, node, tag, TargetType.NODE, "2026-09-30T01:00:00Z");
-        explore(actor, tag, tag, TargetType.HASHTAG, "2026-09-30T02:00:00Z");
-        explore(
+        bookmark(actor, node, tag, TargetType.NODE, "2026-09-30T01:00:00Z");
+        bookmark(actor, tag, tag, TargetType.HASHTAG, "2026-09-30T02:00:00Z");
+        bookmark(
                 actor,
                 otherGraph.nodes().get(0).nodeId(),
                 otherGraph.hashtags().get(0).hashtagId(),
@@ -243,11 +229,34 @@ class TrendingTest extends CommunityTestSupport {
                 "2026-09-30T02:30:00Z");
         assertThat(row("today", "Java")).isEqualTo(new Row(1, 1, 1));
 
-        event(actor, TargetType.HASHTAG, tag, tag, ActivityKind.BOOKMARK, "2026-09-30T02:40:00Z");
-        assertThat(row("today", "Java")).isEqualTo(new Row(1, 2, 2));
+        bookmark(actor, node, tag, TargetType.NODE, "2026-09-29T01:00:00Z");
+        assertThat(row("week", "Java")).isEqualTo(new Row(1, 2, 2));
+    }
 
-        explore(actor, node, tag, TargetType.NODE, "2026-09-29T01:00:00Z");
-        assertThat(row("week", "Java")).isEqualTo(new Row(1, 3, 3));
+    // 없앤 "나도 탐색중" 이 남긴 예전 EXPLORE 행은 두 기간 어디에서도 세지 않는다
+    @Test
+    @DisplayName("[COM-6-3 S3] 예전 나도 탐색중 활동은 세지 않고 북마크만 센다")
+    void legacyExploreRowsAreNotCounted() {
+        session(ownerId, true, "Legacy");
+        var legacy = tagIds(ownerId).get("legacy");
+        var actor = member();
+        event(actor, TargetType.HASHTAG, tag, tag, ActivityKind.EXPLORE, "2026-09-30T01:00:00Z");
+        event(member(), TargetType.HASHTAG, tag, tag, ActivityKind.EXPLORE, "2026-09-30T01:00:00Z");
+        event(member(), TargetType.HASHTAG, tag, tag, ActivityKind.EXPLORE, "2026-09-29T01:00:00Z");
+        event(
+                member(),
+                TargetType.HASHTAG,
+                legacy,
+                legacy,
+                ActivityKind.EXPLORE,
+                "2026-09-30T01:00:00Z");
+        bookmark(actor, "2026-09-30T02:00:00Z");
+
+        assertThat(names("today")).containsExactly("Java");
+        assertThat(row("today", "Java")).isEqualTo(new Row(1, 1, 1));
+        assertThat(names("week")).containsExactly("Java");
+        assertThat(row("week", "Java")).isEqualTo(new Row(1, 1, 1));
+        assertThat(activity.count()).isEqualTo(5);
     }
 
     @Test
@@ -255,9 +264,9 @@ class TrendingTest extends CommunityTestSupport {
         var other = member();
         session(other, true, "JAVA");
         var otherTag = graphs.graph(other, null).hashtags().get(0).hashtagId();
-        explore(member(), otherTag, "2026-09-30T01:00:00Z");
-        explore(member(), tag, "2026-09-30T01:00:00Z");
-        explore(member(), otherTag, "2026-09-29T01:00:00Z");
+        bookmark(member(), otherTag, "2026-09-30T01:00:00Z");
+        bookmark(member(), tag, "2026-09-30T01:00:00Z");
+        bookmark(member(), otherTag, "2026-09-29T01:00:00Z");
 
         assertThat(names("today")).containsExactly("Java");
         assertThat(row("today", "Java")).isEqualTo(new Row(1, 2, 1));
@@ -269,7 +278,7 @@ class TrendingTest extends CommunityTestSupport {
         session(ownerId, true, "banana", "Apple");
         var tags = tagIds(ownerId);
         for (var name : List.of("banana", "apple", "java"))
-            explore(member(), tags.get(name), "2026-09-30T01:00:00Z");
+            bookmark(member(), tags.get(name), "2026-09-30T01:00:00Z");
 
         assertThat(names("today")).containsExactly("Apple", "banana", "Java");
     }
@@ -277,7 +286,7 @@ class TrendingTest extends CommunityTestSupport {
     @Test
     void limitCutsTheRanking() throws Exception {
         session(ownerId, true, "Apple", "Banana");
-        tagIds(ownerId).values().forEach(id -> explore(member(), id, "2026-09-30T01:00:00Z"));
+        tagIds(ownerId).values().forEach(id -> bookmark(member(), id, "2026-09-30T01:00:00Z"));
 
         mvc.perform(get(TRENDING).param("limit", "2").header("Authorization", auth(viewerId)))
                 .andExpect(status().isOk())
@@ -286,7 +295,7 @@ class TrendingTest extends CommunityTestSupport {
 
     @Test
     void responseHasOnlyTheContractFields() throws Exception {
-        explore(member(), "2026-09-30T01:00:00Z");
+        bookmark(member(), "2026-09-30T01:00:00Z");
 
         var body =
                 mvc.perform(
@@ -306,7 +315,7 @@ class TrendingTest extends CommunityTestSupport {
     @Test
     @DisplayName("[COM-6-3 S6] 기간은 today · week 를 대소문자 무시로 받고 그 밖은 400")
     void periodIgnoresCaseAndRejectsOtherValues() throws Exception {
-        explore(member(), "2026-09-30T01:00:00Z");
+        bookmark(member(), "2026-09-30T01:00:00Z");
         for (var period : List.of("today", "TODAY", "Today", "week", "WEEK", "wEeK", "")) {
             mvc.perform(
                             get(TRENDING)
@@ -326,8 +335,8 @@ class TrendingTest extends CommunityTestSupport {
 
     @Test
     void privateSessionTakesItsHistoryOutOfBothWindows() {
-        explore(member(), node, tag, TargetType.NODE, "2026-09-30T01:00:00Z");
-        explore(member(), "2026-09-29T01:00:00Z");
+        bookmark(member(), node, tag, TargetType.NODE, "2026-09-30T01:00:00Z");
+        bookmark(member(), "2026-09-29T01:00:00Z");
         var second = session(ownerId, true, "Java");
         var secondNode =
                 graphs.graph(ownerId, null).nodes().stream()
@@ -335,7 +344,7 @@ class TrendingTest extends CommunityTestSupport {
                         .findFirst()
                         .orElseThrow()
                         .nodeId();
-        explore(member(), secondNode, tag, TargetType.NODE, "2026-09-30T01:00:00Z");
+        bookmark(member(), secondNode, tag, TargetType.NODE, "2026-09-30T01:00:00Z");
         assertThat(row("today", "Java")).isEqualTo(new Row(1, 2, 1));
 
         sessions.findAll().stream()
@@ -353,7 +362,7 @@ class TrendingTest extends CommunityTestSupport {
                         .filter(b -> b.getUserId().equals(ownerId))
                         .findFirst()
                         .orElseThrow();
-        explore(member(), node, tag, TargetType.NODE, "2026-09-30T01:00:00Z");
+        bookmark(member(), node, tag, TargetType.NODE, "2026-09-30T01:00:00Z");
 
         s.replaceSources(List.of(new Source("other", "https://example.org/other", "excerpt")));
 
@@ -365,8 +374,8 @@ class TrendingTest extends CommunityTestSupport {
         var s = session(ownerId, true, "Java", "Spring");
         var tags = tagIds(ownerId);
         var shared = nodeOf(s.getId());
-        explore(member(), shared, tags.get("java"), TargetType.NODE, "2026-09-30T01:00:00Z");
-        explore(member(), shared, tags.get("spring"), TargetType.NODE, "2026-09-30T01:00:00Z");
+        bookmark(member(), shared, tags.get("java"), TargetType.NODE, "2026-09-30T01:00:00Z");
+        bookmark(member(), shared, tags.get("spring"), TargetType.NODE, "2026-09-30T01:00:00Z");
         assertThat(names("today")).containsExactly("Java", "Spring");
 
         s.update(null, null, null, null, List.of("Java"));
@@ -381,7 +390,7 @@ class TrendingTest extends CommunityTestSupport {
                         .filter(b -> b.getUserId().equals(ownerId))
                         .findFirst()
                         .orElseThrow();
-        explore(member(), "2026-09-30T01:00:00Z");
+        bookmark(member(), "2026-09-30T01:00:00Z");
         assertThat(names("today")).containsExactly("Java");
 
         s.update(null, null, false, null, null);
@@ -403,9 +412,9 @@ class TrendingTest extends CommunityTestSupport {
         var s = session(ownerId, true, "Java", "Spring");
         var tags = tagIds(ownerId);
         var shared = nodeOf(s.getId());
-        explore(member(), shared, tags.get("java"), TargetType.NODE, "2026-09-30T01:00:00Z");
-        explore(member(), shared, tags.get("spring"), TargetType.NODE, "2026-09-30T01:00:00Z");
-        explore(member(), tags.get("spring"), "2026-09-30T01:00:00Z");
+        bookmark(member(), shared, tags.get("java"), TargetType.NODE, "2026-09-30T01:00:00Z");
+        bookmark(member(), shared, tags.get("spring"), TargetType.NODE, "2026-09-30T01:00:00Z");
+        bookmark(member(), tags.get("spring"), "2026-09-30T01:00:00Z");
         var profile = profiles.findById(ownerId).orElseGet(() -> new CommunityProfile(ownerId));
         profile.replaceHiddenHashtags(List.of("SPRING"));
         profiles.saveAndFlush(profile);
@@ -415,7 +424,7 @@ class TrendingTest extends CommunityTestSupport {
 
     @Test
     void withdrawnOwnerTakesTheirHashtagsOut() {
-        explore(member(), "2026-09-30T01:00:00Z");
+        bookmark(member(), "2026-09-30T01:00:00Z");
         assertThat(names("today")).containsExactly("Java");
 
         members.findById(ownerId)
@@ -432,7 +441,7 @@ class TrendingTest extends CommunityTestSupport {
                         .filter(b -> b.getUserId().equals(ownerId))
                         .findFirst()
                         .orElseThrow();
-        explore(member(), "2026-09-30T01:00:00Z");
+        bookmark(member(), "2026-09-30T01:00:00Z");
         s.replaceSources(
                 List.of(
                         new Source("a", "https://example.com", "x"),
@@ -448,7 +457,7 @@ class TrendingTest extends CommunityTestSupport {
     @DisplayName("[COM-6-3 S3] 개수를 안 보내면 최대 10개까지 준다")
     void defaultLimitIsTen() throws Exception {
         session(ownerId, true, "A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9", "A10", "A11");
-        tagIds(ownerId).values().forEach(id -> explore(member(), id, "2026-09-30T01:00:00Z"));
+        tagIds(ownerId).values().forEach(id -> bookmark(member(), id, "2026-09-30T01:00:00Z"));
 
         assertThat(tagIds(ownerId)).hasSizeGreaterThan(10);
         assertThat(names("today")).hasSize(10);
@@ -530,16 +539,23 @@ class TrendingTest extends CommunityTestSupport {
                 .getId();
     }
 
-    private void explore(Long actor, String time) {
-        explore(actor, tag, tag, TargetType.HASHTAG, time);
+    /** 지금 시계로 태그 묶음을 북마크하고 북마크 id 를 돌려준다 */
+    private Long saveTag(Long actor) {
+        return bookmarks
+                .save(actor, TargetType.HASHTAG, List.of(tag), SaveType.HASHTAG_BUNDLE, null, null)
+                .bookmarkId();
     }
 
-    private void explore(Long actor, Long hashtag, String time) {
-        explore(actor, hashtag, hashtag, TargetType.HASHTAG, time);
+    private void bookmark(Long actor, String time) {
+        bookmark(actor, tag, tag, TargetType.HASHTAG, time);
     }
 
-    private void explore(Long actor, Long target, Long hashtag, TargetType type, String time) {
-        event(actor, type, target, hashtag, ActivityKind.EXPLORE, time);
+    private void bookmark(Long actor, Long hashtag, String time) {
+        bookmark(actor, hashtag, hashtag, TargetType.HASHTAG, time);
+    }
+
+    private void bookmark(Long actor, Long target, Long hashtag, TargetType type, String time) {
+        event(actor, type, target, hashtag, ActivityKind.BOOKMARK, time);
     }
 
     private void event(

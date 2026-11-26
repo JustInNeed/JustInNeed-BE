@@ -68,10 +68,6 @@ class CommunityCardCountsScenarioTest extends ScenarioTestSupport {
                             .with(as(viewer))
                             .with(json(Map.of("liked", true))));
             mvc.perform(
-                    patch("/community/mindmaps/{id}/exploring", id)
-                            .with(as(viewer))
-                            .with(json(Map.of("exploring", true))));
-            mvc.perform(
                     patch("/community/mindmaps/{id}/bookmark", id)
                             .with(as(viewer))
                             .with(json(Map.of("bookmarked", true))));
@@ -87,8 +83,6 @@ class CommunityCardCountsScenarioTest extends ScenarioTestSupport {
                         count -> {
                             assertThat(count.likeCount()).isEqualTo(1);
                             assertThat(count.likedByMe()).isTrue();
-                            assertThat(count.exploringCount()).isEqualTo(1);
-                            assertThat(count.exploringByMe()).isTrue();
                             assertThat(count.bookmarkCount()).isEqualTo(1);
                             assertThat(count.bookmarkId()).isNotNull();
                         });

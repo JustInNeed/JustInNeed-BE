@@ -74,22 +74,6 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
                 .andExpect(status().isCreated());
     }
 
-    private void exploreHashtag(Member actor, Member owner, String hashtag) throws Exception {
-        mvc.perform(
-                        patch("/community/exploring")
-                                .with(as(actor))
-                                .with(
-                                        json(
-                                                Map.of(
-                                                        "targetType",
-                                                        "HASHTAG",
-                                                        "targetId",
-                                                        hashtagId(owner, hashtag),
-                                                        "exploring",
-                                                        true))))
-                .andExpect(okEnvelope());
-    }
-
     private void bookmarkHashtag(Member actor, Member owner, String hashtag) throws Exception {
         mvc.perform(
                         post("/community/bookmarks")
@@ -175,10 +159,10 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("오늘 / 이번 주 떠오르는 해시태그(COM-6-3): 탐색중 · 북마크한 사람 수로 순위가 매겨진다")
+    @DisplayName("오늘 / 이번 주 떠오르는 해시태그(COM-6-3): 북마크한 사람 수로 순위가 매겨진다")
     void trendingHashtags() throws Exception {
-        exploreHashtag(me, wanderer.member(), "프라하");
-        exploreHashtag(foodtrip, wanderer.member(), "프라하");
+        bookmarkHashtag(me, wanderer.member(), "프라하");
+        bookmarkHashtag(foodtrip, wanderer.member(), "프라하");
         bookmarkHashtag(me, wanderer.member(), "야간열차");
 
         for (String period : List.of("TODAY", "WEEK")) {
@@ -293,7 +277,7 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("로그인하지 않으면 검색 · 추천 · 떠오르는 해시태그 · 탐색중 조회 모두 401")
+    @DisplayName("로그인하지 않으면 검색 · 추천 · 떠오르는 해시태그 모두 401")
     void requiresLogin() throws Exception {
         for (String path :
                 List.of(
@@ -302,8 +286,7 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
                         "/community/search/hashtags?q=프라하",
                         BY_INTERESTS,
                         BY_RECENT_BOOKMARKS,
-                        TRENDING,
-                        "/community/exploring?targetType=HASHTAG&targetId=1")) {
+                        TRENDING)) {
             mvc.perform(get(path)).andExpect(status().isUnauthorized());
         }
     }
@@ -318,7 +301,7 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
     @Test
     @DisplayName("떠오르는 해시태그마다 합계(count)와 이전 기간 대비 증감(trend)이 온다")
     void trendingHasCountAndTrend() throws Exception {
-        exploreHashtag(me, wanderer.member(), "프라하");
+        bookmarkHashtag(me, wanderer.member(), "프라하");
 
         mvc.perform(get(TRENDING).param("period", "TODAY").with(as(me)))
                 .andExpect(jsonPath("$.data.hashtags[0].count").value(1))
@@ -352,7 +335,7 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("추천 카드에 작성자 · 제목 · 노드 수 · 좋아요 · 북마크 · 탐색중 수가 온다")
+    @DisplayName("추천 카드에 작성자 · 제목 · 노드 수 · 좋아요 · 북마크 수가 오고 탐색중 수는 없다")
     void recommendationCardFields() throws Exception {
         addInterest(me, "프라하");
         mvc.perform(
@@ -368,7 +351,8 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
                 .andExpect(jsonPath("$.data.mindmaps[0].nodeCount").isNumber())
                 .andExpect(jsonPath("$.data.mindmaps[0]", hasKey("likeCount")))
                 .andExpect(jsonPath("$.data.mindmaps[0]", hasKey("bookmarkCount")))
-                .andExpect(jsonPath("$.data.mindmaps[0]", hasKey("exploringCount")));
+                .andExpect(jsonPath("$.data.mindmaps[0]", not(hasKey("exploringCount"))))
+                .andExpect(jsonPath("$.data.mindmaps[0]", not(hasKey("exploringByMe"))));
 
         mvc.perform(
                         patch("/community/me/visibility")
@@ -427,13 +411,11 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
     }
 
     @Test
-    @DisplayName("[X-CMT-05 R1] 검색어 · 대상 id 같은 필수 파라미터를 빠뜨리면 400")
+    @DisplayName("[X-CMT-05 R1] 검색어 같은 필수 파라미터를 빠뜨리면 400")
     void missingRequiredParameterIs400() throws Exception {
         mvc.perform(get("/community/search/profiles").with(as(me)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false));
-        mvc.perform(get("/community/exploring").param("targetType", "HASHTAG").with(as(me)))
-                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -450,8 +432,8 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
     }
 
     /**
-     * wanderer 는 카페 · 슬로우트래블 을 비공개로 두었다 (카페 세션 · 슬로우트래블 비공개 세션). 카페는 잠깐 공개로 돌려 내가 북마크 · 탐색한 뒤 다시
-     * 비공개로 돌리는 식으로, 비공개가 아니었다면 추천 · 집계에 걸렸을 상황을 만든다.
+     * wanderer 는 카페 · 슬로우트래블 을 비공개로 두었다 (카페 세션 · 슬로우트래블 비공개 세션). 카페는 잠깐 공개로 돌려 내가 북마크한 뒤 다시 비공개로
+     * 돌리는 식으로, 비공개가 아니었다면 추천 · 집계에 걸렸을 상황을 만든다.
      */
     @Nested
     @DisplayName("다른 사람이 비공개로 둔 해시태그는 추천 피드 카드 · 추천 기준 · 떠오르는 해시태그에 나오지 않는다")
@@ -549,28 +531,28 @@ class CommunityFeedScenarioTest extends ScenarioTestSupport {
         }
 
         @Test
-        @DisplayName(
-                "떠오르는 해시태그(COM-6-3): 비공개로 돌린 해시태그 · 그 세션 노드에 쌓인 탐색 · 북마크 활동은 오늘 · 이번 주 순위에 안 나온다")
+        @DisplayName("떠오르는 해시태그(COM-6-3): 비공개로 돌린 해시태그 · 그 세션 노드에 쌓인 북마크 활동은 오늘 · 이번 주 순위에 안 나온다")
         void trendingIgnoresPrivateHashtags() throws Exception {
             setWandererHashtagPublic("카페", true);
-            exploreHashtag(me, wanderer.member(), "카페");
             bookmarkHashtag(me, wanderer.member(), "카페");
             Long cafeNode =
                     nodeId(foodtrip, wanderer.member(), CAFE_URL); // 카페 세션 노드: 비엔나 · 카페 태그에 이어짐
             mvc.perform(
-                            patch("/community/exploring")
+                            post("/community/bookmarks")
                                     .with(as(foodtrip))
                                     .with(
                                             json(
                                                     Map.of(
                                                             "targetType",
                                                             "NODE",
-                                                            "targetId",
-                                                            cafeNode,
-                                                            "exploring",
-                                                            true))))
-                    .andExpect(okEnvelope());
-            exploreHashtag(me, wanderer.member(), "프라하");
+                                                            "targetIds",
+                                                            List.of(cafeNode),
+                                                            "saveType",
+                                                            "MINI_MINDMAP",
+                                                            "sourceMindmapId",
+                                                            wanderer.id()))))
+                    .andExpect(status().isCreated());
+            bookmarkHashtag(me, wanderer.member(), "프라하");
             // 공개였을 땐 카페가 순위에 오른다 (비공개가 아니면 걸리는 상황인지 확인)
             mvc.perform(get(TRENDING).param("period", "TODAY").with(as(me)))
                     .andExpect(jsonPath("$.data.hashtags[*].name").value(hasItem("카페")));

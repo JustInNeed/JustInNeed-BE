@@ -78,22 +78,6 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
         return mvc.perform(post("/community/bookmarks").with(as(actor)).with(json(body)));
     }
 
-    private ResultActions explore(Member actor, String targetType, Long targetId, boolean exploring)
-            throws Exception {
-        return mvc.perform(
-                patch("/community/exploring")
-                        .with(as(actor))
-                        .with(
-                                json(
-                                        Map.of(
-                                                "targetType",
-                                                targetType,
-                                                "targetId",
-                                                targetId,
-                                                "exploring",
-                                                exploring))));
-    }
-
     private void showContent() throws Exception {
         mvc.perform(
                         patch("/community/me/visibility")
@@ -367,61 +351,6 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
                                 .with(as(me))
                                 .with(json("{}")))
                 .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    @DisplayName("'나도 탐색중'(COM-4-2): 등록하면 인원이 오르고, 조회하면 내 상태와 인원이 오며, 해제하면 내려간다")
-    void exploringToggle() throws Exception {
-        Long prague = hashtagId(wanderer.member(), "프라하");
-
-        for (int i = 0; i < 2; i++) {
-            explore(me, "HASHTAG", prague, true)
-                    .andExpect(okEnvelope())
-                    .andExpect(jsonPath("$.data.targetType").value("HASHTAG"))
-                    .andExpect(jsonPath("$.data.targetId").value(prague))
-                    .andExpect(jsonPath("$.data.exploring").value(true))
-                    .andExpect(jsonPath("$.data.exploringCount").value(1));
-        }
-        explore(foodtrip, "HASHTAG", prague, true)
-                .andExpect(jsonPath("$.data.exploringCount").value(2));
-        mvc.perform(
-                        get("/community/exploring")
-                                .param("targetType", "HASHTAG")
-                                .param("targetId", prague.toString())
-                                .with(as(me)))
-                .andExpect(okEnvelope())
-                .andExpect(jsonPath("$.data.exploring").value(true))
-                .andExpect(jsonPath("$.data.exploringCount").value(2));
-
-        explore(me, "HASHTAG", prague, false)
-                .andExpect(jsonPath("$.data.exploring").value(false))
-                .andExpect(jsonPath("$.data.exploringCount").value(1));
-        mvc.perform(
-                        get("/community/exploring")
-                                .param("targetType", "HASHTAG")
-                                .param("targetId", prague.toString())
-                                .with(as(me)))
-                .andExpect(jsonPath("$.data.exploring").value(false))
-                .andExpect(jsonPath("$.data.exploringCount").value(1));
-
-        Long castle = nodeId(me, wanderer.member(), PRAGUE_CASTLE);
-        explore(me, "NODE", castle, true)
-                .andExpect(jsonPath("$.data.targetType").value("NODE"))
-                .andExpect(jsonPath("$.data.exploringCount").value(1));
-    }
-
-    @Test
-    @DisplayName("비공개 해시태그는 '나도 탐색중' 대상이 아니다 (404)")
-    void cannotExploreHiddenHashtag() throws Exception {
-        Long cafe = hashtagId(wanderer.member(), "카페");
-
-        explore(me, "HASHTAG", cafe, true).andExpect(status().isNotFound());
-        mvc.perform(
-                        get("/community/exploring")
-                                .param("targetType", "HASHTAG")
-                                .param("targetId", cafe.toString())
-                                .with(as(me)))
-                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -700,30 +629,6 @@ class OtherProfileScenarioTest extends ScenarioTestSupport {
                     .andExpect(errorEnvelope(HttpStatus.NOT_FOUND, "요청한 정보를 찾을 수 없습니다."));
         }
         assertThat(likes.existsByActorIdAndProfileId(foodtrip.getId(), wanderer.id())).isTrue();
-    }
-
-    @Test
-    @DisplayName("[X-OPRF-01 S4] 프로필 나도 탐색중 수는 카드별 수의 합이고, 탈퇴한 사람의 탐색은 빠진다 (A-10)")
-    void profileExploringCountExcludesWithdrawnActors() throws Exception {
-        String card = "/community/mindmaps/{id}/exploring";
-        for (var pair :
-                List.of(
-                        Map.entry(me, wanderer.prague()),
-                        Map.entry(foodtrip, wanderer.prague()),
-                        Map.entry(me, wanderer.vienna()))) {
-            mvc.perform(
-                            patch(card, pair.getValue().getId())
-                                    .with(as(pair.getKey()))
-                                    .with(json(Map.of("exploring", true))))
-                    .andExpect(okEnvelope());
-        }
-        mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me)))
-                .andExpect(jsonPath("$.data.exploringCount").value(3));
-
-        withdraw(foodtrip);
-
-        mvc.perform(get("/community/profiles/{id}", wanderer.id()).with(as(me)))
-                .andExpect(jsonPath("$.data.exploringCount").value(2));
     }
 
     @Test

@@ -5,7 +5,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.jayway.jsonpath.JsonPath;
 import com.justinneed.auth.domain.Member;
 import com.justinneed.community.SqlCapture;
 import com.justinneed.community.card.CommunityCardReader;
@@ -14,7 +13,6 @@ import com.justinneed.community.domain.CommunityProfile;
 import com.justinneed.session.management.domain.BrowsingSession;
 import com.justinneed.session.management.domain.Source;
 import jakarta.persistence.EntityManager;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -94,28 +92,6 @@ class CommunityReadOnlyScenarioTest extends ScenarioTestSupport {
         mvc.perform(get(path.replace("{owner}", owner.getId().toString())).with(as(viewer)));
 
         assertThat(SqlCapture.all()).isNotEmpty();
-        assertThat(SqlCapture.writesAndLocks()).isEmpty();
-    }
-
-    @Test
-    @DisplayName("나도 탐색중 상태 조회는 작성자 행을 잠그지 않는다")
-    void exploringStatusTakesNoLock() throws Exception {
-        seed();
-        String body =
-                mvc.perform(get("/community/profiles/{id}/mindmap", owner.getId()).with(as(viewer)))
-                        .andReturn()
-                        .getResponse()
-                        .getContentAsString(StandardCharsets.UTF_8);
-        Number node = JsonPath.read(body, "$.data.nodes[0].nodeId");
-        SqlCapture.clear();
-
-        mvc.perform(
-                        get("/community/exploring")
-                                .param("targetType", "NODE")
-                                .param("targetId", node.toString())
-                                .with(as(viewer)))
-                .andExpect(okEnvelope());
-
         assertThat(SqlCapture.writesAndLocks()).isEmpty();
     }
 

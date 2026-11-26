@@ -68,7 +68,6 @@ class CommunityCommitTest {
                         if (!start.await(5, TimeUnit.SECONDS))
                             throw new IllegalStateException("Start timeout");
                         interactions.like(actor, owner, true);
-                        interactions.exploring(actor, TargetType.NODE, node, true);
                         return bookmarks
                                 .save(
                                         actor,
@@ -86,8 +85,6 @@ class CommunityCommitTest {
             Long id = first.get(20, TimeUnit.SECONDS);
             assertThat(second.get(20, TimeUnit.SECONDS)).isEqualTo(id);
             assertThat(graphs.profile(owner, actor).likeCount()).isEqualTo(1);
-            assertThat(interactions.status(actor, TargetType.NODE, node).exploringCount())
-                    .isEqualTo(1);
             var snapshot = queries.mindmaps(actor, 0, 10).mindmaps().get(0);
             assertThat(snapshot.nodes()).hasSize(1);
             assertThat(snapshot.hashtags()).hasSize(1);
@@ -100,8 +97,6 @@ class CommunityCommitTest {
                                     sessions.findById(s)
                                             .orElseThrow()
                                             .update(null, null, false, null, null));
-            assertThat(interactions.exploring(actor, TargetType.NODE, node, false).exploring())
-                    .isFalse();
             assertThat(graphs.original(actor, id).highlightedNodeIds()).isEmpty();
             // 원본이 비공개면 북마크는 숨겨지고 행은 남는다. 다시 공개하면 같은 스냅샷이 돌아온다
             assertThat(queries.mindmaps(actor, 0, 10).mindmaps()).isEmpty();
@@ -178,7 +173,7 @@ class CommunityCommitTest {
         var actor = member();
         session(owner);
         var node = graphs.graph(owner, null).nodes().get(0).nodeId();
-        interactions.exploring(actor, TargetType.NODE, node, true);
+        bookmarks.save(actor, TargetType.NODE, List.of(node), SaveType.MINI_MINDMAP, owner, null);
         members.deleteById(owner);
         assertThatCode(() -> trending.trending(TrendingService.Period.TODAY, 10))
                 .doesNotThrowAnyException();

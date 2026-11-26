@@ -1,6 +1,5 @@
 package com.justinneed.community.recommend;
 
-import com.justinneed.community.activity.ActivityKind;
 import com.justinneed.community.activity.ActivityRecorder;
 import com.justinneed.community.activity.CommunityActivityRepository;
 import com.justinneed.community.activity.TrendingActivity;
@@ -31,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <pre>
  * 오늘     = 오늘 00:00 ~ 지금, 직전 기간은 어제 00:00 ~ 어제 같은 시각
  * 이번 주  = 지금부터 최근 7일, 직전 기간은 그 앞 7일
- * count    = 기간 안의 나도 탐색중 + 북마크. 사람 · 태그 · 종류 · 날짜마다 1 (대상이 여러 개여도, 취소해도 그대로)
+ * count    = 기간 안의 북마크. 사람 · 태그 · 날짜마다 1 (대상이 여러 개여도, 취소해도 그대로)
  * trend    = count - 직전 기간 count. 같은 규칙으로 세고, 직전 기간에 없던 태그는 count 와 같다
  * </pre>
  *
@@ -83,8 +82,8 @@ public class TrendingService {
         for (var event : activities.findTrending(previousStart, now)) {
             if (!shown.includes(event, sharing)) continue;
             var count = groups.computeIfAbsent(CommunityTags.key(event.tagName()), Counts::new);
-            // Count one person per tag/kind/day, even across different nodes or profiles.
-            var person = new Person(event.actorId(), event.kind(), event.activityDay());
+            // Count one person per tag/day, even across different nodes or profiles.
+            var person = new Person(event.actorId(), event.activityDay());
             if (!event.occurredAt().isBefore(start)) count.current(person, event);
             else if (event.occurredAt().isBefore(previousEnd)) count.previous.add(person);
         }
@@ -150,7 +149,7 @@ public class TrendingService {
     }
 
     @Schema(name = "TrendingServicePerson")
-    private record Person(Long actorId, ActivityKind kind, LocalDate day) {}
+    private record Person(Long actorId, LocalDate day) {}
 
     private static class Counts {
         final String key;

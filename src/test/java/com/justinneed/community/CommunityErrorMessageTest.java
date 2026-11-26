@@ -64,16 +64,8 @@ class CommunityErrorMessageTest extends CommunityTestSupport {
                 "/community/search/profiles",
                 "/community/search/mindmaps",
                 "/community/search/hashtags",
-                "/community/exploring",
-                "/community/exploring?targetType=HASHTAG",
-                "/community/exploring?targetId=1",
-                "/community/exploring?targetType=&targetId=1",
-                "/community/exploring?targetType=HASHTAG&targetId=",
                 // 타입 · enum 불일치
-                "/community/exploring?targetType=BOGUS&targetId=1",
-                "/community/exploring?targetType=hashtag&targetId=1",
-                "/community/exploring?targetType=HASHTAG&targetId=abc",
-                "/community/exploring?targetType=HASHTAG&targetId=99999999999999999999",
+                "/community/profiles/1/mindmap?hashtagId=99999999999999999999",
                 "/community/recommendations/hashtags/trending?period=BOGUS",
                 "/community/recommendations/hashtags/trending?limit=abc",
                 "/community/recommendations/mindmaps/interests?limit=abc",
@@ -85,7 +77,6 @@ class CommunityErrorMessageTest extends CommunityTestSupport {
                 "/community/profiles/abc",
                 "/community/profiles/1/mindmap?hashtagId=abc",
                 // 범위 밖
-                "/community/exploring?targetType=HASHTAG&targetId=0",
                 "/community/recommendations/mindmaps/interests?limit=0",
                 "/community/recommendations/mindmaps/recent-bookmarks?limit=101",
                 "/community/recommendations/hashtags/trending?limit=0",
@@ -105,15 +96,10 @@ class CommunityErrorMessageTest extends CommunityTestSupport {
         return Stream.of(
                 Arguments.of(HttpMethod.PATCH, "/community/profiles/1/like", "{}"),
                 Arguments.of(HttpMethod.PATCH, "/community/profiles/0/like", "{\"liked\":true}"),
-                Arguments.of(HttpMethod.PATCH, "/community/exploring", "{}"),
                 Arguments.of(
-                        HttpMethod.PATCH,
-                        "/community/exploring",
-                        "{\"targetType\":\"HASHTAG\",\"targetId\":0,\"exploring\":true}"),
-                Arguments.of(
-                        HttpMethod.PATCH,
-                        "/community/exploring",
-                        "{\"targetType\":\"BOGUS\",\"targetId\":1,\"exploring\":true}"),
+                        HttpMethod.POST,
+                        "/community/bookmarks",
+                        "{\"targetType\":\"BOGUS\",\"targetIds\":[1],\"saveType\":\"HASHTAG_BUNDLE\"}"),
                 Arguments.of(HttpMethod.POST, "/community/bookmarks", "{}"),
                 Arguments.of(
                         HttpMethod.POST,
@@ -211,7 +197,7 @@ class CommunityErrorMessageTest extends CommunityTestSupport {
 
     @Test
     void missingResourceIsKorean404() throws Exception {
-        send(get("/community/exploring?targetType=HASHTAG&targetId=999999"))
+        send(get("/community/me/bookmarks/999999/original"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message").value(matchesPattern(KOREAN)));

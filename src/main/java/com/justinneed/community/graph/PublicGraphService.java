@@ -278,7 +278,6 @@ public class PublicGraphService {
                 likes.countByProfileId(ownerId),
                 likes.existsByActorIdAndProfileId(viewerId, ownerId),
                 follows.existsByActorIdAndTargetId(viewerId, ownerId),
-                cards.exploringCount(profile, viewerId),
                 sharing.publicSessionCount(profile));
     }
 
@@ -362,7 +361,6 @@ public class PublicGraphService {
             long likeCount,
             boolean likedByMe,
             boolean following,
-            long exploringCount,
             long sharedSessionCount) {}
 
     public record Original(

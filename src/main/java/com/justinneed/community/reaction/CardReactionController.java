@@ -29,14 +29,6 @@ public class CardReactionController {
         return ApiResponse.ok(service.like(actor, mindmapId, body.liked()));
     }
 
-    @PatchMapping("/{mindmapId}/exploring")
-    public ApiResponse<CardReactionService.ExploringView> exploring(
-            @AuthenticationPrincipal Long actor,
-            @PathVariable @Positive Long mindmapId,
-            @Valid @RequestBody ExploringRequest body) {
-        return ApiResponse.ok(service.exploring(actor, mindmapId, body.exploring()));
-    }
-
     @PatchMapping("/{mindmapId}/bookmark")
     public ApiResponse<CardReactionService.BookmarkView> bookmark(
             @AuthenticationPrincipal Long actor,
@@ -47,9 +39,6 @@ public class CardReactionController {
 
     @Schema(name = "CardReactionControllerLikeRequest")
     public record LikeRequest(@NotNull(message = "좋아요 상태를 입력해 주세요.") Boolean liked) {}
-
-    @Schema(name = "CardReactionControllerExploringRequest")
-    public record ExploringRequest(@NotNull(message = "나도 탐색중 상태를 입력해 주세요.") Boolean exploring) {}
 
     public record BookmarkRequest(@NotNull(message = "북마크 상태를 입력해 주세요.") Boolean bookmarked) {}
 }

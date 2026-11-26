@@ -19,8 +19,6 @@ public record CommunityCard(
         boolean likedByMe,
         long bookmarkCount,
         @Nullable Long bookmarkId,
-        long exploringCount,
-        boolean exploringByMe,
         LocalDateTime lastActivityAt,
         List<RelatedUrl> relatedUrls) {
 

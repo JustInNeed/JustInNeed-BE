@@ -7,10 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.justinneed.auth.domain.Member;
 import com.justinneed.auth.domain.SocialProvider;
-import com.justinneed.community.activity.CommunityActivityRepository;
-import com.justinneed.community.bookmark.TargetType;
 import com.justinneed.community.graph.PublicGraphService;
-import com.justinneed.community.reaction.ExplorationRepository;
 import com.justinneed.community.reaction.InteractionService;
 import com.justinneed.community.reaction.ProfileLikeRepository;
 import jakarta.persistence.EntityManager;
@@ -25,8 +22,6 @@ class WithdrawnActorCountTest extends CommunityTestSupport {
     @Autowired InteractionService interactions;
     @Autowired PublicGraphService graphs;
     @Autowired ProfileLikeRepository likes;
-    @Autowired ExplorationRepository explorations;
-    @Autowired CommunityActivityRepository activities;
     @Autowired EntityManager entityManager;
 
     private Long leaverId;
@@ -65,26 +60,5 @@ class WithdrawnActorCountTest extends CommunityTestSupport {
         assertThat(interactions.like(viewerId, ownerId, true).likeCount()).isEqualTo(1);
         assertThat(interactions.like(viewerId, ownerId, false).likeCount()).isZero();
         assertThat(likes.count()).isEqualTo(1);
-    }
-
-    @Test
-    void exploringCountExcludesWithdrawnActorsButKeepsRows() {
-        session(ownerId, true, "Java");
-        var node = graphs.graph(ownerId, null).nodes().get(0).nodeId();
-        interactions.exploring(viewerId, TargetType.NODE, node, true);
-        interactions.exploring(leaverId, TargetType.NODE, node, true);
-        assertThat(interactions.status(viewerId, TargetType.NODE, node).exploringCount())
-                .isEqualTo(2);
-
-        withdrawLeaver();
-
-        var status = interactions.status(viewerId, TargetType.NODE, node);
-        assertThat(status.exploringCount()).isEqualTo(1);
-        assertThat(status.exploring()).isTrue();
-        assertThat(interactions.exploring(viewerId, TargetType.NODE, node, true).exploringCount())
-                .isEqualTo(1);
-        assertThat(interactions.exploring(viewerId, TargetType.NODE, node, false).exploringCount())
-                .isZero();
-        assertThat(explorations.count()).isEqualTo(1);
     }
 }
